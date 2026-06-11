@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { LandingPage } from '../features/landing/LandingPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
+import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { QuotePage } from '../features/quote/QuotePage';
 import { HistoryPage } from '../features/history/HistoryPage';
@@ -10,8 +11,13 @@ import { TarifasPage } from '../features/settings/TarifasPage';
 import { PagosPage } from '../features/settings/PagosPage';
 import { CuentaCobroPage } from '../features/settings/CuentaCobroPage';
 import { EstimacionPage } from '../features/settings/EstimacionPage';
+import { PerfilPage } from '../features/settings/PerfilPage';
+import { MaterialesPage } from '../features/materials/MaterialesPage';
+import { CategoriaPage } from '../features/materials/CategoriaPage';
+import { ProductoPage } from '../features/materials/ProductoPage';
+import { PedidosPage } from '../features/materials/PedidosPage';
 import { QuoteInvoicesPage } from '../features/invoice/QuoteInvoicesPage';
-import { EstimationCalculatorPage } from '../features/calculator/EstimationCalculatorPage';
+// import { EstimationCalculatorPage } from '../features/calculator/EstimationCalculatorPage';
 import { Layout } from './Layout';
 import { useStore } from '../shared/services/store';
 
@@ -32,6 +38,10 @@ export const router = createBrowserRouter([
   {
     path: '/register',
     element: <RegisterPage />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPasswordPage />,
   },
   {
     path: '/dashboard',
@@ -71,8 +81,24 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute><Layout><EstimacionPage /></Layout></ProtectedRoute>,
   },
   {
-    path: '/calculadoras/estimaciones',
-    element: <ProtectedRoute><Layout><EstimationCalculatorPage /></Layout></ProtectedRoute>,
+    path: '/perfil',
+    element: <ProtectedRoute><Layout><PerfilPage /></Layout></ProtectedRoute>,
+  },
+  {
+    path: '/materiales',
+    element: <ProtectedRoute><Layout><MaterialesPage /></Layout></ProtectedRoute>,
+  },
+  {
+    path: '/materiales/:categoryId',
+    element: <ProtectedRoute><Layout><CategoriaPage /></Layout></ProtectedRoute>,
+  },
+  {
+    path: '/materiales/productos/:productId',
+    element: <ProtectedRoute><Layout><ProductoPage /></Layout></ProtectedRoute>,
+  },
+  {
+    path: '/materiales/pedidos',
+    element: <ProtectedRoute><Layout><PedidosPage /></Layout></ProtectedRoute>,
   },
   // Redirect old /settings to /tarifas
   {

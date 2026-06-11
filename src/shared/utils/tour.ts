@@ -26,13 +26,19 @@ export const tourSteps: TourStep[] = [
     step: 3,
     route: '/cuenta-cobro',
     title: '📋 Zona 3: Cuenta de Cobro',
-    description: 'Ingresa los datos de tu empresa, sube tu logo y firma digital. Esto aparecerá en cada cuenta de cobro que generes para tus clientes.',
+    description: 'Configura los términos, notas y numeración de tus cuentas de cobro.',
   },
   {
     step: 4,
     route: '/estimacion',
     title: '🏗️ Zona 4: Estimación de Obra',
     description: 'Define precios por m² para obra negra, obra gris y acabados. También puedes crear estimaciones personalizadas como "Primer piso" o "Sótano".',
+  },
+  {
+    step: 5,
+    route: '/perfil',
+    title: '👤 Zona 5: Perfil',
+    description: 'Configura tu logo de empresa y firma digital para que aparezcan en tus cuentas de cobro.',
   },
 ];
 

@@ -221,6 +221,11 @@ export function LoginPage() {
           </div>
 
           <div style={{ marginTop: 24, textAlign: 'center' }}>
+            <p className="small" style={{ fontSize: 12, marginBottom: 8 }}>
+              <span style={{ color: '#b69462', cursor: 'pointer', fontWeight: 600 }} onClick={() => navigate('/forgot-password')}>
+                ¿Olvidaste tu contraseña?
+              </span>
+            </p>
             <p className="small" style={{ fontSize: 12 }}>
               ¿No tienes cuenta?{' '}
               <span style={{ color: '#b69462', cursor: 'pointer', fontWeight: 600 }} onClick={() => navigate('/register')}>

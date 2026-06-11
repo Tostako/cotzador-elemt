@@ -6,7 +6,7 @@ import logoSinBaner from '../../assets/LOGO SIN BANER/ELEMENThaus - Transparent 
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { quotes, config, user } = useStore();
+  const { quotes, config, user, paymentPlans } = useStore();
   const [showWelcome, setShowWelcome] = useState(false);
   const [tourActive, setTourActive] = useState(false);
 
@@ -79,8 +79,8 @@ export function DashboardPage() {
               ¡Bienvenido a ELEMENT Cotizador!
             </h2>
             <p style={{ fontSize: 15, color: '#aaa', lineHeight: 1.6, marginBottom: 28 }}>
-              Antes de crear tu primera cotización, te recomendamos configurar tu cuenta. 
-              Te guiaremos por 4 zonas clave para que todo quede listo.
+              Antes de crear tu primera cotización, te recomendamos configurar tu cuenta.
+              Te guiaremos por 5 zonas clave para que todo quede listo.
             </p>
 
             <div style={{ display: 'grid', gap: 10, marginBottom: 24, textAlign: 'left' }}>
@@ -102,7 +102,7 @@ export function DashboardPage() {
                 <span style={{ fontSize: 24 }}>📋</span>
                 <div>
                   <div style={{ fontWeight: 600 }}>Cuenta de Cobro</div>
-                  <div className="small" style={{ color: '#999' }}>Logo, firma y datos de tu empresa</div>
+                  <div className="small" style={{ color: '#999' }}>Términos y numeración</div>
                 </div>
               </div>
               <div className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -110,6 +110,13 @@ export function DashboardPage() {
                 <div>
                   <div style={{ fontWeight: 600 }}>Estimación de Obra</div>
                   <div className="small" style={{ color: '#999' }}>Precios por m² y estimaciones personalizadas</div>
+                </div>
+              </div>
+              <div className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 24 }}>👤</span>
+                <div>
+                  <div style={{ fontWeight: 600 }}>Perfil</div>
+                  <div className="small" style={{ color: '#999' }}>Logo y firma digital</div>
                 </div>
               </div>
             </div>
@@ -249,8 +256,16 @@ export function DashboardPage() {
           <p className="small">Servicios</p>
         </div>
         <div className="stat-card">
-          <div className="stat-number">{config.paymentPlan.payments.length}</div>
-          <p className="small">Pagos Configurados</p>
+          <div className="stat-number">
+            {paymentPlans.length > 0
+              ? (paymentPlans.find((p) => p.isDefault)?.installments.length || paymentPlans[0]?.installments.length || 0)
+              : config.paymentPlan.payments.length}
+          </div>
+          <p className="small">
+            {paymentPlans.length > 0
+              ? `Cuotas en "${paymentPlans.find((p) => p.isDefault)?.name || paymentPlans[0]?.name || 'Plan'}"`
+              : 'Pagos Configurados'}
+          </p>
         </div>
       </div>
     </main>

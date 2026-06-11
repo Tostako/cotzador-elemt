@@ -17,7 +17,6 @@ export function PagosPage() {
     createPaymentPlan,
     updatePaymentPlan,
     deletePaymentPlan,
-    setDefaultPaymentPlan,
   } = useStore();
   const showTour = isTourActiveForRoute('/pagos');
 
@@ -142,15 +141,6 @@ export function PagosPage() {
     }
   };
 
-  const handleSetDefault = async (id: number) => {
-    try {
-      await setDefaultPaymentPlan(id);
-      showNotification('Plan marcado como predeterminado', 'success');
-    } catch (e: any) {
-      showNotification(e.message || 'Error', 'error');
-    }
-  };
-
   return (
     <main>
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>💳 Plan de Pagos</h1>
@@ -226,16 +216,13 @@ export function PagosPage() {
         )}
 
         {paymentPlans.map((plan) => (
-          <div key={plan.id} className="mb-2" style={{ padding: 16, background: '#0a0a0a', borderRadius: 12, border: plan.isDefault ? '1px solid #b69462' : '1px solid transparent' }}>
-            <div className="flex-between mb-1">
-              <div>
+          <div key={plan.id} className="mb-2" style={{ padding: 16, background: '#0a0a0a', borderRadius: 12, border: '1px solid transparent' }}>
+            <div className="flex-between mb-1" style={{ flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ minWidth: 0 }}>
                 <span style={{ fontWeight: 600 }}>{plan.name}</span>
                 {plan.isDefault && <span style={{ marginLeft: 8, fontSize: 11, color: '#b69462', background: 'rgba(182,148,98,0.15)', padding: '2px 8px', borderRadius: 8 }}>Predeterminado</span>}
               </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {!plan.isDefault && (
-                  <button className="btn btn-small btn-ghost" onClick={() => handleSetDefault(plan.id)}>★ Default</button>
-                )}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 <button className="btn btn-small" onClick={() => handleEditPlan(plan)}>Editar</button>
                 <button className="btn btn-small btn-danger" onClick={() => handleDeletePlan(plan.id)}>Eliminar</button>
               </div>

@@ -1,0 +1,214 @@
+import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useAppStore, NotificationContainer } from '../../shared/hooks/useNotifications';
+import logoAbbreviated from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado White.png';
+
+export function ForgotPasswordPage() {
+  const navigate = useNavigate();
+  const showNotification = useAppStore((s) => s.showNotification);
+
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleReset = async () => {
+    if (!email.trim() && !phone.trim()) {
+      showNotification('Ingresa tu correo o número de teléfono', 'warning');
+      return;
+    }
+    if (!newPassword.trim() || newPassword.length < 6) {
+      showNotification('La nueva contraseña debe tener al menos 6 caracteres', 'warning');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showNotification('Las contraseñas no coinciden', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { apiService, SHOP_SLUG } = await import('../../shared/services/api');
+      const payload: any = {
+        new_password: newPassword.trim(),
+        shop_slug: SHOP_SLUG,
+      };
+      if (email.trim()) payload.email = email.trim();
+      if (phone.trim()) payload.phone = phone.trim();
+      const res = await apiService.resetPassword(payload);
+      showNotification(res?.data?.message || 'Contraseña actualizada correctamente', 'success');
+      navigate('/login');
+    } catch (err: any) {
+      showNotification(err.message || 'Error al actualizar la contraseña', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <NotificationContainer />
+      <div className="animated-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        {/* Background effects */}
+        <div style={{
+          position: 'fixed',
+          top: '10%',
+          left: '5%',
+          width: '400px',
+          height: '400px',
+          background: 'radial-gradient(circle, rgba(182,148,98,0.08) 0%, transparent 70%)',
+          borderRadius: '50%',
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'fixed',
+          bottom: '10%',
+          right: '5%',
+          width: '300px',
+          height: '300px',
+          background: 'radial-gradient(circle, rgba(182,148,98,0.06) 0%, transparent 70%)',
+          borderRadius: '50%',
+          pointerEvents: 'none',
+        }} />
+
+        <div style={{ maxWidth: 480, width: '100%' }}>
+          {/* Back to login */}
+          <button
+            className="btn btn-ghost btn-small"
+            style={{ marginBottom: 32 }}
+            onClick={() => navigate('/login')}
+          >
+            ← Volver al inicio de sesión
+          </button>
+
+          <div
+            className="card-hero"
+            style={{
+              animation: 'modalSlide 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            <div style={{ textAlign: 'center', marginBottom: 32 }}>
+              <img
+                src={logoAbbreviated}
+                alt="ELEMENThaus"
+                style={{
+                  height: 100,
+                  width: 'auto',
+                  filter: 'drop-shadow(0 0 20px rgba(182, 148, 98, 0.3))',
+                }}
+              />
+            </div>
+
+            <h2 style={{ fontSize: 24, fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
+              🔑 Recuperar Contraseña
+            </h2>
+            <p className="small" style={{ textAlign: 'center', marginBottom: 24, color: '#999' }}>
+              Ingresa tu teléfono y la nueva contraseña
+            </p>
+
+            <div style={{ display: 'grid', gap: 16 }}>
+              <div>
+                <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Correo electrónico</label>
+                <input
+                  className="input"
+                  type="email"
+                  placeholder="tu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <span className="small" style={{ color: '#666' }}>— o —</span>
+              </div>
+              <div>
+                <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Teléfono</label>
+                <input
+                  className="input"
+                  type="tel"
+                  placeholder="Ej: +57 300 123 4567"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+                <p className="small" style={{ color: '#666', marginTop: 4 }}>
+                  Ingresa tu correo o teléfono registrado
+                </p>
+              </div>
+              <div>
+                <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Nueva contraseña</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    className="input"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Mínimo 6 caracteres"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    style={{ paddingRight: 44 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: 12,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#999',
+                      cursor: 'pointer',
+                      fontSize: 18,
+                      padding: 0,
+                    }}
+                  >
+                    {showPassword ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Confirmar contraseña</label>
+                <input
+                  className="input"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Repite la nueva contraseña"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleReset()}
+                />
+              </div>
+              <button
+                className="btn"
+                onClick={handleReset}
+                disabled={isLoading}
+                style={{ marginTop: 8 }}
+              >
+                {isLoading ? (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                      width: 18,
+                      height: 18,
+                      border: '2px solid rgba(0,0,0,0.3)',
+                      borderTopColor: '#000',
+                      borderRadius: '50%',
+                      animation: 'spin 0.8s linear infinite',
+                    }} />
+                    Actualizando...
+                  </span>
+                ) : (
+                  'ACTUALIZAR CONTRASEÑA'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    </>
+  );
+}

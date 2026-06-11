@@ -128,15 +128,18 @@ function buildUserFromToken(token: string) {
     token,
     role: payload.role || 'customer',
     profession: payload.profession,
+    phone: payload.phone,
+    address: payload.address,
   };
 }
 
 async function api(path: string, options: RequestInit = {}) {
   const token = getToken();
 
-  // Add shop_slug as query param if not already present and not a public/auth route
+  // Add shop_slug as query param if not already present and not a public route
+  // Auth routes ALSO need shop_slug so the backend can identify the shop
   let finalPath = path;
-  if (!path.includes('shop_slug') && !path.startsWith('/public/') && !path.startsWith('/auth/')) {
+  if (!path.includes('shop_slug') && !path.startsWith('/public/')) {
     const separator = path.includes('?') ? '&' : '?';
     finalPath = `${path}${separator}shop_slug=${SHOP_SLUG}`;
   }
@@ -181,12 +184,14 @@ export const apiService = {
     api('/auth/customer/register', { method: 'POST', body: JSON.stringify(data) }),
 
   login: (data: any) =>
-    api('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+    api('/auth/customer/login', { method: 'POST', body: JSON.stringify(data) }),
 
   selectShop: (data: any) =>
     api('/auth/select-shop', { method: 'POST', body: JSON.stringify(data) }),
 
   me: () => api('/auth/me'),
+  updateMe: (data: any) => api('/customers/me', { method: 'PATCH', body: JSON.stringify(data) }),
+  resetPassword: (data: any) => api('/auth/customer/reset-password', { method: 'PATCH', body: JSON.stringify(data) }),
 
   buildUserFromToken,
 
@@ -231,4 +236,21 @@ export const apiService = {
   // ── Customer Config (Auth) ────────────────────────
   getMyConfig: () => api('/customer-config/me'),
   saveMyConfig: (data: any) => api('/customer-config/me', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // ── Quote Catalog (Materiales) ─────────────────────
+  getCatalogCategories: () => api('/quote-catalog/categories'),
+  createCatalogCategory: (data: any) => api('/quote-catalog/categories', { method: 'POST', body: JSON.stringify(data) }),
+  deleteCatalogCategory: (id: string) => api(`/quote-catalog/categories/${id}`, { method: 'DELETE' }),
+
+  getCatalogProducts: (categoryId?: string) => api(`/quote-catalog/products${categoryId ? `?category_id=${categoryId}` : ''}`),
+  createCatalogProduct: (data: any) => api('/quote-catalog/products', { method: 'POST', body: JSON.stringify(data) }),
+  deleteCatalogProduct: (id: string) => api(`/quote-catalog/products/${id}`, { method: 'DELETE' }),
+  getCatalogProduct: (id: string) => api(`/quote-catalog/products/${id}`),
+
+  addCatalogPrice: (productId: string, data: any) => api(`/quote-catalog/products/${productId}/prices`, { method: 'POST', body: JSON.stringify(data) }),
+  updateCatalogPrice: (productId: string, priceId: string, data: any) => api(`/quote-catalog/products/${productId}/prices/${priceId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteCatalogPrice: (productId: string, priceId: string) => api(`/quote-catalog/products/${productId}/prices/${priceId}`, { method: 'DELETE' }),
+
+  getCatalogOrders: () => api('/quote-catalog/orders'),
+  createCatalogOrder: (data: any) => api('/quote-catalog/orders', { method: 'POST', body: JSON.stringify(data) }),
 };

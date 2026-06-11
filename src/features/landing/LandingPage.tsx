@@ -128,7 +128,7 @@ export function LandingPage() {
     { icon: '📋', title: 'Cuentas de Cobro', desc: 'Documentos formales con datos de empresa, plan de pagos, firma y numeración automática.' },
     { icon: '📱', title: '100% Responsive', desc: 'Accede desde cualquier dispositivo, en cualquier momento. Diseño mobile-first.' },
     { icon: '💰', title: 'Precios en Tiempo Real', desc: 'Cálculo instantáneo con descuentos, servicios adicionales y estimaciones de obra.' },
-    { icon: '📊', title: 'Historial Completo', desc: 'Guarda, edita y gestiona todas tus cotizaciones con sincronización en la nube.' },
+    { icon: '🏗️', title: 'Materiales', desc: 'Gestiona tu catálogo de materiales con precios por ferretería y lista de pedidos.' },
   ];
 
   const stats = [
@@ -186,7 +186,7 @@ export function LandingPage() {
             onClick={() => scrollTo('#hero')}
           />
 
-          <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+          <div className="hide-mobile" style={{ alignItems: 'center', gap: 32 }}>
             {navLinks.map((link) => (
               <span key={link.href} className="landing-nav-link" onClick={() => scrollTo(link.href)}>
                 {link.label}
@@ -197,7 +197,7 @@ export function LandingPage() {
             </button>
           </div>
 
-          <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)} style={{ display: 'none' }} aria-label="Menú">
+          <button className="hamburger show-mobile" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menú">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
               <span className="hamburger-line" style={{ transform: menuOpen ? 'rotate(45deg) translateY(3.5px)' : undefined }} />
               <span className="hamburger-line" style={{ opacity: menuOpen ? 0 : 1, width: 14 }} />
@@ -206,18 +206,25 @@ export function LandingPage() {
           </button>
         </div>
 
+        {/* Mobile menu drawer */}
         {menuOpen && (
-          <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 24, background: 'rgba(15,15,15,0.98)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 16, minWidth: 200, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {navLinks.map((link) => (
-              <span key={link.href} style={{ padding: '10px 16px', borderRadius: 12, cursor: 'pointer', fontSize: 15, color: '#fff' }} onClick={() => scrollTo(link.href)}>
-                {link.label}
-              </span>
-            ))}
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '8px 0' }} />
-            <button className="btn" onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}>
-              {isAuthenticated ? 'Ir al Dashboard' : 'Ingresar'}
-            </button>
-          </div>
+          <>
+            <div className="fixed inset-0 bg-black/60 z-[98]" onClick={() => setMenuOpen(false)} />
+            <div
+              className="fixed top-0 right-0 bottom-0 w-[min(280px,80vw)] bg-[rgba(10,10,10,0.98)] border-l border-white/10 z-[99] pt-20 px-6 flex flex-col gap-4"
+              style={{ animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
+            >
+              {navLinks.map((link) => (
+                <span key={link.href} className="text-base font-medium cursor-pointer py-3" onClick={() => scrollTo(link.href)}>
+                  {link.label}
+                </span>
+              ))}
+              <div className="border-t border-white/10 my-2" />
+              <button className="btn" onClick={() => { setMenuOpen(false); navigate(isAuthenticated ? '/dashboard' : '/login'); }}>
+                {isAuthenticated ? 'Ir al Dashboard' : 'Ingresar'}
+              </button>
+            </div>
+          </>
         )}
       </nav>
 
@@ -260,91 +267,151 @@ export function LandingPage() {
       </section>
 
       {/* Stats */}
-      <section style={{ padding: '80px 24px', maxWidth: 1200, margin: '0 auto' }}>
-        <div ref={statsReveal.ref} className={`grid-2 stagger-children ${statsReveal.visible ? 'visible' : ''}`} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+      <div style={{ padding: '60px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div ref={statsReveal.ref} className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24, maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
           {stats.map((stat, i) => (
-            <div key={i} className="stat-card scroll-reveal-up">
-              <div className="stat-number">{stat.value}</div>
-              <p className="small" style={{ marginTop: 8 }}>{stat.label}</p>
+            <div
+              key={i}
+              className="scroll-reveal-up"
+              style={{
+                transitionDelay: `${i * 100}ms`,
+                transform: statsReveal.visible ? 'translateY(0)' : 'translateY(30px)',
+                opacity: statsReveal.visible ? 1 : 0,
+                transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease',
+              }}
+            >
+              <div style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 700, color: '#b69462', marginBottom: 8 }}>{stat.value}</div>
+              <div style={{ fontSize: 14, color: '#999', textTransform: 'uppercase', letterSpacing: 1 }}>{stat.label}</div>
             </div>
           ))}
         </div>
-      </section>
+      </div>
 
       {/* Features */}
-      <section id="features" style={{ padding: '80px 24px', maxWidth: 1200, margin: '0 auto' }}>
-        <div ref={featuresTitleReveal.ref} style={{ textAlign: 'center', marginBottom: 60 }} className={`scroll-reveal-up ${featuresTitleReveal.visible ? 'visible' : ''}`}>
-          <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 700, marginBottom: 16, background: 'linear-gradient(135deg, #ffffff, #b69462)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Todo lo que necesitas
-          </h2>
-          <p style={{ color: '#999', fontSize: 18, lineHeight: 1.6, maxWidth: 600, margin: '0 auto' }}>
-            Herramientas profesionales diseñadas para arquitectos, ingenieros y constructoras
-          </p>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 40, alignItems: 'center' }}>
-          <div ref={featuresListReveal.ref} className={`stagger-children ${featuresListReveal.visible ? 'visible' : ''}`} style={{ display: 'grid', gap: 20 }}>
-            {features.map((feature, i) => (
-              <div key={i} className="scroll-reveal-right" style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                <div style={{ fontSize: 28, background: 'rgba(182, 148, 98, 0.1)', padding: '12px', borderRadius: 12, border: '1px solid rgba(182, 148, 98, 0.2)', flexShrink: 0 }}>
-                  {feature.icon}
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{feature.title}</h3>
-                  <p className="small" style={{ lineHeight: 1.6 }}>{feature.desc}</p>
-                </div>
-              </div>
-            ))}
+      <section id="features" style={{ padding: '100px 24px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div ref={featuresTitleReveal.ref} className="scroll-reveal-up" style={{ textAlign: 'center', marginBottom: 60, transform: featuresTitleReveal.visible ? 'translateY(0)' : 'translateY(30px)', opacity: featuresTitleReveal.visible ? 1 : 0, transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease' }}>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 700, marginBottom: 16 }}>
+              {getConfig('features', 'title', 'Todo lo que necesitas para cotizar')}
+            </h2>
+            <p style={{ fontSize: 18, color: '#999', maxWidth: 600, margin: '0 auto' }}>
+              {getConfig('features', 'subtitle', 'Un sistema completo diseñado para profesionales de la construcción')}
+            </p>
           </div>
 
-          <div ref={featuresImageReveal.ref} className={`scroll-reveal-scale ${featuresImageReveal.visible ? 'visible' : ''}`}>
-            <img src={casaImage} alt="Casa moderna" loading="lazy" style={{ width: '100%', borderRadius: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', border: '1px solid rgba(182, 148, 98, 0.2)' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'center' }}>
+            <div ref={featuresListReveal.ref} style={{ display: 'grid', gap: 20 }}>
+              {features.map((f, i) => (
+                <div
+                  key={i}
+                  className="scroll-reveal-up"
+                  style={{
+                    transitionDelay: `${i * 100}ms`,
+                    transform: featuresListReveal.visible ? 'translateY(0)' : 'translateY(30px)',
+                    opacity: featuresListReveal.visible ? 1 : 0,
+                    transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease',
+                    display: 'flex',
+                    gap: 16,
+                    alignItems: 'flex-start',
+                    padding: '16px 20px',
+                    borderRadius: 16,
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}
+                >
+                  <span style={{ fontSize: 28, flexShrink: 0 }}>{f.icon}</span>
+                  <div>
+                    <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{f.title}</h3>
+                    <p style={{ fontSize: 14, color: '#999', lineHeight: 1.5 }}>{f.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div ref={featuresImageReveal.ref} className="scroll-reveal-scale" style={{ transform: featuresImageReveal.visible ? 'scale(1)' : 'scale(0.95)', opacity: featuresImageReveal.visible ? 1 : 0, transition: 'transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease' }}>
+              <img
+                src={getImage('features', casa2Image)}
+                alt="Constructora"
+                style={{ width: '100%', borderRadius: 24, boxShadow: '0 40px 80px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}
+              />
+            </div>
           </div>
         </div>
       </section>
 
       {/* Services */}
-      <section id="services" style={{ padding: '80px 24px', maxWidth: 1200, margin: '0 auto' }}>
-        <div ref={servicesTitleReveal.ref} style={{ textAlign: 'center', marginBottom: 48 }} className={`scroll-reveal-up ${servicesTitleReveal.visible ? 'visible' : ''}`}>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 700, marginBottom: 12 }}>Servicios Disponibles</h2>
-          <p className="small" style={{ fontSize: 16, marginBottom: 8 }}>Cada uno calculado al precio por m² de tu proyecto</p>
-          <p className="small" style={{ color: '#b69462', fontSize: 14 }}>También puedes crear tus propios servicios personalizados desde el panel de configuración.</p>
-        </div>
+      <section id="services" style={{ padding: '100px 24px', background: 'rgba(0,0,0,0.3)' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div ref={servicesTitleReveal.ref} className="scroll-reveal-up" style={{ textAlign: 'center', marginBottom: 60, transform: servicesTitleReveal.visible ? 'translateY(0)' : 'translateY(30px)', opacity: servicesTitleReveal.visible ? 1 : 0, transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease' }}>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 700, marginBottom: 16 }}>
+              {getConfig('services', 'title', 'Servicios disponibles')}
+            </h2>
+            <p style={{ fontSize: 18, color: '#999', maxWidth: 600, margin: '0 auto' }}>
+              También puedes crear tus propios servicios personalizados desde el panel de configuración
+            </p>
+          </div>
 
-        <div ref={servicesGridReveal.ref} className={`grid-2 stagger-children ${servicesGridReveal.visible ? 'visible' : ''}`} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
-          {services.map((s, i) => (
-            <div key={i} className="card scroll-reveal-up" style={{ padding: 28 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-accent)', letterSpacing: 1 }}>{s.n}</span>
-              <h4 style={{ fontSize: 18, fontWeight: 600, margin: '12px 0 8px' }}>{s.t}</h4>
-              <p className="small" style={{ lineHeight: 1.6 }}>{s.d}</p>
-            </div>
-          ))}
+          <div ref={servicesGridReveal.ref} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+            {services.map((s, i) => (
+              <div
+                key={i}
+                className="scroll-reveal-up"
+                style={{
+                  transitionDelay: `${i * 80}ms`,
+                  transform: servicesGridReveal.visible ? 'translateY(0)' : 'translateY(30px)',
+                  opacity: servicesGridReveal.visible ? 1 : 0,
+                  transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease',
+                  padding: '24px 20px',
+                  borderRadius: 16,
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  textAlign: 'center',
+                }}
+              >
+                <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#b69462', marginBottom: 12 }}>{s.n}</div>
+                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{s.t}</h3>
+                <p style={{ fontSize: 13, color: '#999', lineHeight: 1.5 }}>{s.d}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section id="cta" style={{ padding: '100px 24px', textAlign: 'center', position: 'relative' }}>
-        <div style={{ position: 'absolute', top: '20%', left: '10%', width: 200, height: 200, background: 'radial-gradient(circle, rgba(182,148,98,0.06) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none', animation: 'floatParticle 10s ease-in-out infinite' }} />
-        <div style={{ position: 'absolute', bottom: '20%', right: '10%', width: 250, height: 250, background: 'radial-gradient(circle, rgba(182,148,98,0.05) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none', animation: 'floatParticle 8s ease-in-out 2s infinite' }} />
-
-        <div ref={ctaReveal.ref} className={`card-hero scroll-reveal-scale ${ctaReveal.visible ? 'visible' : ''}`} style={{ maxWidth: 800, margin: '0 auto', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${getImage('cta_bg', casa2Image)})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.05 }} />
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <img src={logoWhite} alt="ELEMENThaus" loading="lazy" style={{ width: 80, height: 'auto', marginBottom: 24, opacity: 0.9 }} />
-            <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', fontWeight: 700, marginBottom: 16 }}>¿Listo para profesionalizar tus cotizaciones?</h2>
-            <p style={{ color: '#999', marginBottom: 32, fontSize: 18 }}>Únete a los estudios de arquitectura que ya confían en ELEMENT</p>
-            <button className="btn" style={{ width: 'auto', padding: '18px 48px', fontSize: 18 }} onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}>
-              {isAuthenticated ? 'Ir al Dashboard →' : 'Empezar Gratis →'}
+      <section id="cta" style={{ padding: '120px 24px', textAlign: 'center' }}>
+        <div ref={ctaReveal.ref} className="scroll-reveal-up" style={{ maxWidth: 600, margin: '0 auto', transform: ctaReveal.visible ? 'translateY(0)' : 'translateY(30px)', opacity: ctaReveal.visible ? 1 : 0, transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease' }}>
+          <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 700, marginBottom: 20 }}>
+            {getConfig('cta', 'title', '¿Listo para empezar?')}
+          </h2>
+          <p style={{ fontSize: 18, color: '#999', marginBottom: 40 }}>
+            {getConfig('cta', 'subtitle', 'Únete a cientos de profesionales que ya usan ELEMENT para cotizar sus proyectos')}
+          </p>
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button className="btn" style={{ width: 'auto', padding: '16px 40px', fontSize: 18 }} onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}>
+              {isAuthenticated ? 'Ir al Dashboard →' : 'Crear Cuenta Gratis'}
+            </button>
+            <button className="btn btn-ghost" style={{ width: 'auto', padding: '16px 40px', fontSize: 18 }} onClick={() => navigate('/login')}>
+              Iniciar Sesión
             </button>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer ref={footerReveal.ref} style={{ padding: '48px 24px', textAlign: 'center', borderTop: '1px solid var(--color-line)' }} className={`scroll-reveal-fade ${footerReveal.visible ? 'visible' : ''}`}>
-        <img src={getImage('logo_white', logoWhite)} alt="ELEMENThaus" loading="lazy" style={{ width: 60, height: 'auto', marginBottom: 16, opacity: 0.8 }} />
-        <p className="small">{getConfig('footer', 'company_name', 'ELEMENThaus - Estudio de Diseño & Construcción')} © 2026</p>
-        <p className="small" style={{ marginTop: 4 }}>{getConfig('footer', 'tagline', 'Cotizador Profesional · Todos los derechos reservados')}</p>
+      <footer ref={footerReveal.ref} style={{ padding: '40px 24px', borderTop: '1px solid rgba(255,255,255,0.06)', opacity: footerReveal.visible ? 1 : 0, transition: 'opacity 0.6s ease' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <img src={logoWhite} alt="ELEMENThaus" style={{ height: 32, width: 'auto' }} />
+            <span style={{ fontSize: 14, color: '#999' }}>© 2026 ELEMENT. Todos los derechos reservados.</span>
+          </div>
+          <div style={{ display: 'flex', gap: 24 }}>
+            {navLinks.map((link) => (
+              <span key={link.href} className="landing-nav-link" style={{ fontSize: 13 }} onClick={() => scrollTo(link.href)}>
+                {link.label}
+              </span>
+            ))}
+          </div>
+        </div>
       </footer>
     </div>
   );

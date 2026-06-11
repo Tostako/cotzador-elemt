@@ -231,15 +231,16 @@ export function InvoicePage() {
 
   return (
     <main>
-      <div className="no-print" style={{ marginBottom: 20 }}>
+      <div className="no-print" style={{ marginBottom: 20, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button
           className="btn btn-small btn-secondary"
           onClick={() => navigate(`/quotes/${quoteId}/invoices`)}
+          style={{ flex: '1 1 auto', minWidth: 140 }}
         >
           ← Volver a Cuentas de Cobro
         </button>
 
-        <button className="btn btn-small" onClick={handlePrint} style={{ float: 'right' }}>
+        <button className="btn btn-small" onClick={handlePrint} style={{ flex: '1 1 auto', minWidth: 140 }}>
           🖨️ Imprimir / PDF
         </button>
       </div>
@@ -545,8 +546,8 @@ export function InvoicePage() {
 
       {/* Generate mode: Finalize button */}
       {isGenerateMode && (
-        <div className="no-print" style={{ textAlign: 'center', marginTop: 20 }}>
-          <button className="btn" onClick={handleFinalize} style={{ padding: '12px 32px', fontSize: 16 }}>
+        <div className="no-print" style={{ marginTop: 20 }}>
+          <button className="btn" onClick={handleFinalize} style={{ width: '100%', padding: '12px 32px', fontSize: 16 }}>
             ✓ Finalizar y Guardar
           </button>
         </div>

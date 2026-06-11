@@ -209,6 +209,24 @@ export const useStore = create<AppState>((set, get) => ({
         }
 
         set({ config: mergedConfig });
+
+        // Extract customer info (phone, address) from the nested customer object
+        const customerData = rawConfig?.customer;
+        if (customerData && typeof customerData === 'object') {
+          const { user: currentUser } = get();
+          if (currentUser) {
+            const updatedUser = {
+              ...currentUser,
+              phone: customerData.phone || currentUser.phone,
+              address: customerData.address || currentUser.address,
+              name: customerData.name || currentUser.name,
+              email: customerData.email || currentUser.email,
+              profession: customerData.address || currentUser.profession,
+            };
+            localStorage.setItem('element_user', JSON.stringify(updatedUser));
+            set({ user: updatedUser });
+          }
+        }
       }
     } catch (e: any) {
       console.error('[STORE] Error loading from backend:', e.message || e);

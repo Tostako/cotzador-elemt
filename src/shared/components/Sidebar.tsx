@@ -40,6 +40,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     { route: '/pagos', icon: '💳', label: 'Plan de Pagos' },
     { route: '/cuenta-cobro', icon: '📋', label: 'Cuenta de Cobro' },
     { route: '/estimacion', icon: '🏗️', label: 'Estimación de Obra' },
+    { route: '/perfil', icon: '👤', label: 'Perfil' },
+  ];
+
+  const materialsItems = [
+    { route: '/materiales', icon: '🏗️', label: 'Materiales' },
   ];
 
   const calculatorItems = [
@@ -111,6 +116,22 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           {/* Calculators section */}
           <p className="small" style={{ padding: '16px 12px 8px', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 8 }}>Calculadoras</p>
           {calculatorItems.map((item) => (
+            <div
+              key={item.route}
+              className={`sidebar-item ${isActive(item.route) ? 'active' : ''}`}
+              onClick={() => handleNavigate(item.route)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && handleNavigate(item.route)}
+            >
+              <span style={{ fontSize: 20, width: 28, textAlign: 'center' }}>{item.icon}</span>
+              <span>{item.label}</span>
+            </div>
+          ))}
+
+          {/* Materials section */}
+          <p className="small" style={{ padding: '16px 12px 8px', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 8 }}>Materiales</p>
+          {materialsItems.map((item) => (
             <div
               key={item.route}
               className={`sidebar-item ${isActive(item.route) ? 'active' : ''}`}
