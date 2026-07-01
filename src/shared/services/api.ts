@@ -253,4 +253,11 @@ export const apiService = {
 
   getCatalogOrders: () => api('/quote-catalog/orders'),
   createCatalogOrder: (data: any) => api('/quote-catalog/orders', { method: 'POST', body: JSON.stringify(data) }),
+
+  // ── Tile Calculator (Enchapes) ────────────────────
+  getTileProjects: () => api('/tile-calculator/projects'),
+  getTileProject: (id: string) => api(`/tile-calculator/projects/${id}`),
+  createTileProject: (data: any) => api('/tile-calculator/projects', { method: 'POST', body: JSON.stringify(data) }),
+  updateTileProject: (id: string, data: any) => api(`/tile-calculator/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTileProject: (id: string) => api(`/tile-calculator/projects/${id}`, { method: 'DELETE' }),
 };

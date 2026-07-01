@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAppStore } from '../../shared/hooks/useNotifications';
+import { showNotification } from '../../shared/hooks/useNotifications';
 import type { QuoteCatalogProduct, QuoteCatalogPrice } from '../../shared/types';
+import { ArrowLeft, DollarSign, Award, ShoppingCart, Trash2 } from 'lucide-react';
 
 export function ProductoPage() {
   const navigate = useNavigate();
   const { productId } = useParams();
-  const showNotification = useAppStore((s) => s.showNotification);
+
   const [product, setProduct] = useState<QuoteCatalogProduct | null>(null);
   const [prices, setPrices] = useState<QuoteCatalogPrice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showPriceForm, setShowPriceForm] = useState(false);
   const [newPrice, setNewPrice] = useState({ hardware_store: '', brand: '', price: '', notes: '' });
   const [quantity, setQuantity] = useState(1);
+  const [deletePriceConfirm, setDeletePriceConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     if (productId) {
@@ -31,7 +33,7 @@ export function ProductoPage() {
         setPrices(priceList.sort((a: QuoteCatalogPrice, b: QuoteCatalogPrice) => a.price - b.price));
       }
     } catch (err: any) {
-      showNotification(err.message || 'Error al cargar producto', 'error');
+      showNotification('Error', 'error', err.message || 'Error al cargar producto');
     } finally {
       setIsLoading(false);
     }
@@ -39,7 +41,7 @@ export function ProductoPage() {
 
   const handleAddPrice = async () => {
     if (!newPrice.hardware_store.trim() || !newPrice.brand.trim() || !newPrice.price) {
-      showNotification('Ferretería, marca y precio son obligatorios', 'warning');
+      showNotification('Atención', 'warning', 'Ferretería, marca y precio son obligatorios.');
       return;
     }
     try {
@@ -50,25 +52,30 @@ export function ProductoPage() {
         price: parseFloat(newPrice.price),
         notes: newPrice.notes.trim() || undefined,
       });
-      showNotification('Precio agregado', 'success');
+      showNotification('Correcto', 'success', 'Precio agregado correctamente.');
       setNewPrice({ hardware_store: '', brand: '', price: '', notes: '' });
       setShowPriceForm(false);
       loadProduct();
     } catch (err: any) {
-      showNotification(err.message || 'Error al agregar precio', 'error');
+      showNotification('Error', 'error', err.message || 'Error al agregar precio.');
     }
   };
 
   const handleDeletePrice = async (priceId: string) => {
-    if (!confirm('¿Eliminar este precio?')) return;
+    setDeletePriceConfirm(priceId);
+  };
+
+  const confirmDeletePrice = async () => {
+    if (!deletePriceConfirm) return;
     try {
       const { apiService } = await import('../../shared/services/api');
-      await apiService.deleteCatalogPrice(productId!, priceId);
-      showNotification('Precio eliminado', 'success');
+      await apiService.deleteCatalogPrice(productId!, deletePriceConfirm);
+      showNotification('Correcto', 'success', 'Precio eliminado correctamente.');
       loadProduct();
     } catch (err: any) {
-      showNotification(err.message || 'Error al eliminar', 'error');
+      showNotification('Error', 'error', err.message || 'Error al eliminar.');
     }
+    setDeletePriceConfirm(null);
   };
 
   const handleOrder = async (price: QuoteCatalogPrice) => {
@@ -84,17 +91,17 @@ export function ProductoPage() {
           },
         ],
       });
-      showNotification('Agregado a pedidos', 'success');
+      showNotification('Correcto', 'success', 'Producto agregado a pedidos correctamente.');
       navigate('/materiales/pedidos');
     } catch (err: any) {
-      showNotification(err.message || 'Error al crear pedido', 'error');
+      showNotification('Error', 'error', err.message || 'Error al crear pedido.');
     }
   };
 
   return (
     <main>
-      <button className="btn btn-ghost btn-small mb-2" onClick={() => navigate(-1)}>
-        ← Volver
+      <button className="btn btn-ghost btn-small mb-2" onClick={() => navigate('/materiales')} style={{ gap: 6 }}>
+        <ArrowLeft size={15} /> Volver a Materiales
       </button>
 
       {isLoading ? (
@@ -108,7 +115,7 @@ export function ProductoPage() {
 
           <div className="card mt-2" style={{ marginBottom: 24 }}>
             <div className="flex-between mb-2">
-              <h3 style={{ fontSize: 18, fontWeight: 600 }}>💰 Precios por Ferretería</h3>
+              <h3 style={{ fontSize: 18, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}><DollarSign size={18} color="#b69462" /> Precios por Ferretería</h3>
               <button className="btn btn-small" onClick={() => setShowPriceForm(!showPriceForm)}>
                 {showPriceForm ? '× Cancelar' : '+ Agregar Precio'}
               </button>
@@ -157,7 +164,7 @@ export function ProductoPage() {
                     <div className="flex-between" style={{ alignItems: 'flex-start' }}>
                       <div>
                         <div style={{ fontSize: 16, fontWeight: 600 }}>
-                          {index === 0 && <span style={{ color: '#b69462', marginRight: 8 }}>🏆</span>}
+                          {index === 0 && <Award size={16} color="#b69462" style={{ marginRight: 8, verticalAlign: '-2px' }} />}
                           {price.hardware_store}
                         </div>
                         <p className="small" style={{ color: '#999' }}>Marca: {price.brand}</p>
@@ -165,7 +172,7 @@ export function ProductoPage() {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: 20, fontWeight: 700, color: '#b69462' }}>
-                          ${price.price.toLocaleString('es-CO')}
+                          ${Number(price.price).toLocaleString('es-CO')}
                         </div>
                         <div style={{ display: 'flex', gap: 8, marginTop: 8, justifyContent: 'flex-end' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -183,14 +190,15 @@ export function ProductoPage() {
                           <button
                             className="btn btn-small"
                             onClick={() => handleOrder(price)}
+                            style={{ gap: 6 }}
                           >
-                            🛒 Pedir
+                            <ShoppingCart size={14} /> Pedir
                           </button>
                           <button
                             className="btn btn-small btn-danger"
                             onClick={() => handleDeletePrice(price.id)}
                           >
-                            🗑️
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </div>
@@ -201,6 +209,29 @@ export function ProductoPage() {
             )}
           </div>
         </>
+      )}
+
+      {/* Delete Price Confirmation Modal */}
+      {deletePriceConfirm && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget) setDeletePriceConfirm(null); }}
+        >
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <h3 style={{ marginBottom: 8 }}>¿Eliminar precio?</h3>
+            <p className="small mb-2" style={{ color: '#999' }}>
+              Esta acción no se puede deshacer.
+            </p>
+            <div className="grid-2" style={{ marginTop: 24 }}>
+              <button className="btn btn-secondary" onClick={() => setDeletePriceConfirm(null)}>
+                Cancelar
+              </button>
+              <button className="btn btn-danger" onClick={confirmDeletePrice} style={{ gap: 6 }}>
+                <Trash2 size={16} /> Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

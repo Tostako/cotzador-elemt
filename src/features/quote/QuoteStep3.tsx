@@ -72,7 +72,7 @@ export function QuoteStep3() {
                   onClick={() => toggleFacade(item.key)}
                 >
                   <span>
-                    {item.label} ({item.value.toFixed(1)}m)
+                    {item.label} ({Number(item.value).toFixed(1)}m)
                   </span>
                 </div>
               ))}

@@ -10,13 +10,14 @@ import { InvoicePage } from '../features/invoice/InvoicePage';
 import { TarifasPage } from '../features/settings/TarifasPage';
 import { PagosPage } from '../features/settings/PagosPage';
 import { CuentaCobroPage } from '../features/settings/CuentaCobroPage';
-import { EstimacionPage } from '../features/settings/EstimacionPage';
+import { EstimacionModule } from '../features/settings/EstimacionModule';
 import { PerfilPage } from '../features/settings/PerfilPage';
 import { MaterialesPage } from '../features/materials/MaterialesPage';
 import { CategoriaPage } from '../features/materials/CategoriaPage';
 import { ProductoPage } from '../features/materials/ProductoPage';
 import { PedidosPage } from '../features/materials/PedidosPage';
 import { QuoteInvoicesPage } from '../features/invoice/QuoteInvoicesPage';
+import { EnchapesPage } from '../features/enchapes/EnchapesPage';
 // import { EstimationCalculatorPage } from '../features/calculator/EstimationCalculatorPage';
 import { Layout } from './Layout';
 import { useStore } from '../shared/services/store';
@@ -78,7 +79,11 @@ export const router = createBrowserRouter([
   },
   {
     path: '/estimacion',
-    element: <ProtectedRoute><Layout><EstimacionPage /></Layout></ProtectedRoute>,
+    element: <ProtectedRoute><Layout><EstimacionModule /></Layout></ProtectedRoute>,
+  },
+  {
+    path: '/calculadoras/enchapes',
+    element: <ProtectedRoute><Layout><EnchapesPage /></Layout></ProtectedRoute>,
   },
   {
     path: '/perfil',

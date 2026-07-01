@@ -1,12 +1,14 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../../shared/services/store';
-import { useAppStore } from '../../shared/hooks/useNotifications';
+import { showNotification } from '../../shared/hooks/useNotifications';
 import { TourBanner } from '../../shared/components/TourBanner';
 import { isTourActiveForRoute } from '../../shared/utils/tour';
+import { BackButton } from '../../shared/components/BackButton';
+import { User, Save, Building2, Signature, Upload, Trash2 } from 'lucide-react';
 
 export function PerfilPage() {
   const { user, config, updateConfig, login } = useStore();
-  const showNotification = useAppStore((s) => s.showNotification);
+
   const showTour = isTourActiveForRoute('/perfil');
 
   const [name, setName] = useState(user?.name || '');
@@ -20,7 +22,7 @@ export function PerfilPage() {
 
   const handleSaveProfile = async () => {
     if (!name.trim()) {
-      showNotification('El nombre no puede estar vacío', 'warning');
+      showNotification('Atención', 'warning', 'El nombre no puede estar vacío.');
       return;
     }
     setIsSaving(true);
@@ -36,9 +38,9 @@ export function PerfilPage() {
       if (user) {
         login({ ...user, name: name.trim(), email: email.trim(), profession: profession.trim() || undefined });
       }
-      showNotification('Perfil actualizado correctamente', 'success');
+      showNotification('Actualización correcta', 'success', 'Perfil actualizado correctamente.');
     } catch (err: any) {
-      showNotification(err.message || 'Error al actualizar perfil', 'error');
+      showNotification('Error', 'error', err.message || 'Error al actualizar perfil');
     } finally {
       setIsSaving(false);
     }
@@ -52,12 +54,12 @@ export function PerfilPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      showNotification('Solo se permiten archivos de imagen', 'error');
+      showNotification('Error', 'error', 'Solo se permiten archivos de imagen.');
       return;
     }
     const maxSize = 1 * 1024 * 1024;
     if (file.size > maxSize) {
-      showNotification('La imagen no debe superar 1MB', 'error');
+      showNotification('Error', 'error', 'La imagen no debe superar 1MB.');
       return;
     }
     const reader = new FileReader();
@@ -71,10 +73,10 @@ export function PerfilPage() {
           },
         },
       });
-      showNotification('Imagen cargada correctamente', 'success');
+      showNotification('Correcto', 'success', 'Imagen cargada correctamente.');
     };
     reader.onerror = () => {
-      showNotification('Error al leer la imagen', 'error');
+      showNotification('Error', 'error', 'Error al leer la imagen.');
     };
     reader.readAsDataURL(file);
   };
@@ -95,12 +97,13 @@ export function PerfilPage() {
 
   return (
     <main>
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>👤 Perfil</h1>
+      <BackButton />
+      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}><User size={28} color="#b69462" /> Perfil</h1>
       <p className="small">Gestiona tus datos personales, logo y firma digital</p>
 
       {/* Profile Info */}
       <div className="card mt-2">
-        <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>📝 Información Personal</h3>
+        <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><User size={18} color="#b69462" /> Información Personal</h3>
         <div style={{ display: 'grid', gap: 12 }}>
           <div>
             <label className="small" style={{ display: 'block', marginBottom: 4 }}>Nombre completo</label>
@@ -118,15 +121,15 @@ export function PerfilPage() {
             <label className="small" style={{ display: 'block', marginBottom: 4 }}>Profesión</label>
             <input className="input" value={profession} onChange={(e) => setProfession(e.target.value)} placeholder="Ej: Arquitecto, Ingeniero..." />
           </div>
-          <button className="btn" onClick={handleSaveProfile} disabled={isSaving}>
-            {isSaving ? 'Guardando...' : '💾 Guardar Perfil'}
+          <button className="btn" onClick={handleSaveProfile} disabled={isSaving} style={{ gap: 6 }}>
+            {isSaving ? 'Guardando...' : <><Save size={16} /> Guardar Perfil</>}
           </button>
         </div>
       </div>
 
       {/* Company Logo */}
       <div className="card mt-2">
-        <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>🏢 Logo de la Empresa</h3>
+        <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><Building2 size={18} color="#b69462" /> Logo de la Empresa</h3>
         <p className="small" style={{ color: '#999', marginBottom: 12 }}>
           Este logo aparecerá en tus cuentas de cobro y recibos de pago.
         </p>
@@ -147,10 +150,10 @@ export function PerfilPage() {
               />
               <div style={{ display: 'flex', gap: 8, marginTop: 8, justifyContent: 'center' }}>
                 <button className="btn btn-small btn-secondary" onClick={() => logoInputRef.current?.click()}>
-                  🔄 Cambiar
+                  <Upload size={14} /> Cambiar
                 </button>
                 <button className="btn btn-small btn-danger" onClick={() => clearImage('company', 'logo')}>
-                  🗑️ Eliminar
+                  <Trash2 size={14} /> Eliminar
                 </button>
               </div>
             </div>
@@ -165,7 +168,7 @@ export function PerfilPage() {
               }}
               onClick={() => logoInputRef.current?.click()}
             >
-              <span style={{ fontSize: 32, marginBottom: 8, display: 'block' }}>🏢</span>
+              <Building2 size={30} color="#8c8578" style={{ marginBottom: 8 }} />
               <p className="small" style={{ color: '#999' }}>Haz clic para subir tu logo</p>
             </div>
           )}
@@ -174,7 +177,7 @@ export function PerfilPage() {
 
       {/* Digital Signature */}
       <div className="card mt-2">
-        <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>✍️ Firma Digital</h3>
+        <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><Signature size={18} color="#b69462" /> Firma Digital</h3>
         <p className="small" style={{ color: '#999', marginBottom: 12 }}>
           Tu firma aparecerá en las cuentas de cobro generadas.
         </p>
@@ -195,10 +198,10 @@ export function PerfilPage() {
               />
               <div style={{ display: 'flex', gap: 8, marginTop: 8, justifyContent: 'center' }}>
                 <button className="btn btn-small btn-secondary" onClick={() => signatureInputRef.current?.click()}>
-                  🔄 Cambiar
+                  <Upload size={14} /> Cambiar
                 </button>
                 <button className="btn btn-small btn-danger" onClick={() => clearImage('representative', 'signature')}>
-                  🗑️ Eliminar
+                  <Trash2 size={14} /> Eliminar
                 </button>
               </div>
             </div>
@@ -213,7 +216,7 @@ export function PerfilPage() {
               }}
               onClick={() => signatureInputRef.current?.click()}
             >
-              <span style={{ fontSize: 32, marginBottom: 8, display: 'block' }}>✍️</span>
+              <Signature size={30} color="#8c8578" style={{ marginBottom: 8 }} />
               <p className="small" style={{ color: '#999' }}>Haz clic para subir tu firma</p>
             </div>
           )}

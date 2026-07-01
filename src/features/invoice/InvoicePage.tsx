@@ -5,6 +5,7 @@ import { useStore } from '../../shared/services/store';
 import { safeParseQuoteData } from '../../shared/utils/parseQuoteData';
 import { calculateArea, calculatePrice, roundTo50 } from '../../shared/services/calculator';
 import type { QuoteFormData, InvoiceRecord } from '../../shared/types';
+import { ArrowLeft, Printer, Check } from 'lucide-react';
 
 export function InvoicePage() {
   const navigate = useNavigate();
@@ -143,18 +144,20 @@ export function InvoicePage() {
     ? roundTo50(totalPrice * targetInstallment.percentage / 100)
     : totalPrice;
 
+  const PAID_STATUSES = ['confirmed', 'approved', 'paid'];
+
   const isPaid = (index: number) => {
     return quotePayments.some((p) => {
-      const pIndex = Number(p.installmentIndex ?? p.plan_installment_index ?? -1);
-      const pStatus = String(p.status ?? '').toLowerCase();
-      return pIndex === index && (pStatus === 'confirmed' || pStatus === 'approved');
+      const pIndex = Number(p.installmentIndex ?? p.installment_index ?? p.plan_installment_index ?? -1);
+      const pStatus = String(p.status ?? 'confirmed').toLowerCase();
+      return pIndex === index && PAID_STATUSES.includes(pStatus);
     });
   };
 
   const totalPaid = quotePayments
     .filter((p) => {
-      const pStatus = String(p.status ?? '').toLowerCase();
-      return pStatus === 'confirmed' || pStatus === 'approved';
+      const pStatus = String(p.status ?? 'confirmed').toLowerCase();
+      return PAID_STATUSES.includes(pStatus);
     })
     .reduce((sum, p) => sum + (parseFloat(p.transactionAmount ?? p.amount ?? p.transaction_amount ?? 0) || 0), 0);
 
@@ -235,13 +238,13 @@ export function InvoicePage() {
         <button
           className="btn btn-small btn-secondary"
           onClick={() => navigate(`/quotes/${quoteId}/invoices`)}
-          style={{ flex: '1 1 auto', minWidth: 140 }}
+          style={{ flex: '1 1 auto', minWidth: 140, gap: 6 }}
         >
-          ← Volver a Cuentas de Cobro
+          <ArrowLeft size={15} /> Volver a Cuentas de Cobro
         </button>
 
-        <button className="btn btn-small" onClick={handlePrint} style={{ flex: '1 1 auto', minWidth: 140 }}>
-          🖨️ Imprimir / PDF
+        <button className="btn btn-small" onClick={handlePrint} style={{ flex: '1 1 auto', minWidth: 140, gap: 6 }}>
+          <Printer size={15} /> Imprimir / PDF
         </button>
       </div>
 
@@ -382,7 +385,7 @@ export function InvoicePage() {
                 <tr key={id}>
                   <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11 }}>{service.name}</td>
                   <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'center' }}>{service.unit === '/m²' ? area.total.toFixed(2) + ' m²' : '1'}</td>
-                  <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'right' }}>${service.price.toLocaleString('es-CO')}</td>
+                  <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'right' }}>${Number(service.price).toLocaleString('es-CO')}</td>
                   <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'right' }}>${roundTo50(total).toLocaleString('es-CO')}</td>
                 </tr>
               );
@@ -391,7 +394,7 @@ export function InvoicePage() {
               <tr key={service.id}>
                 <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11 }}>{service.name}</td>
                 <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'center' }}>1</td>
-                <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'right' }}>${service.price.toLocaleString('es-CO')}</td>
+                <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'right' }}>${Number(service.price).toLocaleString('es-CO')}</td>
                 <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'right' }}>${roundTo50(service.price).toLocaleString('es-CO')}</td>
               </tr>
             ))}
@@ -456,9 +459,9 @@ export function InvoicePage() {
                       </td>
                       <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'center' }}>
                         {paid ? (
-                          <span style={{ color: '#2ecc71', fontWeight: 'bold' }}>✓ Pagado</span>
+                          <span style={{ color: '#2ecc71', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Check size={13} /> Pagado</span>
                         ) : (
-                          <span style={{ color: '#e74c3c' }}>⏳ Pendiente</span>
+                          <span style={{ color: '#e74c3c', display: 'inline-flex', alignItems: 'center', gap: 4 }}>⏳ Pendiente</span>
                         )}
                       </td>
                     </tr>
@@ -547,8 +550,8 @@ export function InvoicePage() {
       {/* Generate mode: Finalize button */}
       {isGenerateMode && (
         <div className="no-print" style={{ marginTop: 20 }}>
-          <button className="btn" onClick={handleFinalize} style={{ width: '100%', padding: '12px 32px', fontSize: 16 }}>
-            ✓ Finalizar y Guardar
+          <button className="btn" onClick={handleFinalize} style={{ width: '100%', padding: '12px 32px', fontSize: 16, gap: 8 }}>
+            <Check size={17} /> Finalizar y Guardar
           </button>
         </div>
       )}

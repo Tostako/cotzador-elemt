@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useState, useEffect } from 'react';
 import { TopNav } from '../shared/components/TopNav';
 import { Sidebar } from '../shared/components/Sidebar';
-import { NotificationContainer } from '../shared/hooks/useNotifications';
+import { Toaster } from 'sileo';
 import { useStore } from '../shared/services/store';
 
 interface LayoutProps {
@@ -30,7 +30,7 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <>
-      <NotificationContainer />
+      <Toaster position="top-center" theme="dark" />
       <TopNav onMenuClick={() => setSidebarOpen(true)} />
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="wrap">

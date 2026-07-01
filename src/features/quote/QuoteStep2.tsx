@@ -1,5 +1,6 @@
 import { useStore } from '../../shared/services/store';
 import { calculateArea } from '../../shared/services/calculator';
+import { Ruler, PencilRuler } from 'lucide-react';
 
 export function QuoteStep2() {
   const { formData, setFormData } = useStore();
@@ -69,8 +70,8 @@ export function QuoteStep2() {
       <div className="card lot-card">
         {formData.areaMode === 'direct' ? (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <p className="small mb-2" style={{ color: '#b69462', fontSize: 14, fontWeight: 600 }}>
-              📏 Modo Área Directa
+            <p className="small mb-2" style={{ color: '#b69462', fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Ruler size={15} /> Modo Área Directa
             </p>
             <p className="small" style={{ color: '#999' }}>
               Las dimensiones del terreno se calculan automáticamente desde el área ingresada.
@@ -78,8 +79,8 @@ export function QuoteStep2() {
           </div>
         ) : (
           <>
-            <p className="small mb-4" style={{ color: '#b69462', fontSize: 14, fontWeight: 600 }}>
-              📐 Ingresa las dimensiones del terreno:
+            <p className="small mb-4" style={{ color: '#b69462', fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <PencilRuler size={15} /> Ingresa las dimensiones del terreno:
             </p>
 
             {/* TOP: POSTERIOR */}

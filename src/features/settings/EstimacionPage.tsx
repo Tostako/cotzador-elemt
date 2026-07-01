@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useStore } from '../../shared/services/store';
-import { useAppStore } from '../../shared/hooks/useNotifications';
+import { showNotification } from '../../shared/hooks/useNotifications';
 import { TourBanner } from '../../shared/components/TourBanner';
 import { isTourActiveForRoute } from '../../shared/utils/tour';
 import type { CustomEstimation } from '../../shared/types';
 
 export function EstimacionPage() {
   const { config, updateConfig } = useStore();
-  const showNotification = useAppStore((s) => s.showNotification);
   const showTour = isTourActiveForRoute('/estimacion');
   const [showForm, setShowForm] = useState(false);
   const [newEstimation, setNewEstimation] = useState({ name: '', price: '' });
@@ -16,12 +15,12 @@ export function EstimacionPage() {
 
   const addCustomEstimation = () => {
     if (!newEstimation.name.trim() || !newEstimation.price) {
-      showNotification('Ingresa nombre y precio por m²', 'warning');
+      showNotification('Atención', 'warning', 'Ingresa nombre y precio por m².');
       return;
     }
     const price = parseInt(newEstimation.price) || 0;
     if (price <= 0) {
-      showNotification('El precio debe ser mayor a 0', 'warning');
+      showNotification('Atención', 'warning', 'El precio debe ser mayor a 0.');
       return;
     }
     const estimation: CustomEstimation = {
@@ -37,7 +36,7 @@ export function EstimacionPage() {
     });
     setNewEstimation({ name: '', price: '' });
     setShowForm(false);
-    showNotification('Estimación creada correctamente', 'success');
+    showNotification('Correcto', 'success', 'Estimación creada correctamente.');
   };
 
   const deleteCustomEstimation = (id: number | string) => {
@@ -47,7 +46,7 @@ export function EstimacionPage() {
         customEstimations: customEstimations.filter((e) => e.id !== id),
       },
     });
-    showNotification('Estimación eliminada', 'success');
+    showNotification('Correcto', 'success', 'Estimación eliminada correctamente.');
   };
 
   const updatePrice = (key: 'obraNegraPrice' | 'obraGrisPrice' | 'acabadosPrice', val: string) => {
@@ -59,9 +58,8 @@ export function EstimacionPage() {
   };
 
   return (
-    <main>
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>🏗️ Estimación de Obra</h1>
-      <p className="small">Configurar precios de obra negra, obra gris, acabados y estimaciones personalizadas</p>
+    <>
+      <p className="small" style={{ marginBottom: 16 }}>Configura los precios por m² de obra negra, obra gris, acabados y estimaciones personalizadas.</p>
 
       {/* Fixed estimations */}
       <div className="card mt-2">
@@ -214,7 +212,7 @@ export function EstimacionPage() {
                 <div>
                   <div style={{ fontWeight: 600, marginBottom: 2 }}>{est.name}</div>
                   <div className="small" style={{ color: '#b69462' }}>
-                    ${est.price.toLocaleString('es-CO')} / m²
+                    ${Number(est.price).toLocaleString('es-CO')} / m²
                   </div>
                 </div>
                 <button
@@ -230,6 +228,6 @@ export function EstimacionPage() {
       </div>
 
       {showTour && <TourBanner />}
-    </main>
+    </>
   );
 }

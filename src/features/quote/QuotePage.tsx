@@ -1,16 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../shared/services/store';
-import { useAppStore } from '../../shared/hooks/useNotifications';
+import { showNotification } from '../../shared/hooks/useNotifications';
 import { QuoteStep1 } from './QuoteStep1';
 import { QuoteStep2 } from './QuoteStep2';
 import { QuoteStep3 } from './QuoteStep3';
 import { QuoteStep4 } from './QuoteStep4';
 import { QuoteStep5 } from './QuoteStep5';
 import { calculateArea, calculatePrice } from '../../shared/services/calculator';
+import { ArrowLeft, ArrowRight, X, RefreshCw, Save } from 'lucide-react';
 
 export function QuotePage() {
   const navigate = useNavigate();
-  const showNotification = useAppStore((s) => s.showNotification);
   const { formData, config, quoteStep, setQuoteStep, resetForm, addQuote, updateQuote, editingQuoteId, setEditingQuoteId } = useStore();
 
   const isEditing = editingQuoteId !== null;
@@ -19,7 +19,7 @@ export function QuotePage() {
 
   const nextStep = () => {
     if (quoteStep === 1 && (!formData.client.trim() || !formData.project.trim())) {
-      showNotification('Ingresa nombre de cliente y proyecto', 'warning');
+      showNotification('Atención', 'warning', 'Ingresa el nombre del cliente y el proyecto para continuar.');
       return;
     }
     setQuoteStep(quoteStep + 1);
@@ -47,13 +47,13 @@ export function QuotePage() {
     if (isEditing) {
       // PATCH existing quote
       updateQuote(editingQuoteId, payload);
-      showNotification('¡Cotización actualizada correctamente!', 'success');
+      showNotification('Actualización correcta', 'success', 'La cotización fue actualizada correctamente.');
       setEditingQuoteId(null);
     } else {
       // POST new quote
       const quote = { id: Date.now(), status: 'draft' as const, ...payload };
       addQuote(quote);
-      showNotification('¡Cotización guardada correctamente!', 'success');
+      showNotification('Correcto', 'success', 'La cotización fue guardada correctamente.');
     }
 
     resetForm();
@@ -80,21 +80,21 @@ export function QuotePage() {
 
       <div className="flex-between mt-2" style={{ gap: 12 }}>
         {quoteStep > 1 ? (
-          <button className="btn btn-secondary" onClick={prevStep} style={{ flex: 1 }}>
-            ← ATRÁS
+          <button className="btn btn-secondary" onClick={prevStep} style={{ flex: 1, gap: 6 }}>
+            <ArrowLeft size={16} /> ATRÁS
           </button>
         ) : (
-          <button className="btn btn-secondary" onClick={() => { if (isEditing) { setEditingQuoteId(null); resetForm(); } navigate('/dashboard'); }} style={{ flex: 1 }}>
-            {isEditing ? '✕ CANCELAR' : '← INICIO'}
+          <button className="btn btn-secondary" onClick={() => { if (isEditing) { setEditingQuoteId(null); resetForm(); } navigate('/dashboard'); }} style={{ flex: 1, gap: 6 }}>
+            {isEditing ? <><X size={16} /> CANCELAR</> : <><ArrowLeft size={16} /> INICIO</>}
           </button>
         )}
         {quoteStep < 5 ? (
-          <button className="btn" onClick={nextStep} style={{ flex: 2 }}>
-            CONTINUAR →
+          <button className="btn" onClick={nextStep} style={{ flex: 2, gap: 6 }}>
+            CONTINUAR <ArrowRight size={16} />
           </button>
         ) : (
-          <button className="btn" onClick={saveQuote} style={{ flex: 2 }}>
-            {isEditing ? '↻ ACTUALIZAR' : 'GUARDAR'}
+          <button className="btn" onClick={saveQuote} style={{ flex: 2, gap: 6 }}>
+            {isEditing ? <><RefreshCw size={16} /> ACTUALIZAR</> : <><Save size={16} /> GUARDAR</>}
           </button>
         )}
       </div>

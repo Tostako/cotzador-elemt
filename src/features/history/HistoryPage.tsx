@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../shared/services/store';
-import { useAppStore } from '../../shared/hooks/useNotifications';
+import { showNotification } from '../../shared/hooks/useNotifications';
 import { safeParseQuoteData } from '../../shared/utils/parseQuoteData';
 import { calculateArea, calculatePrice } from '../../shared/services/calculator';
 import type { Quote } from '../../shared/types';
+import { BackButton } from '../../shared/components/BackButton';
+import { FileText, Pencil, Copy, Receipt, Calculator, CircleCheck, Layers, House, Sparkles } from 'lucide-react';
 
 export function HistoryPage() {
   const navigate = useNavigate();
-  const showNotification = useAppStore((s) => s.showNotification);
+
   const { quotes, config, formData, paymentPlans, loadPaymentPlans, deleteQuote, setFormData, setQuoteStep, setEditingQuoteId } = useStore();
 
   // Load payment plans on mount (needed to resolve quote's selected plan in summary)
@@ -49,7 +51,7 @@ export function HistoryPage() {
   const confirmDelete = () => {
     if (quoteToDelete) {
       deleteQuote(quoteToDelete);
-      showNotification('Cotización eliminada', 'success');
+      showNotification('Correcto', 'success', 'La cotización fue eliminada correctamente.');
       setShowDeleteConfirm(false);
       setQuoteToDelete(null);
     }
@@ -57,7 +59,7 @@ export function HistoryPage() {
 
   const handleEdit = async (quote: Quote) => {
     if (quote.status === 'paid' || quote.status === 'completed') {
-      showNotification('No puedes editar una cotización finalizada', 'warning');
+      showNotification('Atención', 'warning', 'No puedes editar una cotización finalizada.');
       return;
     }
     // Check if quote has payments
@@ -68,7 +70,7 @@ export function HistoryPage() {
       if (Array.isArray(payments) && payments.length > 0) {
         const hasConfirmed = payments.some((p: any) => p.status === 'confirmed' || p.status === 'approved');
         if (hasConfirmed) {
-          showNotification('No puedes editar una cotización con pagos registrados', 'warning');
+          showNotification('Atención', 'warning', 'No puedes editar una cotización con pagos registrados.');
           return;
         }
       }
@@ -77,7 +79,7 @@ export function HistoryPage() {
     }
     const data = safeParseQuoteData(quote.data);
     if (!data) {
-      showNotification('Error al leer los datos de la cotización', 'error');
+      showNotification('Error', 'error', 'Error al leer los datos de la cotización.');
       return;
     }
     setFormData(data);
@@ -89,7 +91,7 @@ export function HistoryPage() {
   const handleCloneQuote = (quote: Quote) => {
     const data = safeParseQuoteData(quote.data);
     if (!data) {
-      showNotification('Error al leer los datos de la cotización', 'error');
+      showNotification('Error', 'error', 'Error al leer los datos de la cotización.');
       return;
     }
     // Precargar datos base, pero resetear plan de pagos, cuentas de cobro y contador
@@ -121,7 +123,7 @@ export function HistoryPage() {
   const handleView = (quote: Quote) => {
     const data = safeParseQuoteData(quote.data);
     if (!data) {
-      showNotification('Error al leer los datos de la cotización', 'error');
+      showNotification('Error', 'error', 'Error al leer los datos de la cotización.');
       return;
     }
     setFormData(data);
@@ -131,6 +133,7 @@ export function HistoryPage() {
 
   return (
     <main>
+      <BackButton />
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Historial</h1>
       <p className="small">{quotes.length} cotizaciones guardadas</p>
 
@@ -197,7 +200,7 @@ export function HistoryPage() {
                         ● {statusLabels[status]}
                       </span>
                       <span className="small">
-                        {parent.area.toFixed(0)}m² - ${parent.price.toLocaleString('es-CO')}
+                        {Number(parent.area).toFixed(0)}m² - ${Number(parent.price).toLocaleString('es-CO')}
                       </span>
                     </div>
                     <p className="small mt-1">{parent.date}</p>
@@ -234,7 +237,7 @@ export function HistoryPage() {
                                 ● {statusLabels[childStatus]}
                               </span>
                               <span className="small">
-                                {child.area.toFixed(0)}m² - ${child.price.toLocaleString('es-CO')}
+                                {Number(child.area).toFixed(0)}m² - ${Number(child.price).toLocaleString('es-CO')}
                               </span>
                             </div>
                             <p className="small mt-1">{child.date}</p>
@@ -267,28 +270,30 @@ export function HistoryPage() {
             <h3 style={{ marginBottom: 12 }}>{selectedQuote.client}</h3>
             <p className="small mb-2">{selectedQuote.project}</p>
             <div style={{ display: 'grid', gap: 12 }}>
-              <button className="btn btn-secondary" onClick={() => handleView(selectedQuote)}>
-                📄 Ver Resumen
+              <button className="btn btn-secondary" onClick={() => handleView(selectedQuote)} style={{ gap: 8 }}>
+                <FileText size={16} /> Ver Resumen
               </button>
               {(selectedQuote.status !== 'paid' && selectedQuote.status !== 'completed') && (
-                <button className="btn btn-secondary" onClick={() => handleEdit(selectedQuote)}>
-                  ✏️ Editar
+                <button className="btn btn-secondary" onClick={() => handleEdit(selectedQuote)} style={{ gap: 8 }}>
+                  <Pencil size={16} /> Editar
                 </button>
               )}
-              <button className="btn btn-secondary" onClick={() => handleCloneQuote(selectedQuote)}>
-                🔄 Nueva cotización
+              <button className="btn btn-secondary" onClick={() => handleCloneQuote(selectedQuote)} style={{ gap: 8 }}>
+                <Copy size={16} /> Nueva cotización
               </button>
               <button
                 className="btn btn-secondary"
+                style={{ gap: 8 }}
                 onClick={() => {
                   setSelectedQuote(null);
                   navigate(`/quotes/${selectedQuote.id}/invoices`);
                 }}
               >
-                💳 Cuentas de Cobro
+                <Receipt size={16} /> Cuentas de Cobro
               </button>
               <button
                 className="btn btn-secondary"
+                style={{ gap: 8 }}
                 onClick={() => {
                   setEstimationQuote(selectedQuote);
                   setEstimationType('obraNegra');
@@ -296,19 +301,19 @@ export function HistoryPage() {
                   setSelectedQuote(null);
                 }}
               >
-                🏗️ Realizar Estimación
+                <Calculator size={16} /> Realizar Estimación
               </button>
               {(selectedQuote.status !== 'paid' && selectedQuote.status !== 'completed') && (
                 <button
                   className="btn"
-                  style={{ background: '#34c759' }}
+                  style={{ background: '#34c759', gap: 8 }}
                   onClick={() => {
                     useStore.getState().updateQuote(selectedQuote.id, { status: 'completed' });
-                    showNotification('Cotización marcada como finalizada', 'success');
+                    showNotification('Correcto', 'success', 'La cotización fue marcada como finalizada.');
                     setSelectedQuote(null);
                   }}
                 >
-                  ✓ Marcar como Finalizada
+                  <CircleCheck size={16} /> Marcar como Finalizada
                 </button>
               )}
               <button className="btn btn-secondary" onClick={() => setSelectedQuote(null)}>
@@ -326,7 +331,7 @@ export function HistoryPage() {
           onClick={(e) => { if (e.target === e.currentTarget) setShowSummary(false); }}
         >
           <div className="modal" style={{ maxWidth: 540, width: '100%', padding: 24 }}>
-            <h3 style={{ marginBottom: 2, fontSize: 18, fontWeight: 700 }}>📄 Resumen</h3>
+            <h3 style={{ marginBottom: 2, fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><FileText size={18} color="#b69462" /> Resumen</h3>
             <p className="small" style={{ color: '#b69462', fontWeight: 600, marginBottom: 16 }}>
               {formData.client} — {formData.project}
             </p>
@@ -401,7 +406,7 @@ export function HistoryPage() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {formData.additionalServices.map((svc: any) => (
                       <span key={svc.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: 8, fontSize: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
-                        {svc.name} <span style={{ color: '#b69462' }}>${svc.price.toLocaleString('es-CO')}</span>
+                        {svc.name} <span style={{ color: '#b69462' }}>${Number(svc.price).toLocaleString('es-CO')}</span>
                       </span>
                     ))}
                   </div>
@@ -458,7 +463,7 @@ export function HistoryPage() {
           onClick={(e) => { if (e.target === e.currentTarget) setShowEstimation(false); }}
         >
           <div className="modal" style={{ maxWidth: 480 }}>
-            <h3 style={{ marginBottom: 8 }}>🏗️ Estimación de Obra</h3>
+            <h3 style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}><Calculator size={18} color="#b69462" /> Estimación de Obra</h3>
             <p className="small mb-2" style={{ color: '#b69462', fontWeight: 600 }}>
               {estimationQuote.client}
             </p>
@@ -468,7 +473,7 @@ export function HistoryPage() {
             <div className="card" style={{ textAlign: 'center', marginBottom: 20, background: '#0a0a0a' }}>
               <p className="small">Área total construida</p>
               <div style={{ fontSize: 36, fontWeight: 700, color: '#b69462', lineHeight: 1 }}>
-                {estimationQuote.area.toFixed(0)}
+                {Number(estimationQuote.area).toFixed(0)}
               </div>
               <p className="small">m²</p>
             </div>
@@ -480,7 +485,7 @@ export function HistoryPage() {
                 className={`toggle-option ${estimationType === 'obraNegra' ? 'active' : ''}`}
                 onClick={() => setEstimationType('obraNegra')}
               >
-                <span style={{ fontSize: 20 }}>🧱</span>
+                <Layers size={22} color="#b69462" />
                 <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>Obra Negra</div>
                 <div className="small">Sin acabados</div>
               </div>
@@ -488,7 +493,7 @@ export function HistoryPage() {
                 className={`toggle-option ${estimationType === 'obraGris' ? 'active' : ''}`}
                 onClick={() => setEstimationType('obraGris')}
               >
-                <span style={{ fontSize: 20 }}>🏠</span>
+                <House size={22} color="#b69462" />
                 <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>Obra Gris</div>
                 <div className="small">Básicos</div>
               </div>
@@ -496,7 +501,7 @@ export function HistoryPage() {
                 className={`toggle-option ${estimationType === 'acabados' ? 'active' : ''}`}
                 onClick={() => setEstimationType('acabados')}
               >
-                <span style={{ fontSize: 20 }}>✨</span>
+                <Sparkles size={22} color="#b69462" />
                 <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>Acabados</div>
                 <div className="small">Terminada</div>
               </div>
@@ -518,7 +523,7 @@ export function HistoryPage() {
                         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}
                       >
                         <div style={{ fontSize: 14, fontWeight: 600 }}>{est.name}</div>
-                        <div className="small" style={{ color: '#b69462' }}>${est.price.toLocaleString('es-CO')}/m²</div>
+                        <div className="small" style={{ color: '#b69462' }}>${Number(est.price).toLocaleString('es-CO')}/m²</div>
                       </div>
                     ))}
                   </div>

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppStore } from '../../shared/hooks/useNotifications';
+import { showNotification } from '../../shared/hooks/useNotifications';
 import type { QuoteCatalogCategory } from '../../shared/types';
+import { BackButton } from '../../shared/components/BackButton';
+import { Package, Trash2, FolderOpen, ArrowRight } from 'lucide-react';
 
 export function MaterialesPage() {
   const navigate = useNavigate();
-  const showNotification = useAppStore((s) => s.showNotification);
+
   const [categories, setCategories] = useState<QuoteCatalogCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -22,7 +24,7 @@ export function MaterialesPage() {
       const data = extractData(res);
       setCategories(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      showNotification(err.message || 'Error al cargar categorías', 'error');
+      showNotification('Error', 'error', err.message || 'Error al cargar categorías');
     } finally {
       setIsLoading(false);
     }
@@ -30,7 +32,7 @@ export function MaterialesPage() {
 
   const handleCreate = async () => {
     if (!newCategory.name.trim()) {
-      showNotification('El nombre es obligatorio', 'warning');
+      showNotification('Atención', 'warning', 'El nombre es obligatorio.');
       return;
     }
     try {
@@ -39,30 +41,30 @@ export function MaterialesPage() {
         name: newCategory.name.trim(),
         description: newCategory.description.trim() || undefined,
       });
-      showNotification('Categoría creada', 'success');
+      showNotification('Correcto', 'success', 'Categoría creada correctamente.');
       setNewCategory({ name: '', description: '' });
       setShowForm(false);
       loadCategories();
     } catch (err: any) {
-      showNotification(err.message || 'Error al crear', 'error');
+      showNotification('Error', 'error', err.message || 'Error al crear');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar esta categoría?')) return;
     try {
       const { apiService } = await import('../../shared/services/api');
       await apiService.deleteCatalogCategory(id);
-      showNotification('Categoría eliminada', 'success');
+      showNotification('Correcto', 'success', 'Categoría eliminada correctamente.');
       loadCategories();
     } catch (err: any) {
-      showNotification(err.message || 'Error al eliminar', 'error');
+      showNotification('Error', 'error', err.message || 'Error al eliminar');
     }
   };
 
   return (
     <main>
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>🏗️ Materiales</h1>
+      <BackButton />
+      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}><Package size={28} color="#b69462" /> Materiales</h1>
       <p className="small">Gestiona tus categorías y productos de materiales</p>
 
       <button className="btn mt-2 mb-2" onClick={() => setShowForm(!showForm)}>
@@ -110,13 +112,13 @@ export function MaterialesPage() {
                   className="btn btn-small btn-danger"
                   onClick={(e) => { e.stopPropagation(); handleDelete(cat.id); }}
                 >
-                  🗑️
+                  <Trash2 size={15} />
                 </button>
               </div>
               {cat.description && <p className="small" style={{ color: '#999' }}>{cat.description}</p>}
-              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 20 }}>📁</span>
-                <span className="small" style={{ color: '#b69462' }}>Ver productos →</span>
+              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, color: '#b69462' }}>
+                <FolderOpen size={18} />
+                <span className="small" style={{ color: '#b69462', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Ver productos <ArrowRight size={14} /></span>
               </div>
             </div>
           ))}

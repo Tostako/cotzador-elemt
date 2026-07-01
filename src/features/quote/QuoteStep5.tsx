@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../../shared/services/store';
 import type { AreaResult } from '../../shared/types';
+import { CreditCard, TriangleAlert, Check, Settings, ClipboardCheck } from 'lucide-react';
 
 interface QuoteStep5Props {
   area: AreaResult;
@@ -118,11 +119,11 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
 
       {/* Plan de pagos */}
       <div className="card">
-        <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>📋 Plan de Pagos</h3>
+        <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><CreditCard size={18} color="#b69462" /> Plan de Pagos</h3>
         {hasPayments ? (
           <div style={{ padding: 12, background: 'rgba(255,193,7,0.1)', borderRadius: 8, marginBottom: 16, border: '1px solid rgba(255,193,7,0.3)' }}>
-            <p className="small" style={{ color: '#ffc107', fontWeight: 600 }}>
-              ⚠️ Esta cotización tiene pagos registrados. El plan de pagos no puede modificarse.
+            <p className="small" style={{ color: '#ffc107', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <TriangleAlert size={15} /> Esta cotización tiene pagos registrados. El plan de pagos no puede modificarse.
             </p>
           </div>
         ) : (
@@ -153,7 +154,7 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
               {config.paymentPlan.payments.length} cuotas definidas manualmente
             </div>
             {isPlanSelected(undefined) && (
-              <div style={{ marginTop: 8, fontSize: 12, color: '#b69462', fontWeight: 600 }}>✓ Seleccionado</div>
+              <div style={{ marginTop: 8, fontSize: 12, color: '#b69462', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Check size={14} /> Seleccionado</div>
             )}
           </div>
         </div>
@@ -204,7 +205,7 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
                 ))}
               </div>
               {isPlanSelected(plan.id) && (
-                <div style={{ marginTop: 8, fontSize: 12, color: '#b69462', fontWeight: 600 }}>✓ Seleccionado</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: '#b69462', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Check size={14} /> Seleccionado</div>
               )}
             </div>
           </div>
@@ -258,7 +259,7 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
               <div>
                 <div style={{ fontWeight: 600 }}>{service.name}</div>
                 <div className="small">
-                  ${service.price.toLocaleString('es-CO')}
+                  ${Number(service.price).toLocaleString('es-CO')}
                   {service.unit}
                 </div>
               </div>
@@ -319,12 +320,12 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
       <div className="card">
         <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Plan de Pagos</h3>
         {selectedPlan ? (
-          <p className="small mb-2" style={{ color: '#b69462' }}>
-            📋 Plan seleccionado: <strong>{selectedPlan.name}</strong> ({planPayments.length} cuotas)
+          <p className="small mb-2" style={{ color: '#b69462', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <ClipboardCheck size={15} /> Plan seleccionado: <strong style={{ marginLeft: 2 }}>{selectedPlan.name}</strong> ({planPayments.length} cuotas)
           </p>
         ) : (
-          <p className="small mb-2" style={{ color: '#999' }}>
-            ⚙️ Usando configuración manual
+          <p className="small mb-2" style={{ color: '#999', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Settings size={15} /> Usando configuración manual
           </p>
         )}
         <div style={{ display: 'grid', gap: 10 }}>

@@ -1,12 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { useAppStore, NotificationContainer } from '../../shared/hooks/useNotifications';
+import { showNotification, Toaster } from '../../shared/hooks/useNotifications';
 import { useStore } from '../../shared/services/store';
 import logoAbbreviated from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado White.png';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const showNotification = useAppStore((s) => s.showNotification);
   const login = useStore((s) => s.login);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
 
@@ -23,7 +23,7 @@ export function LoginPage() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      showNotification('Ingresa correo y contraseña', 'warning');
+      showNotification('Atención', 'warning', 'Ingresa tu correo electrónico y contraseña para continuar.');
       return;
     }
     setIsLoading(true);
@@ -38,7 +38,6 @@ export function LoginPage() {
       // Check if token is pending (no shop_id) and resolve it
       let selectRes: any = null;
       if (apiService.isTokenPending(token)) {
-        console.log('[LOGIN] Token is pending, resolving shop...');
         // Save temp token to localStorage so api() can read it for selectShop
         const tempUser = apiService.buildUserFromToken(token);
         if (tempUser) {
@@ -48,7 +47,6 @@ export function LoginPage() {
         const newToken = selectRes.token || (selectRes.data && selectRes.data.token);
         if (newToken) {
           token = newToken;
-          console.log('[LOGIN] Shop resolved, new token received');
         }
       }
 
@@ -89,10 +87,10 @@ export function LoginPage() {
         user = { ...user, profession: bodyProfession };
       }
       login(user);
-      showNotification(`¡Bienvenido a ELEMENT, ${user.name}!`, 'success');
+      showNotification('Correcto', 'success', `Inicio de sesión exitoso. ¡Bienvenido a ELEMENT, ${user.name}!`);
       navigate('/dashboard');
     } catch (err: any) {
-      showNotification(err.message || 'Error al iniciar sesión', 'error');
+      showNotification('Error', 'error', err.message || 'Verifica tus credenciales e intenta de nuevo.');
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +98,7 @@ export function LoginPage() {
 
   return (
     <>
-      <NotificationContainer />
+      <Toaster position="top-center" theme="dark" />
       <div className="animated-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       {/* Background effects */}
       <div style={{
@@ -128,10 +126,10 @@ export function LoginPage() {
         {/* Back to landing */}
         <button
           className="btn btn-ghost btn-small"
-          style={{ marginBottom: 32 }}
+          style={{ marginBottom: 32, gap: 6 }}
           onClick={() => navigate('/')}
         >
-          ← Volver al inicio
+          <ArrowLeft size={15} /> Volver al inicio
         </button>
 
         <div
@@ -141,14 +139,16 @@ export function LoginPage() {
           }}
         >
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <img 
+            <img
               src={logoAbbreviated}
               alt="ELEMENThaus"
               style={{
                 height: 100,
                 width: 'auto',
+                display: 'block',
+                margin: '0 auto',
                 filter: 'drop-shadow(0 0 20px rgba(182, 148, 98, 0.3))',
-              }} 
+              }}
             />
           </div>
 
@@ -192,7 +192,7 @@ export function LoginPage() {
                     padding: 0,
                   }}
                 >
-                  {showPassword ? '🙈' : '👁️'}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>

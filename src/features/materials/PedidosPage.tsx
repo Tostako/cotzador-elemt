@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppStore } from '../../shared/hooks/useNotifications';
+import { showNotification } from '../../shared/hooks/useNotifications';
 import type { QuoteCatalogOrder } from '../../shared/types';
+import { ArrowLeft, ShoppingCart } from 'lucide-react';
 
 export function PedidosPage() {
   const navigate = useNavigate();
-  const showNotification = useAppStore((s) => s.showNotification);
+
   const [orders, setOrders] = useState<QuoteCatalogOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,7 +21,7 @@ export function PedidosPage() {
       const data = extractData(res);
       setOrders(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      showNotification(err.message || 'Error al cargar pedidos', 'error');
+      showNotification('Error', 'error', err.message || 'Error al cargar pedidos.');
     } finally {
       setIsLoading(false);
     }
@@ -28,11 +29,11 @@ export function PedidosPage() {
 
   return (
     <main>
-      <button className="btn btn-ghost btn-small mb-2" onClick={() => navigate('/materiales')}>
-        ← Volver a Materiales
+      <button className="btn btn-ghost btn-small mb-2" onClick={() => navigate('/materiales')} style={{ gap: 6 }}>
+        <ArrowLeft size={15} /> Volver a Materiales
       </button>
 
-      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>🛒 Pedidos</h1>
+      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}><ShoppingCart size={26} color="#b69462" /> Pedidos</h1>
       <p className="small">Listas de compras de materiales</p>
 
       {isLoading ? (
@@ -65,7 +66,7 @@ export function PedidosPage() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: 20, fontWeight: 700, color: '#b69462' }}>
-                    ${order.total.toLocaleString('es-CO')}
+                    ${Number(order.total).toLocaleString('es-CO')}
                   </div>
                 </div>
               </div>
@@ -92,10 +93,10 @@ export function PedidosPage() {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div className="small" style={{ color: '#b69462' }}>
-                          ${item.unit_price.toLocaleString('es-CO')} x {item.quantity}
+                          ${Number(item.unit_price).toLocaleString('es-CO')} x {item.quantity}
                         </div>
                         <div style={{ fontWeight: 600, fontSize: 14 }}>
-                          ${item.subtotal.toLocaleString('es-CO')}
+                          ${Number(item.subtotal).toLocaleString('es-CO')}
                         </div>
                       </div>
                     </div>

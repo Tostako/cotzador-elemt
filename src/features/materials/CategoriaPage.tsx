@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAppStore } from '../../shared/hooks/useNotifications';
+import { showNotification } from '../../shared/hooks/useNotifications';
 import type { QuoteCatalogProduct, QuoteCatalogCategory } from '../../shared/types';
+import { ArrowLeft, ArrowRight, Trash2 } from 'lucide-react';
 
 export function CategoriaPage() {
   const navigate = useNavigate();
   const { categoryId } = useParams();
-  const showNotification = useAppStore((s) => s.showNotification);
+
   const [category, setCategory] = useState<QuoteCatalogCategory | null>(null);
   const [products, setProducts] = useState<QuoteCatalogProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +34,7 @@ export function CategoriaPage() {
       }
       setProducts(Array.isArray(prods) ? prods : []);
     } catch (err: any) {
-      showNotification(err.message || 'Error al cargar', 'error');
+      showNotification('Error', 'error', err.message || 'Error al cargar');
     } finally {
       setIsLoading(false);
     }
@@ -41,7 +42,7 @@ export function CategoriaPage() {
 
   const handleCreate = async () => {
     if (!newProduct.name.trim()) {
-      showNotification('El nombre es obligatorio', 'warning');
+      showNotification('Atención', 'warning', 'El nombre es obligatorio.');
       return;
     }
     try {
@@ -51,31 +52,30 @@ export function CategoriaPage() {
         name: newProduct.name.trim(),
         description: newProduct.description.trim() || undefined,
       });
-      showNotification('Producto creado', 'success');
+      showNotification('Correcto', 'success', 'Producto creado correctamente.');
       setNewProduct({ name: '', description: '' });
       setShowForm(false);
       loadCategoryAndProducts();
     } catch (err: any) {
-      showNotification(err.message || 'Error al crear', 'error');
+      showNotification('Error', 'error', err.message || 'Error al crear');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este producto?')) return;
     try {
       const { apiService } = await import('../../shared/services/api');
       await apiService.deleteCatalogProduct(id);
-      showNotification('Producto eliminado', 'success');
+      showNotification('Correcto', 'success', 'Producto eliminado correctamente.');
       loadCategoryAndProducts();
     } catch (err: any) {
-      showNotification(err.message || 'Error al eliminar', 'error');
+      showNotification('Error', 'error', err.message || 'Error al eliminar');
     }
   };
 
   return (
     <main>
-      <button className="btn btn-ghost btn-small mb-2" onClick={() => navigate('/materiales')}>
-        ← Volver a Materiales
+      <button className="btn btn-ghost btn-small mb-2" onClick={() => navigate('/materiales')} style={{ gap: 6 }}>
+        <ArrowLeft size={15} /> Volver a Materiales
       </button>
 
       <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>
@@ -135,11 +135,11 @@ export function CategoriaPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-small" onClick={(e) => { e.stopPropagation(); navigate(`/materiales/productos/${prod.id}`); }}>
-                  Ver →
+                <button className="btn btn-small" onClick={(e) => { e.stopPropagation(); navigate(`/materiales/productos/${prod.id}`); }} style={{ gap: 6 }}>
+                  Ver <ArrowRight size={14} />
                 </button>
                 <button className="btn btn-small btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(prod.id); }}>
-                  🗑️
+                  <Trash2 size={15} />
                 </button>
               </div>
             </div>

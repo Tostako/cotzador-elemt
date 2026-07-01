@@ -1,6 +1,8 @@
 import { useStore } from '../../shared/services/store';
 import { TourBanner } from '../../shared/components/TourBanner';
 import { isTourActiveForRoute } from '../../shared/utils/tour';
+import { BackButton } from '../../shared/components/BackButton';
+import { Receipt, Building2, User, Signature, Landmark, FileText } from 'lucide-react';
 
 export function CuentaCobroPage() {
   const { config, updateConfig } = useStore();
@@ -32,13 +34,14 @@ export function CuentaCobroPage() {
 
   return (
     <main>
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>📋 Cuenta de Cobro</h1>
+      <BackButton />
+      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}><Receipt size={28} color="#b69462" /> Cuenta de Cobro</h1>
       <p className="small">Configurar datos para facturación</p>
 
       {/* Company */}
       <div className="card mt-2">
         <div className="flex-between mb-2">
-          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>🏢 Datos de la Empresa</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><Building2 size={18} color="#b69462" /> Datos de la Empresa</h3>
           <div
             className={`checkbox ${config.invoice.company.enabled ? 'checked' : ''}`}
             onClick={() => toggleInvoiceSection('company')}
@@ -72,8 +75,8 @@ export function CuentaCobroPage() {
               <p className="small mb-1">Sitio web (opcional)</p>
               <input className="input" value={config.invoice.company.website} onChange={(e) => updateInvoiceField('company', 'website', e.target.value)} />
             </div>
-            <p className="small" style={{ color: '#b69462', padding: '8px 0' }}>
-              🏢 Logo: configura tu logo en <strong>Perfil</strong>.
+            <p className="small" style={{ color: '#b69462', padding: '8px 0', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Building2 size={14} /> Logo: configura tu logo en <strong>Perfil</strong>.
             </p>
           </div>
         ) : (
@@ -84,7 +87,7 @@ export function CuentaCobroPage() {
       {/* Representative */}
       <div className="card">
         <div className="flex-between mb-2">
-          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>👤 Representante Legal</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><User size={18} color="#b69462" /> Representante Legal</h3>
           <div
             className={`checkbox ${config.invoice.representative.enabled ? 'checked' : ''}`}
             onClick={() => toggleInvoiceSection('representative')}
@@ -106,8 +109,8 @@ export function CuentaCobroPage() {
               <p className="small mb-1">Documento de identidad</p>
               <input className="input" value={config.invoice.representative.document} onChange={(e) => updateInvoiceField('representative', 'document', e.target.value)} />
             </div>
-            <p className="small" style={{ color: '#b69462', padding: '8px 0' }}>
-              ✍️ Firma digital: configura tu firma en <strong>Perfil</strong>.
+            <p className="small" style={{ color: '#b69462', padding: '8px 0', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Signature size={14} /> Firma digital: configura tu firma en <strong>Perfil</strong>.
             </p>
           </div>
         ) : (
@@ -118,7 +121,7 @@ export function CuentaCobroPage() {
       {/* Banking */}
       <div className="card">
         <div className="flex-between mb-2">
-          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>🏦 Datos Bancarios</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><Landmark size={18} color="#b69462" /> Datos Bancarios</h3>
           <div
             className={`checkbox ${config.invoice.banking.enabled ? 'checked' : ''}`}
             onClick={() => toggleInvoiceSection('banking')}
@@ -155,7 +158,7 @@ export function CuentaCobroPage() {
 
       {/* Document Config */}
       <div className="card" style={{ marginBottom: 100 }}>
-        <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>📄 Configuración del Documento</h3>
+        <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><FileText size={18} color="#b69462" /> Configuración del Documento</h3>
         <div style={{ display: 'grid', gap: 12 }}>
           <div>
             <p className="small mb-1">Número consecutivo actual</p>

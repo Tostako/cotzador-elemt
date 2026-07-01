@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  PencilRuler, Settings, History, Receipt, Building2,
+  Wallet, CreditCard, User, Calculator,
+} from 'lucide-react';
 import { useStore } from '../../shared/services/store';
 
 import logoSinBaner from '../../assets/LOGO SIN BANER/ELEMENThaus - Transparent White.png';
@@ -38,10 +42,10 @@ export function DashboardPage() {
   };
 
   const quickActions = [
-    { icon: '📐', title: 'Nueva Cotización', desc: 'Crear cotización profesional', color: '#b69462', route: '/quote' },
-    { icon: '⚙️', title: 'Ajustes', desc: 'Configurar tarifas y pagos', color: '#999', route: '/settings' },
-    { icon: '📂', title: 'Historial', desc: `${quotes.length} cotizaciones guardadas`, color: '#34c759', route: '/history' },
-    { icon: '📋', title: 'Cuenta de Cobro', desc: 'Generar factura profesional', color: '#ff9500', route: '/history' },
+    { icon: PencilRuler, title: 'Nueva Cotización', desc: 'Crear cotización profesional', color: '#b69462', route: '/quote' },
+    { icon: Settings, title: 'Ajustes', desc: 'Configurar tarifas y pagos', color: '#999', route: '/settings' },
+    { icon: History, title: 'Historial', desc: `${quotes.length} cotizaciones guardadas`, color: '#34c759', route: '/history' },
+    { icon: Receipt, title: 'Cuenta de Cobro', desc: 'Generar factura profesional', color: '#ff9500', route: '/history' },
   ];
 
   const recentQuotes = quotes.slice(0, 3);
@@ -74,7 +78,7 @@ export function DashboardPage() {
               textAlign: 'center',
             }}
           >
-            <div style={{ fontSize: 56, marginBottom: 16 }}>🏗️</div>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Building2 size={52} color="#b69462" strokeWidth={1.5} /></div>
             <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>
               ¡Bienvenido a ELEMENT Cotizador!
             </h2>
@@ -85,35 +89,35 @@ export function DashboardPage() {
 
             <div style={{ display: 'grid', gap: 10, marginBottom: 24, textAlign: 'left' }}>
               <div className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 24 }}>💰</span>
+                <Wallet size={22} color="#b69462" />
                 <div>
                   <div style={{ fontWeight: 600 }}>Tarifas</div>
                   <div className="small" style={{ color: '#999' }}>Precios de servicios y paquetes</div>
                 </div>
               </div>
               <div className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 24 }}>💳</span>
+                <CreditCard size={22} color="#b69462" />
                 <div>
                   <div style={{ fontWeight: 600 }}>Plan de Pagos</div>
                   <div className="small" style={{ color: '#999' }}>Define cómo te pagan</div>
                 </div>
               </div>
               <div className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 24 }}>📋</span>
+                <Receipt size={22} color="#b69462" />
                 <div>
                   <div style={{ fontWeight: 600 }}>Cuenta de Cobro</div>
                   <div className="small" style={{ color: '#999' }}>Términos y numeración</div>
                 </div>
               </div>
               <div className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 24 }}>🏗️</span>
+                <Calculator size={22} color="#b69462" />
                 <div>
                   <div style={{ fontWeight: 600 }}>Estimación de Obra</div>
                   <div className="small" style={{ color: '#999' }}>Precios por m² y estimaciones personalizadas</div>
                 </div>
               </div>
               <div className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 24 }}>👤</span>
+                <User size={22} color="#b69462" />
                 <div>
                   <div style={{ fontWeight: 600 }}>Perfil</div>
                   <div className="small" style={{ color: '#999' }}>Logo y firma digital</div>
@@ -192,14 +196,16 @@ export function DashboardPage() {
 
       {/* Quick Actions Grid */}
       <div className="grid-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', marginBottom: 40 }}>
-        {quickActions.map((action, i) => (
+        {quickActions.map((action, i) => {
+          const Icon = action.icon;
+          return (
           <div
             key={i}
             className="feature-card"
             onClick={() => navigate(action.route)}
             style={{ cursor: 'pointer' }}
           >
-            <div style={{ fontSize: 36, marginBottom: 12 }}>{action.icon}</div>
+            <div style={{ marginBottom: 12 }}><Icon size={34} color={action.color} strokeWidth={1.75} /></div>
             <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{action.title}</h3>
             <p className="small">{action.desc}</p>
             <div
@@ -214,7 +220,8 @@ export function DashboardPage() {
               }}
             />
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Recent Activity */}
@@ -235,7 +242,7 @@ export function DashboardPage() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ fontWeight: 700, color: '#b69462' }}>
-                    ${quote.price.toLocaleString('es-CO')}
+                    ${Number(quote.price).toLocaleString('es-CO')}
                   </span>
                   <p className="small">{quote.date}</p>
                 </div>

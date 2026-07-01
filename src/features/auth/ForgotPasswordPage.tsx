@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { useAppStore, NotificationContainer } from '../../shared/hooks/useNotifications';
+import { showNotification, Toaster } from '../../shared/hooks/useNotifications';
 import logoAbbreviated from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado White.png';
+import { Eye, EyeOff, ArrowLeft, KeyRound } from 'lucide-react';
 
 export function ForgotPasswordPage() {
   const navigate = useNavigate();
-  const showNotification = useAppStore((s) => s.showNotification);
+
 
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -16,15 +17,15 @@ export function ForgotPasswordPage() {
 
   const handleReset = async () => {
     if (!email.trim() && !phone.trim()) {
-      showNotification('Ingresa tu correo o número de teléfono', 'warning');
+      showNotification('Atención', 'warning', 'Ingresa tu correo electrónico o número de teléfono registrado para identificar tu cuenta.');
       return;
     }
     if (!newPassword.trim() || newPassword.length < 6) {
-      showNotification('La nueva contraseña debe tener al menos 6 caracteres', 'warning');
+      showNotification('Atención', 'warning', 'Tu nueva contraseña debe tener al menos 6 caracteres para mayor seguridad.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      showNotification('Las contraseñas no coinciden', 'error');
+      showNotification('Error', 'error', 'Asegúrate de que la contraseña y la confirmación sean idénticas.');
       return;
     }
 
@@ -38,10 +39,10 @@ export function ForgotPasswordPage() {
       if (email.trim()) payload.email = email.trim();
       if (phone.trim()) payload.phone = phone.trim();
       const res = await apiService.resetPassword(payload);
-      showNotification(res?.data?.message || 'Contraseña actualizada correctamente', 'success');
+      showNotification('Actualización correcta', 'success', res?.data?.message || 'Tu contraseña ha sido actualizada correctamente. Inicia sesión con la nueva contraseña.');
       navigate('/login');
     } catch (err: any) {
-      showNotification(err.message || 'Error al actualizar la contraseña', 'error');
+      showNotification('Error', 'error', err.message || 'No se pudo actualizar la contraseña. Verifica los datos e intenta de nuevo.');
     } finally {
       setIsLoading(false);
     }
@@ -49,7 +50,7 @@ export function ForgotPasswordPage() {
 
   return (
     <>
-      <NotificationContainer />
+      <Toaster position="top-center" theme="dark" />
       <div className="animated-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         {/* Background effects */}
         <div style={{
@@ -77,10 +78,10 @@ export function ForgotPasswordPage() {
           {/* Back to login */}
           <button
             className="btn btn-ghost btn-small"
-            style={{ marginBottom: 32 }}
+            style={{ marginBottom: 32, gap: 6 }}
             onClick={() => navigate('/login')}
           >
-            ← Volver al inicio de sesión
+            <ArrowLeft size={15} /> Volver al inicio de sesión
           </button>
 
           <div
@@ -96,13 +97,15 @@ export function ForgotPasswordPage() {
                 style={{
                   height: 100,
                   width: 'auto',
+                  display: 'block',
+                  margin: '0 auto',
                   filter: 'drop-shadow(0 0 20px rgba(182, 148, 98, 0.3))',
                 }}
               />
             </div>
 
-            <h2 style={{ fontSize: 24, fontWeight: 700, textAlign: 'center', marginBottom: 8 }}>
-              🔑 Recuperar Contraseña
+            <h2 style={{ fontSize: 24, fontWeight: 700, textAlign: 'center', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <KeyRound size={22} color="#b69462" /> Recuperar Contraseña
             </h2>
             <p className="small" style={{ textAlign: 'center', marginBottom: 24, color: '#999' }}>
               Ingresa tu teléfono y la nueva contraseña
@@ -162,7 +165,7 @@ export function ForgotPasswordPage() {
                       padding: 0,
                     }}
                   >
-                    {showPassword ? '🙈' : '👁️'}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
