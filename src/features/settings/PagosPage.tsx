@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../../shared/services/store';
-import { useAppStore } from '../../shared/hooks/useNotifications';
+import { showNotification } from '../../shared/hooks/useNotifications';
 import { TourBanner } from '../../shared/components/TourBanner';
 import { isTourActiveForRoute } from '../../shared/utils/tour';
 import type { SavedPaymentPlan } from '../../shared/types';
+import { BackButton } from '../../shared/components/BackButton';
+import { CreditCard, FolderOpen, Trash2 } from 'lucide-react';
 
 export function PagosPage() {
-  const showNotification = useAppStore((s) => s.showNotification);
+
   const {
     config,
     savePayment,
@@ -17,7 +19,6 @@ export function PagosPage() {
     createPaymentPlan,
     updatePaymentPlan,
     deletePaymentPlan,
-    setDefaultPaymentPlan,
   } = useStore();
   const showTour = isTourActiveForRoute('/pagos');
 
@@ -28,6 +29,9 @@ export function PagosPage() {
   const [editingPlan, setEditingPlan] = useState<SavedPaymentPlan | null>(null);
   const [planForm, setPlanForm] = useState({ name: '', description: '', installments: [{ name: '', percentage: '' }] });
 
+  const [deletePlanConfirm, setDeletePlanConfirm] = useState<number | null>(null);
+  const [deletePaymentConfirm, setDeletePaymentConfirm] = useState<{ index: number; name: string } | null>(null);
+
   useEffect(() => {
     loadPaymentPlans();
   }, [loadPaymentPlans]);
@@ -35,27 +39,27 @@ export function PagosPage() {
   // ── Local payment plan (config) handlers ─────────────────
   const handleSavePayment = () => {
     if (!newPayment.name.trim() || !newPayment.percentage) {
-      showNotification('Completa todos los campos', 'error');
+      showNotification('Error', 'error', 'Completa todos los campos.');
       return;
     }
     const pct = parseInt(newPayment.percentage);
     if (pct <= 0 || pct > 100) {
-      showNotification('Porcentaje debe estar entre 1 y 100', 'error');
+      showNotification('Error', 'error', 'El porcentaje debe estar entre 1 y 100.');
       return;
     }
     const newTotal = paymentTotal + pct;
     if (newTotal > 100) {
-      showNotification(`No se puede agregar. El total quedaría en ${newTotal}% (máximo 100%)`, 'error');
+      showNotification('Error', 'error', `No se puede agregar. El total quedaría en ${newTotal}% (máximo 100%).`);
       return;
     }
     if (config.paymentPlan.payments.length >= 10) {
-      showNotification('Máximo 10 pagos permitidos', 'warning');
+      showNotification('Atención', 'warning', 'Máximo 10 pagos permitidos.');
       return;
     }
     savePayment({ name: newPayment.name.trim(), percentage: pct });
     setNewPayment({ name: '', percentage: '' });
     setShowPaymentForm(false);
-    showNotification('Pago agregado correctamente', 'success');
+    showNotification('Correcto', 'success', 'Pago agregado correctamente.');
   };
 
   const paymentTotal = config.paymentPlan.payments.reduce((sum, p) => sum + p.percentage, 0);
@@ -100,7 +104,7 @@ export function PagosPage() {
   const handleSavePlan = async () => {
     const error = validatePlan();
     if (error) {
-      showNotification(error, 'error');
+      showNotification('Error', 'error', error);
       return;
     }
     const installments = planForm.installments
@@ -110,15 +114,15 @@ export function PagosPage() {
     try {
       if (editingPlan) {
         await updatePaymentPlan(editingPlan.id, { name: planForm.name, description: planForm.description, installments });
-        showNotification('Plan actualizado', 'success');
+        showNotification('Actualización correcta', 'success', 'Plan actualizado correctamente.');
       } else {
         await createPaymentPlan({ name: planForm.name, description: planForm.description, installments, isDefault: false });
-        showNotification('Plan creado', 'success');
+        showNotification('Correcto', 'success', 'Plan creado correctamente.');
       }
       resetPlanForm();
       setShowPlanForm(false);
     } catch (e: any) {
-      showNotification(e.message || 'Error al guardar plan', 'error');
+      showNotification('Error', 'error', e.message || 'Error al guardar plan');
     }
   };
 
@@ -133,33 +137,30 @@ export function PagosPage() {
   };
 
   const handleDeletePlan = async (id: number) => {
-    if (!window.confirm('¿Eliminar este plan de pagos?')) return;
-    try {
-      await deletePaymentPlan(id);
-      showNotification('Plan eliminado', 'success');
-    } catch (e: any) {
-      showNotification(e.message || 'Error al eliminar', 'error');
-    }
+    setDeletePlanConfirm(id);
   };
 
-  const handleSetDefault = async (id: number) => {
+  const confirmDeletePlan = async () => {
+    if (deletePlanConfirm == null) return;
     try {
-      await setDefaultPaymentPlan(id);
-      showNotification('Plan marcado como predeterminado', 'success');
+      await deletePaymentPlan(deletePlanConfirm);
+      showNotification('Correcto', 'success', 'Plan eliminado correctamente.');
     } catch (e: any) {
-      showNotification(e.message || 'Error', 'error');
+      showNotification('Error', 'error', e.message || 'Error al eliminar');
     }
+    setDeletePlanConfirm(null);
   };
 
   return (
     <main>
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>💳 Plan de Pagos</h1>
+      <BackButton />
+      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}><CreditCard size={28} color="#b69462" /> Plan de Pagos</h1>
       <p className="small">Configurar cuotas, condiciones de pago y guardar planes reutilizables</p>
 
       {/* ── SAVED PLANS ─────────────────────────────── */}
       <div className="card mt-2" style={{ marginBottom: 24 }}>
         <div className="flex-between mb-2">
-          <h3 style={{ fontSize: 18, fontWeight: 600 }}>📁 Mis Planes Guardados</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}><FolderOpen size={18} color="#b69462" /> Mis Planes Guardados</h3>
           <button className="btn btn-small" onClick={() => { resetPlanForm(); setShowPlanForm(!showPlanForm); }}>
             {showPlanForm ? '× Cancelar' : '+ Nuevo Plan'}
           </button>
@@ -226,16 +227,13 @@ export function PagosPage() {
         )}
 
         {paymentPlans.map((plan) => (
-          <div key={plan.id} className="mb-2" style={{ padding: 16, background: '#0a0a0a', borderRadius: 12, border: plan.isDefault ? '1px solid #b69462' : '1px solid transparent' }}>
-            <div className="flex-between mb-1">
-              <div>
+          <div key={plan.id} className="mb-2" style={{ padding: 16, background: '#0a0a0a', borderRadius: 12, border: '1px solid transparent' }}>
+            <div className="flex-between mb-1" style={{ flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ minWidth: 0 }}>
                 <span style={{ fontWeight: 600 }}>{plan.name}</span>
                 {plan.isDefault && <span style={{ marginLeft: 8, fontSize: 11, color: '#b69462', background: 'rgba(182,148,98,0.15)', padding: '2px 8px', borderRadius: 8 }}>Predeterminado</span>}
               </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {!plan.isDefault && (
-                  <button className="btn btn-small btn-ghost" onClick={() => handleSetDefault(plan.id)}>★ Default</button>
-                )}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 <button className="btn btn-small" onClick={() => handleEditPlan(plan)}>Editar</button>
                 <button className="btn btn-small btn-danger" onClick={() => handleDeletePlan(plan.id)}>Eliminar</button>
               </div>
@@ -303,12 +301,7 @@ export function PagosPage() {
               <span style={{ fontWeight: 600 }}>Pago {i + 1}</span>
               <button
                 className="btn-small btn-danger"
-                onClick={() => {
-                  if (window.confirm(`¿Eliminar pago "${payment.name}"?`)) {
-                    deletePayment(i);
-                    showNotification('Pago eliminado', 'success');
-                  }
-                }}
+                onClick={() => setDeletePaymentConfirm({ index: i, name: payment.name })}
               >
                 ×
               </button>
@@ -342,7 +335,7 @@ export function PagosPage() {
                 }
                 const currentTotalWithoutThis = config.paymentPlan.payments.reduce((sum, p, idx) => idx === i ? sum : sum + p.percentage, 0);
                 if (currentTotalWithoutThis + newPct > 100) {
-                  showNotification(`El total no puede superar 100%. Actual sin este: ${currentTotalWithoutThis}%`, 'error');
+                  showNotification('Error', 'error', `El total no puede superar 100%. Actual sin este: ${currentTotalWithoutThis}%`);
                   return;
                 }
                 const payments = [...config.paymentPlan.payments];
@@ -360,6 +353,59 @@ export function PagosPage() {
           </span>
         </div>
       </div>
+
+      {/* Delete Plan Confirmation Modal */}
+      {deletePlanConfirm != null && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget) setDeletePlanConfirm(null); }}
+        >
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <h3 style={{ marginBottom: 8 }}>¿Eliminar plan de pagos?</h3>
+            <p className="small mb-2" style={{ color: '#999' }}>
+              Esta acción no se puede deshacer.
+            </p>
+            <div className="grid-2" style={{ marginTop: 24 }}>
+              <button className="btn btn-secondary" onClick={() => setDeletePlanConfirm(null)}>
+                Cancelar
+              </button>
+              <button className="btn btn-danger" onClick={confirmDeletePlan}>
+                <Trash2 size={16} /> Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Payment Confirmation Modal */}
+      {deletePaymentConfirm && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget) setDeletePaymentConfirm(null); }}
+        >
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <h3 style={{ marginBottom: 8 }}>¿Eliminar pago?</h3>
+            <p className="small mb-2" style={{ color: '#999' }}>
+              Vas a eliminar <strong style={{ color: '#fff' }}>{deletePaymentConfirm.name}</strong>.
+            </p>
+            <div className="grid-2" style={{ marginTop: 24 }}>
+              <button className="btn btn-secondary" onClick={() => setDeletePaymentConfirm(null)}>
+                Cancelar
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={() => {
+                  deletePayment(deletePaymentConfirm.index);
+                  showNotification('Correcto', 'success', 'Pago eliminado correctamente.');
+                  setDeletePaymentConfirm(null);
+                }}
+              >
+                <Trash2 size={16} /> Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showTour && <TourBanner />}
     </main>

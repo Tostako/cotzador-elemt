@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useStore } from '../../shared/services/store';
-import { useAppStore } from '../../shared/hooks/useNotifications';
+import { showNotification } from '../../shared/hooks/useNotifications';
 import { TourBanner } from '../../shared/components/TourBanner';
 import { isTourActiveForRoute } from '../../shared/utils/tour';
+import { BackButton } from '../../shared/components/BackButton';
+import { Wallet, Pencil, Trash2 } from 'lucide-react';
 
 export function TarifasPage() {
-  const showNotification = useAppStore((s) => s.showNotification);
   const { config, saveService, deleteService } = useStore();
   const showTour = isTourActiveForRoute('/tarifas');
 
@@ -13,10 +14,11 @@ export function TarifasPage() {
   const [editPriceValue, setEditPriceValue] = useState('');
   const [showServiceForm, setShowServiceForm] = useState(false);
   const [newService, setNewService] = useState({ name: '', price: '', unit: '/m²' });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
   const handleSaveService = () => {
     if (!newService.name.trim() || !newService.price) {
-      showNotification('Completa todos los campos', 'error');
+      showNotification('Error', 'error', 'Completa todos los campos.');
       return;
     }
     const id = 'custom_' + Date.now();
@@ -27,19 +29,25 @@ export function TarifasPage() {
     });
     setNewService({ name: '', price: '', unit: '/m²' });
     setShowServiceForm(false);
-    showNotification('Servicio agregado correctamente', 'success');
+    showNotification('Correcto', 'success', 'Servicio agregado correctamente.');
   };
 
   const handleDeleteService = (id: string) => {
-    if (window.confirm(`¿Eliminar "${config.services[id].name}"? Esta acción no se puede deshacer.`)) {
-      deleteService(id);
-      showNotification('Servicio eliminado', 'success');
+    setDeleteConfirm({ id, name: config.services[id].name });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      deleteService(deleteConfirm.id);
+      showNotification('Correcto', 'success', 'Servicio eliminado correctamente.');
+      setDeleteConfirm(null);
     }
   };
 
   return (
     <main>
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>💰 Tarifas</h1>
+      <BackButton />
+      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}><Wallet size={28} color="#b69462" /> Tarifas</h1>
       <p className="small">Configurar precios de servicios</p>
 
       <button className="btn mt-2 mb-2" onClick={() => setShowServiceForm(!showServiceForm)}>
@@ -102,12 +110,12 @@ export function TarifasPage() {
                     setEditingService({ id, ...config.services[id] });
                     setEditPriceValue(config.services[id].price.toString());
                   }}
-                  style={{ padding: '6px 12px' }}
+                  style={{ padding: '6px 12px', gap: 6 }}
                 >
-                  ✏️ Editar
+                  <Pencil size={14} /> Editar
                 </button>
                 <button className="btn-small btn-danger" onClick={() => handleDeleteService(id)}>
-                  🗑️
+                  <Trash2 size={15} />
                 </button>
               </div>
             </div>
@@ -146,7 +154,7 @@ export function TarifasPage() {
                       const val = parseInt(editPriceValue);
                       if (!isNaN(val) && val >= 0) {
                         saveService(editingService.id, { ...editingService, price: val });
-                        showNotification('Precio actualizado', 'success');
+                        showNotification('Actualización correcta', 'success', 'Precio actualizado correctamente.');
                         setEditingService(null);
                       }
                     }
@@ -162,14 +170,40 @@ export function TarifasPage() {
                   const val = parseInt(editPriceValue);
                   if (!isNaN(val) && val >= 0) {
                     saveService(editingService.id, { ...editingService, price: val });
-                    showNotification('Precio actualizado', 'success');
+                    showNotification('Actualización correcta', 'success', 'Precio actualizado correctamente.');
                     setEditingService(null);
                   } else {
-                    showNotification('Ingresa un valor válido', 'error');
+                    showNotification('Error', 'error', 'Ingresa un valor válido.');
                   }
                 }}
               >
                 Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget) setDeleteConfirm(null); }}
+        >
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <h3 style={{ marginBottom: 8 }}>¿Eliminar servicio?</h3>
+            <p className="small mb-2" style={{ color: '#999' }}>
+              Vas a eliminar <strong style={{ color: '#fff' }}>{deleteConfirm.name}</strong>.
+            </p>
+            <p className="small mb-2" style={{ color: '#ff3b30' }}>
+              Esta acción no se puede deshacer.
+            </p>
+            <div className="grid-2" style={{ marginTop: 24 }}>
+              <button className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>
+                Cancelar
+              </button>
+              <button className="btn btn-danger" onClick={confirmDelete} style={{ gap: 6 }}>
+                <Trash2 size={16} /> Eliminar
               </button>
             </div>
           </div>

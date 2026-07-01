@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { useStore } from '../../shared/services/store';
-import { useAppStore } from '../../shared/hooks/useNotifications';
+import { showNotification } from '../../shared/hooks/useNotifications';
 import { calculateArea } from '../../shared/services/calculator';
 import type { Quote, QuoteFormData } from '../../shared/types';
 
 export function EstimationCalculatorPage() {
-  const showNotification = useAppStore((s) => s.showNotification);
   const { config, quotes, user } = useStore();
 
   const [areaMode, setAreaMode] = useState<'dimensions' | 'direct'>('dimensions');
@@ -70,10 +69,10 @@ export function EstimationCalculatorPage() {
         setFacades(data.facades || { frontal: false, posterior: false, lateralLeft: false, lateralRight: false });
         setLockedFromQuote(true);
         setSelectedQuoteName(`${quote.client} — ${quote.project}`);
-        showNotification(`Medidas cargadas desde: ${quote.client} — ${quote.project}`, 'success');
+        showNotification('Correcto', 'success', `Medidas cargadas desde: ${quote.client} — ${quote.project}`);
       }
     } catch {
-      showNotification('Error al leer las medidas de la cotización', 'error');
+      showNotification('Error', 'error', 'Error al leer las medidas de la cotización.');
     }
     setShowQuoteModal(false);
   };
@@ -81,7 +80,7 @@ export function EstimationCalculatorPage() {
   const handleUnlock = () => {
     setLockedFromQuote(false);
     setSelectedQuoteName('');
-    showNotification('Medidas liberadas. Ahora puedes editar manualmente.', 'success');
+    showNotification('Correcto', 'success', 'Medidas liberadas. Ahora puedes editar manualmente.');
   };
 
   // Filter: only user's quotes, and only parent quotes (no versions/children)
@@ -99,9 +98,8 @@ export function EstimationCalculatorPage() {
   const isDisabled = lockedFromQuote;
 
   return (
-    <main>
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>📐 Calculadora de Estimaciones</h1>
-      <p className="small">Calcula el costo aproximado de construcción según las dimensiones del terreno</p>
+    <>
+      <p className="small" style={{ marginBottom: 16 }}>Calcula el costo aproximado de construcción según las dimensiones del terreno.</p>
 
       {/* Coger cotización */}
       <button className="btn btn-secondary mt-2 mb-2" onClick={() => setShowQuoteModal(true)}>
@@ -377,7 +375,7 @@ export function EstimationCalculatorPage() {
                   >
                     <div className="flex-between mb-1">
                       <h4 style={{ fontSize: 16, fontWeight: 600 }}>{est.name}</h4>
-                      <span style={{ color: '#999', fontSize: 12 }}>${est.price.toLocaleString('es-CO')} /m²</span>
+                      <span style={{ color: '#999', fontSize: 12 }}>${Number(est.price).toLocaleString('es-CO')} /m²</span>
                     </div>
                     <div style={{ fontSize: 20, fontWeight: 700, color: '#b69462' }}>
                       ${cost.toLocaleString('es-CO')}
@@ -415,7 +413,7 @@ export function EstimationCalculatorPage() {
                   >
                     <div className="flex-between mb-1">
                       <span style={{ fontWeight: 600 }}>{quote.client}</span>
-                      <span className="small" style={{ color: '#b69462' }}>{quote.area.toFixed(0)}m²</span>
+                      <span className="small" style={{ color: '#b69462' }}>{Number(quote.area).toFixed(0)}m²</span>
                     </div>
                     <p className="small" style={{ color: '#999' }}>{quote.project}</p>
                     <p className="small mt-1" style={{ color: '#666' }}>{quote.date}</p>
@@ -430,6 +428,6 @@ export function EstimationCalculatorPage() {
           </div>
         </div>
       )}
-    </main>
+    </>
   );
 }

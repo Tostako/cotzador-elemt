@@ -1,11 +1,21 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
+import { Menu, User, ChevronDown, LogOut } from 'lucide-react';
 import { useStore } from '../../shared/services/store';
-import logoAbbreviated from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado White.png';
+import logoPrincipal from '../../assets/LogoPrincipal.png';
 
 interface TopNavProps {
   onMenuClick?: () => void;
 }
+
+/** Enlaces rápidos de funciones en el navbar. */
+const navLinks: { to: string; label: string; match: (p: string) => boolean }[] = [
+  { to: '/dashboard', label: 'Home', match: (p) => p === '/dashboard' },
+  { to: '/quote', label: 'Cotizar', match: (p) => p === '/quote' },
+  { to: '/tarifas', label: 'Tarifas', match: (p) => p === '/tarifas' },
+  { to: '/calculadoras/enchapes', label: 'Enchapes', match: (p) => p.startsWith('/calculadoras/enchapes') },
+  { to: '/materiales', label: 'Materiales', match: (p) => p.startsWith('/materiales') },
+];
 
 export function TopNav({ onMenuClick }: TopNavProps) {
   const navigate = useNavigate();
@@ -41,81 +51,55 @@ export function TopNav({ onMenuClick }: TopNavProps) {
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-        padding: '16px 24px',
+        padding: '14px 24px',
       }}
     >
       <div
         style={{
+          position: 'relative',
           maxWidth: 1200,
           margin: '0 auto',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: 16,
         }}
       >
-        {/* Logo + Home */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 16,
-            cursor: 'pointer',
-          }}
+        {/* Left: Logo (→ landing) */}
+        <img
+          src={logoPrincipal}
+          alt="ELEMENThaus"
+          title="Ir a la página de inicio"
           onClick={() => navigate('/')}
-        >
-          <img
-            src={logoAbbreviated}
-            alt="ELEMENThaus"
-            style={{
-              width: 40,
-              height: 'auto',
-              opacity: 0.9,
-            }}
-          />
-          <div
-            style={{
-              width: 1,
-              height: 24,
-              background: 'rgba(255,255,255,0.15)',
-            }}
-          />
-          <span
-            style={{
-              fontSize: 14,
-              color: '#b69462',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            <span>🏠</span>
-            <span className="hide-mobile">Inicio</span>
-          </span>
-        </div>
+          style={{ height: 40, width: 'auto', opacity: 0.95, cursor: 'pointer', flexShrink: 0 }}
+        />
 
-        {/* Center: Page Title */}
-        <div
+        {/* Center: function links */}
+        <nav
+          className="hide-mobile"
           style={{
             position: 'absolute',
             left: '50%',
             transform: 'translateX(-50%)',
-            fontSize: 14,
-            color: '#999',
-            letterSpacing: '1px',
-            textTransform: 'uppercase',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
           }}
-          className="hide-mobile"
         >
-          {location.pathname === '/dashboard' && 'Dashboard'}
-          {location.pathname === '/quote' && 'Nueva Cotización'}
-          {location.pathname === '/history' && 'Historial'}
-          {location.pathname.startsWith('/invoice') && 'Cuenta de Cobro'}
-          {location.pathname === '/tarifas' && 'Tarifas'}
-          {location.pathname === '/pagos' && 'Plan de Pagos'}
-          {location.pathname === '/cuenta-cobro' && 'Cuenta de Cobro'}
-          {location.pathname === '/estimacion' && 'Estimación de Obra'}
-        </div>
+          {navLinks.map((link) => {
+            const active = link.match(location.pathname);
+            return (
+              <button
+                key={link.to}
+                onClick={() => navigate(link.to)}
+                className="topnav-link"
+                data-active={active ? 'true' : 'false'}
+              >
+                {link.label}
+              </button>
+            );
+          })}
+        </nav>
 
         {/* Right: Hamburger + User */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -123,13 +107,10 @@ export function TopNav({ onMenuClick }: TopNavProps) {
             className="hamburger"
             onClick={onMenuClick}
             aria-label="Abrir menú"
+            title="Todas las funciones"
             style={{ color: '#fff' }}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
-              <span className="hamburger-line" />
-              <span className="hamburger-line" style={{ width: 14 }} />
-              <span className="hamburger-line" />
-            </div>
+            <Menu size={20} />
           </button>
           <div style={{ position: 'relative' }} ref={userMenuRef}>
             <div
@@ -146,9 +127,9 @@ export function TopNav({ onMenuClick }: TopNavProps) {
                 transition: 'all 0.3s ease',
               }}
             >
-              <span style={{ fontSize: 18 }}>👤</span>
+              <User size={18} />
               <span style={{ fontSize: 14, fontWeight: 600 }} className="hide-mobile">{user?.name || 'Usuario'}</span>
-              <span style={{ fontSize: 10, opacity: 0.6 }}>▼</span>
+              <ChevronDown size={14} style={{ opacity: 0.6 }} />
             </div>
             {showUserMenu && (
               <div
@@ -160,7 +141,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
                   border: '1px solid var(--color-line)',
                   borderRadius: 16,
                   padding: 8,
-                  minWidth: 180,
+                  minWidth: 200,
                   boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
                   zIndex: 100,
                 }}
@@ -170,6 +151,17 @@ export function TopNav({ onMenuClick }: TopNavProps) {
                   <p className="small" style={{ fontSize: 12 }}>{user?.email}</p>
                 </div>
                 <button
+                  className="sidebar-item"
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    navigate('/perfil');
+                  }}
+                  style={{ width: '100%', marginTop: 8, justifyContent: 'flex-start', padding: '10px 12px', gap: 10 }}
+                >
+                  <User size={17} />
+                  <span>Mi Perfil</span>
+                </button>
+                <button
                   className="btn btn-danger btn-small"
                   onClick={() => {
                     logout();
@@ -178,12 +170,13 @@ export function TopNav({ onMenuClick }: TopNavProps) {
                   }}
                   style={{
                     width: '100%',
-                    marginTop: 8,
+                    marginTop: 4,
                     justifyContent: 'flex-start',
                     padding: '8px 12px',
+                    gap: 8,
                   }}
                 >
-                  🚪 Cerrar sesión
+                  <LogOut size={16} /> Cerrar sesión
                 </button>
               </div>
             )}
@@ -192,7 +185,27 @@ export function TopNav({ onMenuClick }: TopNavProps) {
       </div>
 
       <style>{`
-        @media (max-width: 640px) {
+        .topnav-link {
+          background: transparent;
+          border: none;
+          color: rgba(255,255,255,0.7);
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          padding: 7px 14px;
+          border-radius: 10px;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+        .topnav-link:hover {
+          color: #fff;
+          background: rgba(255,255,255,0.06);
+        }
+        .topnav-link[data-active="true"] {
+          color: #b69462;
+          background: rgba(182,148,98,0.12);
+        }
+        @media (max-width: 860px) {
           .hide-mobile { display: none !important; }
         }
       `}</style>

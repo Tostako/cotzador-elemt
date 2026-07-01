@@ -169,7 +169,9 @@ export interface User {
   email: string
   username: string
   token?: string
-  profession?: 'ingeniero' | 'arquitecto' | 'maestro_obra'
+  profession?: string
+  phone?: string
+  address?: string
 }
 
 export type QuoteStatus = 'draft' | 'sent' | 'paid' | 'completed'
@@ -186,4 +188,63 @@ export interface Quote {
   paymentPlanId?: number | string
   payments?: any[]
   customerId?: string // owner customer_id from backend
+}
+
+// ── Quote Catalog (Materiales) ──────────────────────────
+export interface QuoteCatalogCategory {
+  id: string
+  name: string
+  description?: string
+  main_category_id?: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface QuoteCatalogProduct {
+  id: string
+  main_product_id?: string | null
+  category_id: string
+  name: string
+  description?: string
+  lowest_price?: number
+  prices_count: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface QuoteCatalogPrice {
+  id: string
+  product_id: string
+  hardware_store: string
+  brand: string
+  price: number
+  notes?: string
+  is_selected?: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface QuoteCatalogOrderItem {
+  id: string
+  quote_product_id: string
+  main_product_id?: string | null
+  price_id: string
+  product_name: string
+  hardware_store: string
+  brand: string
+  unit_price: number
+  quantity: number
+  subtotal: number
+}
+
+export interface QuoteCatalogOrder {
+  id: string
+  status: 'draft' | 'completed'
+  notes?: string
+  total: number
+  items: QuoteCatalogOrderItem[]
+  created_at: string
+  updated_at: string
 }

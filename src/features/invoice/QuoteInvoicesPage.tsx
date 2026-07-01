@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../../shared/services/store';
-import { useAppStore } from '../../shared/hooks/useNotifications';
+import { showNotification } from '../../shared/hooks/useNotifications';
 import { safeParseQuoteData } from '../../shared/utils/parseQuoteData';
 import type { InvoiceRecord, Quote } from '../../shared/types';
 import { PaymentReceipt } from './PaymentReceipt';
+import { Receipt, ArrowLeft, Plus, Eye, Check, DollarSign, FileText } from 'lucide-react';
 
 /** Format a local Date as YYYY-MM-DD string (avoids UTC shift issues) */
 function formatLocalDate(d: Date): string {
@@ -22,7 +23,7 @@ function displayDate(dateStr: string): string {
 export function QuoteInvoicesPage() {
   const navigate = useNavigate();
   const { quoteId } = useParams();
-  const showNotification = useAppStore((s) => s.showNotification);
+
   const { quotes, getQuoteById, config, setFormData, updateQuote, paymentPlans, loadPaymentPlans } = useStore();
 
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -86,15 +87,21 @@ export function QuoteInvoicesPage() {
     return selectedPlan ? selectedPlan.installments : config.paymentPlan.payments;
   };
 
+  const PAID_STATUSES = ['confirmed', 'approved', 'paid'];
+
   const isInstallmentPaid = (index: number) => {
     return quotePayments.some((p: any) => {
-      const pIndex = Number(p.installmentIndex ?? p.plan_installment_index ?? -1);
-      const pStatus = String(p.status ?? '').toLowerCase();
-      return pIndex === index && (pStatus === 'confirmed' || pStatus === 'approved');
+      const pIndex = Number(p.installmentIndex ?? p.installment_index ?? p.plan_installment_index ?? -1);
+      // El modelo del backend usa por defecto status "confirmed"; si viene vacío lo tratamos como confirmado.
+      const pStatus = String(p.status ?? 'confirmed').toLowerCase();
+      return pIndex === index && PAID_STATUSES.includes(pStatus);
     });
   };
 
   const getInvoiceStatus = (invoice: InvoiceRecord): 'pending' | 'paid' => {
+    // 1) Estado local marcado al registrar el pago (respaldo si el backend tarda o el GET falla).
+    if (invoice.status === 'paid' || invoice.paidAt) return 'paid';
+    // 2) Estado según los pagos que devuelve el backend.
     return isInstallmentPaid(invoice.installmentIndex) ? 'paid' : 'pending';
   };
 
@@ -104,18 +111,18 @@ export function QuoteInvoicesPage() {
 
     // 2. Fallback: find matching backend payment
     const payment = quotePayments.find((p: any) => {
-      const pIndex = Number(p.installmentIndex ?? p.plan_installment_index ?? -1);
-      const pStatus = String(p.status ?? '').toLowerCase();
-      return pIndex === invoice.installmentIndex && (pStatus === 'confirmed' || pStatus === 'approved');
+      const pIndex = Number(p.installmentIndex ?? p.installment_index ?? p.plan_installment_index ?? -1);
+      const pStatus = String(p.status ?? 'confirmed').toLowerCase();
+      return pIndex === invoice.installmentIndex && PAID_STATUSES.includes(pStatus);
     });
-    return payment?.paidAt ?? payment?.createdAt;
+    return payment?.paidAt ?? payment?.paid_at ?? payment?.createdAt ?? payment?.created_at;
   };
 
   const handleGenerateInvoice = () => {
     if (!quote) return;
     const data = safeParseQuoteData(quote.data);
     if (!data) {
-      showNotification('Error al leer los datos de la cotización', 'error');
+      showNotification('Error', 'error', 'Error al leer los datos de la cotización.');
       return;
     }
 
@@ -134,12 +141,12 @@ export function QuoteInvoicesPage() {
     }
 
     if (!found && installments.length > 0) {
-      showNotification('Todas las cuotas ya tienen cuenta de cobro generada', 'warning');
+      showNotification('Atención', 'warning', 'Todas las cuotas ya tienen cuenta de cobro generada.');
       return;
     }
 
     if (installments.length === 0) {
-      showNotification('No hay plan de pagos configurado', 'error');
+      showNotification('Error', 'error', 'No hay plan de pagos configurado.');
       return;
     }
 
@@ -177,12 +184,12 @@ export function QuoteInvoicesPage() {
     const selectedInst = installments[paymentForm.installmentIndex];
 
     if (!selectedInst) {
-      showNotification('Selecciona una cuota válida', 'error');
+      showNotification('Error', 'error', 'Selecciona una cuota válida.');
       return;
     }
 
     if (isInstallmentPaid(paymentForm.installmentIndex)) {
-      showNotification('Esta cuota ya está pagada', 'error');
+      showNotification('Error', 'error', 'Esta cuota ya está pagada.');
       return;
     }
 
@@ -213,13 +220,13 @@ export function QuoteInvoicesPage() {
         setInvoices(updatedInvoices);
       }
 
-      showNotification('Pago registrado correctamente', 'success');
+      showNotification('Correcto', 'success', 'El pago fue registrado correctamente.');
       setShowPaymentModal(false);
       setSelectedInvoice(null);
       // Reload payments
       loadQuotePayments(quote.id);
     } catch (err: any) {
-      showNotification(err.message || 'Error al registrar pago', 'error');
+      showNotification('Error', 'error', err.message || 'Error al registrar pago');
     }
   };
 
@@ -254,9 +261,9 @@ export function QuoteInvoicesPage() {
   return (
     <main>
       <div className="flex-between" style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700 }}>💳 Cuentas de Cobro</h1>
-        <button className="btn btn-small btn-secondary" onClick={() => navigate('/history')}>
-          ← Volver al Historial
+        <h1 style={{ fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}><Receipt size={22} color="#b69462" /> Cuentas de Cobro</h1>
+        <button className="btn btn-small btn-secondary" onClick={() => navigate('/history')} style={{ gap: 6 }}>
+          <ArrowLeft size={15} /> Volver al Historial
         </button>
       </div>
 
@@ -275,15 +282,15 @@ export function QuoteInvoicesPage() {
           </div>
         </div>
         <div className="flex-between mt-1">
-          <span className="small">{quote.area.toFixed(0)}m² — ${quote.price.toLocaleString('es-CO')}</span>
+          <span className="small">{Number(quote.area).toFixed(0)}m² — ${Number(quote.price).toLocaleString('es-CO')}</span>
           <span className="small" style={{ color: '#999' }}>{quote.date}</span>
         </div>
       </div>
 
       {/* Generate button */}
       {missingInvoices > 0 && (
-        <button className="btn mb-2" onClick={handleGenerateInvoice} style={{ width: '100%' }}>
-          ➕ Generar cuenta de cobro ({missingInvoices} pendiente{missingInvoices !== 1 ? 's' : ''})
+        <button className="btn mb-2" onClick={handleGenerateInvoice} style={{ width: '100%', gap: 8 }}>
+          <Plus size={16} /> Generar cuenta de cobro ({missingInvoices} pendiente{missingInvoices !== 1 ? 's' : ''})
         </button>
       )}
 
@@ -352,24 +359,25 @@ export function QuoteInvoicesPage() {
                   <button
                     className="btn btn-small btn-secondary"
                     onClick={() => handleViewInvoice(invoice)}
+                    style={{ gap: 6 }}
                   >
-                    👁️ Ver
+                    <Eye size={15} /> Ver
                   </button>
                   <button
                     className="btn btn-small btn-secondary"
                     onClick={() => handleOpenPayment(invoice)}
                     disabled={currentStatus === 'paid'}
-                    style={currentStatus === 'paid' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                    style={currentStatus === 'paid' ? { opacity: 0.5, cursor: 'not-allowed', gap: 6 } : { gap: 6 }}
                   >
-                    {currentStatus === 'paid' ? '✓ Pagada' : '💰 Agregar pago'}
+                    {currentStatus === 'paid' ? <><Check size={15} /> Pagada</> : <><DollarSign size={15} /> Agregar pago</>}
                   </button>
                   <button
                     className="btn btn-small"
                     onClick={() => handleOpenReceipt(invoice)}
                     disabled={currentStatus !== 'paid'}
-                    style={currentStatus !== 'paid' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                    style={currentStatus !== 'paid' ? { opacity: 0.5, cursor: 'not-allowed', gap: 6 } : { gap: 6 }}
                   >
-                    📄 Recibo
+                    <FileText size={15} /> Recibo
                   </button>
                 </div>
               </div>
@@ -385,7 +393,7 @@ export function QuoteInvoicesPage() {
           onClick={(e) => { if (e.target === e.currentTarget) setShowPaymentModal(false); }}
         >
           <div className="modal" style={{ maxWidth: 480, width: '100%' }}>
-            <h3 style={{ marginBottom: 12 }}>💰 Registrar Pago</h3>
+            <h3 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}><DollarSign size={18} color="#b69462" /> Registrar Pago</h3>
             <p className="small mb-2" style={{ color: '#999' }}>
               Cuenta de cobro #{String(selectedInvoice.number).padStart(3, '0')} — {selectedInvoice.client}
             </p>

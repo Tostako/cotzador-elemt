@@ -156,13 +156,11 @@ export const useStore = create<AppState>((set, get) => ({
   },
   loadFromBackend: async () => {
     if (isLoadingFromBackend) {
-      console.log('[STORE] loadFromBackend already in progress, skipping duplicate');
       return;
     }
     isLoadingFromBackend = true;
     try {
       const { apiService, extractData } = await import('./api');
-      console.log('[STORE] Loading data from backend...');
       const [quotesRes, configRes, plansRes] = await Promise.all([
         apiService.getQuotes(),
         apiService.getMyConfig().catch(() => null),
@@ -171,16 +169,37 @@ export const useStore = create<AppState>((set, get) => ({
       const quotes = extractData(quotesRes);
       const rawConfig = extractData(configRes);
       const plans = extractData(plansRes);
-      console.log('[STORE] Quotes response:', quotes);
-      console.log('[STORE] Config raw response:', rawConfig);
-      console.log('[STORE] Payment plans response:', plans);
 
       if (Array.isArray(quotes)) {
         set({ quotes });
       }
 
-      if (Array.isArray(plans)) {
+      if (Array.isArray(plans) && plans.length > 0) {
         set({ paymentPlans: plans });
+      } else if (Array.isArray(plans) && plans.length === 0) {
+        // El usuario no tiene planes de pago en la BD: sembrar el plan default
+        try {
+          const defaultInstallments = demoConfig.paymentPlan.payments.map((p, i) => ({
+            name: p.name,
+            percentage: p.percentage,
+            order: i + 1,
+          }));
+          const createRes = await apiService.createPaymentPlan({
+            name: 'Plan de pagos estándar',
+            description: 'Plan de pagos predeterminado',
+            installments: defaultInstallments,
+            isDefault: true,
+          });
+          const createdPlan = extractData(createRes);
+          if (createdPlan && createdPlan.id) {
+            set({ paymentPlans: [createdPlan] });
+          } else {
+            set({ paymentPlans: [] });
+          }
+        } catch (seedErr: any) {
+          console.error('[STORE] No se pudo crear el plan default:', seedErr.message || seedErr);
+          set({ paymentPlans: [] });
+        }
       }
 
       if (rawConfig && typeof rawConfig === 'object') {
@@ -209,6 +228,24 @@ export const useStore = create<AppState>((set, get) => ({
         }
 
         set({ config: mergedConfig });
+
+        // Extract customer info (phone, address) from the nested customer object
+        const customerData = rawConfig?.customer;
+        if (customerData && typeof customerData === 'object') {
+          const { user: currentUser } = get();
+          if (currentUser) {
+            const updatedUser = {
+              ...currentUser,
+              phone: customerData.phone || currentUser.phone,
+              address: customerData.address || currentUser.address,
+              name: customerData.name || currentUser.name,
+              email: customerData.email || currentUser.email,
+              profession: customerData.address || currentUser.profession,
+            };
+            localStorage.setItem('element_user', JSON.stringify(updatedUser));
+            set({ user: updatedUser });
+          }
+        }
       }
     } catch (e: any) {
       console.error('[STORE] Error loading from backend:', e.message || e);
@@ -225,7 +262,6 @@ export const useStore = create<AppState>((set, get) => ({
       import('./api').then(({ apiService, toSaaSConfig }) => {
         const current = get().config;
         const saasPayload = toSaaSConfig(current);
-        console.log('[STORE] Saving config to SaaS:', saasPayload);
         apiService.saveMyConfig(saasPayload).catch((err: any) => {
           console.error('[STORE] Error saving config:', err.message || err);
         });

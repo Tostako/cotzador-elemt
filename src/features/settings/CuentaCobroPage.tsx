@@ -1,55 +1,12 @@
-import { useRef } from 'react';
 import { useStore } from '../../shared/services/store';
-import { useAppStore } from '../../shared/hooks/useNotifications';
 import { TourBanner } from '../../shared/components/TourBanner';
 import { isTourActiveForRoute } from '../../shared/utils/tour';
+import { BackButton } from '../../shared/components/BackButton';
+import { Receipt, Building2, User, Signature, Landmark, FileText } from 'lucide-react';
 
 export function CuentaCobroPage() {
   const { config, updateConfig } = useStore();
-  const showNotification = useAppStore((s) => s.showNotification);
   const showTour = isTourActiveForRoute('/cuenta-cobro');
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  const signatureInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImageUpload = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    section: 'company' | 'representative',
-    field: string
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      showNotification('Solo se permiten archivos de imagen', 'error');
-      return;
-    }
-
-    const maxSize = 1 * 1024 * 1024; // 1MB
-    if (file.size > maxSize) {
-      showNotification('La imagen no debe superar 1MB', 'error');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      updateInvoiceField(section, field, reader.result as string);
-      showNotification('Imagen cargada correctamente', 'success');
-    };
-    reader.onerror = () => {
-      showNotification('Error al leer la imagen', 'error');
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const clearImage = (section: 'company' | 'representative', field: string) => {
-    updateInvoiceField(section, field, '');
-    if (section === 'company' && logoInputRef.current) {
-      logoInputRef.current.value = '';
-    }
-    if (section === 'representative' && signatureInputRef.current) {
-      signatureInputRef.current.value = '';
-    }
-  };
 
   const updateInvoiceField = (section: 'company' | 'representative' | 'banking' | 'document', field: string, value: string | number) => {
     updateConfig({
@@ -77,13 +34,14 @@ export function CuentaCobroPage() {
 
   return (
     <main>
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>📋 Cuenta de Cobro</h1>
+      <BackButton />
+      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}><Receipt size={28} color="#b69462" /> Cuenta de Cobro</h1>
       <p className="small">Configurar datos para facturación</p>
 
       {/* Company */}
       <div className="card mt-2">
         <div className="flex-between mb-2">
-          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>🏢 Datos de la Empresa</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><Building2 size={18} color="#b69462" /> Datos de la Empresa</h3>
           <div
             className={`checkbox ${config.invoice.company.enabled ? 'checked' : ''}`}
             onClick={() => toggleInvoiceSection('company')}
@@ -117,40 +75,9 @@ export function CuentaCobroPage() {
               <p className="small mb-1">Sitio web (opcional)</p>
               <input className="input" value={config.invoice.company.website} onChange={(e) => updateInvoiceField('company', 'website', e.target.value)} />
             </div>
-
-            {/* Logo upload */}
-            <div>
-              <p className="small mb-1">Logo de la empresa</p>
-              <input
-                ref={logoInputRef}
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleImageUpload(e, 'company', 'logo')}
-                style={{ display: 'none' }}
-              />
-              {config.invoice.company.logo ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <img
-                    src={config.invoice.company.logo}
-                    alt="Logo preview"
-                    style={{ maxHeight: 60, maxWidth: 120, objectFit: 'contain', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)' }}
-                  />
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn btn-small btn-secondary" onClick={() => logoInputRef.current?.click()}>
-                      Cambiar
-                    </button>
-                    <button className="btn btn-small btn-danger" onClick={() => clearImage('company', 'logo')}>
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button className="btn btn-small btn-secondary" onClick={() => logoInputRef.current?.click()}>
-                  📷 Subir logo
-                </button>
-              )}
-              <p className="small mt-1" style={{ color: '#999' }}>Máximo 1MB. JPG, PNG o SVG.</p>
-            </div>
+            <p className="small" style={{ color: '#b69462', padding: '8px 0', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Building2 size={14} /> Logo: configura tu logo en <strong>Perfil</strong>.
+            </p>
           </div>
         ) : (
           <p className="small" style={{ color: '#999' }}>Desactivado - No aparecerá en la cuenta de cobro</p>
@@ -160,7 +87,7 @@ export function CuentaCobroPage() {
       {/* Representative */}
       <div className="card">
         <div className="flex-between mb-2">
-          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>👤 Representante Legal</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><User size={18} color="#b69462" /> Representante Legal</h3>
           <div
             className={`checkbox ${config.invoice.representative.enabled ? 'checked' : ''}`}
             onClick={() => toggleInvoiceSection('representative')}
@@ -182,40 +109,9 @@ export function CuentaCobroPage() {
               <p className="small mb-1">Documento de identidad</p>
               <input className="input" value={config.invoice.representative.document} onChange={(e) => updateInvoiceField('representative', 'document', e.target.value)} />
             </div>
-
-            {/* Signature upload */}
-            <div>
-              <p className="small mb-1">Firma digital</p>
-              <input
-                ref={signatureInputRef}
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleImageUpload(e, 'representative', 'signature')}
-                style={{ display: 'none' }}
-              />
-              {config.invoice.representative.signature ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <img
-                    src={config.invoice.representative.signature}
-                    alt="Signature preview"
-                    style={{ maxHeight: 60, maxWidth: 160, objectFit: 'contain', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: '#fff' }}
-                  />
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn btn-small btn-secondary" onClick={() => signatureInputRef.current?.click()}>
-                      Cambiar
-                    </button>
-                    <button className="btn btn-small btn-danger" onClick={() => clearImage('representative', 'signature')}>
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button className="btn btn-small btn-secondary" onClick={() => signatureInputRef.current?.click()}>
-                  ✍️ Subir firma
-                </button>
-              )}
-              <p className="small mt-1" style={{ color: '#999' }}>Máximo 1MB. JPG o PNG con fondo transparente preferible.</p>
-            </div>
+            <p className="small" style={{ color: '#b69462', padding: '8px 0', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Signature size={14} /> Firma digital: configura tu firma en <strong>Perfil</strong>.
+            </p>
           </div>
         ) : (
           <p className="small" style={{ color: '#999' }}>Desactivado - No aparecerá en la cuenta de cobro</p>
@@ -225,7 +121,7 @@ export function CuentaCobroPage() {
       {/* Banking */}
       <div className="card">
         <div className="flex-between mb-2">
-          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>🏦 Datos Bancarios</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><Landmark size={18} color="#b69462" /> Datos Bancarios</h3>
           <div
             className={`checkbox ${config.invoice.banking.enabled ? 'checked' : ''}`}
             onClick={() => toggleInvoiceSection('banking')}
@@ -262,7 +158,7 @@ export function CuentaCobroPage() {
 
       {/* Document Config */}
       <div className="card" style={{ marginBottom: 100 }}>
-        <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>📄 Configuración del Documento</h3>
+        <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><FileText size={18} color="#b69462" /> Configuración del Documento</h3>
         <div style={{ display: 'grid', gap: 12 }}>
           <div>
             <p className="small mb-1">Número consecutivo actual</p>

@@ -1,12 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { useAppStore, NotificationContainer } from '../../shared/hooks/useNotifications';
+import { showNotification, Toaster } from '../../shared/hooks/useNotifications';
 import { useStore } from '../../shared/services/store';
 import logoAbbreviated from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado White.png';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const showNotification = useAppStore((s) => s.showNotification);
   const login = useStore((s) => s.login);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
 
@@ -28,15 +28,15 @@ export function RegisterPage() {
 
   const handleRegister = async () => {
     if (!name.trim() || !email.trim() || !password.trim()) {
-      showNotification('Completa nombre, correo y contraseña', 'warning');
+      showNotification('Atención', 'warning', 'Completa tu nombre, correo electrónico y contraseña para continuar.');
       return;
     }
     if (password !== confirmPassword) {
-      showNotification('Las contraseñas no coinciden', 'error');
+      showNotification('Error', 'error', 'Asegúrate de que la contraseña y la confirmación sean idénticas.');
       return;
     }
     if (password.length < 6) {
-      showNotification('La contraseña debe tener al menos 6 caracteres', 'warning');
+      showNotification('Atención', 'warning', 'Tu contraseña debe tener al menos 6 caracteres para mayor seguridad.');
       return;
     }
 
@@ -59,7 +59,6 @@ export function RegisterPage() {
       // Check if token is pending (no shop_id) and resolve it
       let selectRes: any = null;
       if (apiService.isTokenPending(token)) {
-        console.log('[REGISTER] Token is pending, resolving shop...');
         // Save temp token to localStorage so api() can read it for selectShop
         const tempUser = apiService.buildUserFromToken(token);
         if (tempUser) {
@@ -67,10 +66,9 @@ export function RegisterPage() {
         }
         selectRes = await apiService.selectShop({ shop_slug: SHOP_SLUG });
         const newToken = selectRes.token || (selectRes.data && selectRes.data.token);
-        if (newToken) {
-          token = newToken;
-          console.log('[REGISTER] Shop resolved, new token received');
-        }
+          if (newToken) {
+            token = newToken;
+          }
       }
 
       let user = apiService.buildUserFromToken(token);
@@ -110,14 +108,14 @@ export function RegisterPage() {
         user = { ...user, profession };
       }
       login(user);
-      showNotification(`¡Bienvenido a ELEMENT, ${user.name}!`, 'success');
+      showNotification('Correcto', 'success', `Registro exitoso. ¡Bienvenido a ELEMENT, ${user.name}! Tu cuenta ha sido creada correctamente.`);
       // Activate onboarding tour for new users
       localStorage.removeItem('element_tour_seen');
       localStorage.removeItem('element_tour_active');
       localStorage.removeItem('element_tour_step');
       navigate('/dashboard');
     } catch (err: any) {
-      showNotification(err.message || 'Error al registrar usuario', 'error');
+      showNotification('Error', 'error', err.message || 'No se pudo crear la cuenta. Verifica los datos e intenta de nuevo.');
     } finally {
       setIsLoading(false);
     }
@@ -125,7 +123,7 @@ export function RegisterPage() {
 
   return (
     <>
-      <NotificationContainer />
+      <Toaster position="top-center" theme="dark" />
       <div className="animated-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       {/* Background effects */}
       <div style={{
@@ -153,10 +151,10 @@ export function RegisterPage() {
         {/* Back to login */}
         <button
           className="btn btn-ghost btn-small"
-          style={{ marginBottom: 32 }}
+          style={{ marginBottom: 32, gap: 6 }}
           onClick={() => navigate('/login')}
         >
-          ← Volver al inicio de sesión
+          <ArrowLeft size={15} /> Volver al inicio de sesión
         </button>
 
         <div
@@ -166,14 +164,16 @@ export function RegisterPage() {
           }}
         >
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <img 
+            <img
               src={logoAbbreviated}
               alt="ELEMENThaus"
               style={{
                 height: 100,
                 width: 'auto',
+                display: 'block',
+                margin: '0 auto',
                 filter: 'drop-shadow(0 0 20px rgba(182, 148, 98, 0.3))',
-              }} 
+              }}
             />
           </div>
 
@@ -244,7 +244,7 @@ export function RegisterPage() {
                     padding: 0,
                   }}
                 >
-                  {showPassword ? '🙈' : '👁️'}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
@@ -276,7 +276,7 @@ export function RegisterPage() {
                     padding: 0,
                   }}
                 >
-                  {showConfirmPassword ? '🙈' : '👁️'}
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
