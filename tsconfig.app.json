@@ -8,7 +8,6 @@
     "skipLibCheck": true,
 
     /* Path alias (shadcn/ui) */
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
