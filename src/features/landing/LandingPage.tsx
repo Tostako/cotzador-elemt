@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties, type ComponentType } from 'react';
-import { PencilRuler, Receipt, CreditCard, Calculator, Package, Grid3x3, Wallet } from 'lucide-react';
+import { PencilRuler, Receipt, CreditCard, Calculator, Package, Grid3x3, Wallet, X } from 'lucide-react';
 import logoGold from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado Original 1.png';
 import logoWhite from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado White.png';
 import logoPrincipal from '../../assets/LogoPrincipal.png';
@@ -310,18 +310,34 @@ export function LandingPage() {
           </button>
         </div>
         {menuOpen && (
-          <>
-            <div className="fixed inset-0 bg-black/60 z-[98]" onClick={() => setMenuOpen(false)} />
-            <div className="fixed top-0 right-0 bottom-0 w-[min(280px,80vw)] bg-[rgba(7,7,7,0.98)] border-l border-white/10 z-[99] pt-20 px-6 flex flex-col gap-4" style={{ animation: 'slideInRight 0.3s cubic-bezier(0.16,1,0.3,1)' }}>
-              {navLinks.map((l) => (
-                <span key={l.href} className="text-base font-medium cursor-pointer py-3" onClick={() => scrollTo(l.href)}>{l.label}</span>
-              ))}
-              <div className="border-t border-white/10 my-2" />
-              <button className="btn" onClick={() => { setMenuOpen(false); navigate(isAuthenticated ? '/dashboard' : '/login'); }}>
-                {isAuthenticated ? 'Ir al Dashboard' : 'Ingresar'}
+          <div className="lp-mobile-menu" role="dialog" aria-modal="true">
+            <div className="lp-mm-top">
+              <img src={getImage('logo_abbreviated', logoPrincipal)} alt="ELEMENThaus" style={{ height: 38, width: 'auto' }} />
+              <button className="lp-mm-close" onClick={() => setMenuOpen(false)} aria-label="Cerrar menú">
+                <X size={22} />
               </button>
             </div>
-          </>
+
+            <nav className="lp-mm-links">
+              {navLinks.map((l, i) => (
+                <button
+                  key={l.href}
+                  className="lp-mm-link"
+                  style={{ animationDelay: `${0.06 + i * 0.06}s` }}
+                  onClick={() => scrollTo(l.href)}
+                >
+                  <span className="lp-mm-idx">0{i + 1}</span>
+                  <span>{l.label}</span>
+                </button>
+              ))}
+            </nav>
+
+            <div className="lp-mm-foot">
+              <button className="btn" style={{ width: '100%' }} onClick={() => { setMenuOpen(false); navigate(isAuthenticated ? '/dashboard' : '/login'); }}>
+                {isAuthenticated ? 'Ir al Dashboard →' : 'Ingresar'}
+              </button>
+            </div>
+          </div>
         )}
       </nav>
 
