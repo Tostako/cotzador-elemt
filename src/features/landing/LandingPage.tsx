@@ -49,17 +49,29 @@ function useSectionProgress<T extends HTMLElement>() {
   const ref = useRef<T>(null);
   const [progress, setProgress] = useState(0);
   useEffect(() => {
-    const onScroll = () => {
+    let ticking = false;
+    const update = () => {
+      ticking = false;
       const el = ref.current;
       if (!el) return;
       const r = el.getBoundingClientRect();
       const vh = window.innerHeight;
       const total = r.height + vh * 0.6;
       const seen = vh * 0.8 - r.top;
-      setProgress(Math.max(0, Math.min(seen / total, 1)));
+      setProgress((prev) => {
+        const next = Math.max(0, Math.min(seen / total, 1));
+        // Evita re-render si el cambio es imperceptible (<0.5%)
+        return Math.abs(next - prev) < 0.005 ? prev : next;
+      });
+    };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
+    update();
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
   return { ref, progress };
@@ -159,7 +171,6 @@ export function LandingPage() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [landingConfig, setLandingConfig] = useState<Record<string, any>>({});
   const [landingImages, setLandingImages] = useState<any[]>([]);
   const [ready, setReady] = useState(false);
@@ -170,15 +181,23 @@ export function LandingPage() {
   }, []);
 
   useEffect(() => {
-    const onScroll = () => {
+    let ticking = false;
+    const update = () => {
+      ticking = false;
       const y = window.scrollY;
       setScrollY(y);
       setScrolled(y > 40);
       const docH = document.documentElement.scrollHeight - window.innerHeight;
       setScrollProgress(docH > 0 ? Math.min(y / docH, 1) : 0);
     };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
+    update();
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
@@ -310,16 +329,14 @@ export function LandingPage() {
       <section
         id="hero"
         style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '100vh', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', overflow: 'hidden', padding: '120px 24px 90px' }}
-        onMouseMove={(e) => { if (reduce) return; setMouse({ x: e.clientX / window.innerWidth - 0.5, y: e.clientY / window.innerHeight - 0.5 }); }}
-        onMouseLeave={() => setMouse({ x: 0, y: 0 })}
       >
-        <div style={{ position: 'absolute', inset: '-12% 0', backgroundImage: `url(${getImage('hero_bg', casaImage)})`, backgroundSize: 'cover', backgroundPosition: 'center', transform: `translate3d(${mouse.x * -18}px, ${par(0.3) + mouse.y * -18}px, 0) scale(${1.06 + (reduce ? 0 : scrollY / 3200)})`, transition: 'transform .25s ease-out', willChange: 'transform' }} />
+        <div style={{ position: 'absolute', inset: '-12% 0', backgroundImage: `url(${getImage('hero_bg', casaImage)})`, backgroundSize: 'cover', backgroundPosition: 'center', transform: `translate3d(0, ${par(0.3)}px, 0) scale(${1.06 + (reduce ? 0 : scrollY / 3200)})`, willChange: 'transform' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(7,7,7,0.5) 0%, rgba(7,7,7,0.72) 45%, rgba(7,7,7,0.97) 100%)' }} />
         <div className="lp-mesh" style={{ width: 520, height: 520, top: '-8%', left: '-6%', background: 'radial-gradient(circle, rgba(182,148,98,0.30), transparent 60%)' }} />
         <div className="lp-mesh" style={{ width: 440, height: 440, bottom: '-12%', right: '-5%', background: 'radial-gradient(circle, rgba(212,175,55,0.22), transparent 60%)', animationDelay: '-7s' }} />
-        <div className="lp-ghost" style={{ bottom: '3%', transform: `translateX(-50%) translateY(${par(-0.05)}px)` }}>ELEMENT</div>
+        <div className="lp-ghost" style={{ bottom: '3%', transform: `translate3d(-50%, ${par(-0.05)}px, 0)` }}>ELEMENT</div>
 
-        <div style={{ position: 'relative', zIndex: 2, transform: `translateY(${par(0.12)}px)`, opacity: heroOpacity }}>
+        <div style={{ position: 'relative', zIndex: 2, transform: `translate3d(0, ${par(0.12)}px, 0)`, opacity: heroOpacity }}>
           <div className="animate-reveal-up" style={{ textAlign: 'center' }}>
             <img src={getImage('logo_main', logoGold)} alt="ELEMENThaus" style={{ display: 'block', margin: '0 auto', width: 'clamp(160px, 20vw, 260px)', height: 'auto', filter: 'drop-shadow(0 0 34px rgba(182,148,98,0.38))' }} />
           </div>

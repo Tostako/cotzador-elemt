@@ -909,9 +909,9 @@ input[type="number"] {
 }
 
 .landing-nav.scrolled {
-  background: rgba(10, 10, 10, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(10, 10, 10, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -1476,7 +1476,7 @@ h1.lp-display { font-weight: 700; }
   position: relative;
   z-index: 2;
   border-radius: 40px 40px 0 0;
-  box-shadow: 0 -40px 90px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(182, 148, 98, 0.16);
+  box-shadow: 0 -22px 46px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(182, 148, 98, 0.16);
 }
 @media (max-width: 640px) {
   .lp-content {
@@ -1505,14 +1505,15 @@ h1.lp-display { font-weight: 700; }
   66% { transform: translate3d(-6%, 7%, 0) scale(0.92); }
 }
 .lp-mesh {
-  position: absolute; border-radius: 50%; filter: blur(90px);
-  pointer-events: none; will-change: transform; z-index: 0;
+  position: absolute; border-radius: 50%; filter: blur(52px);
+  pointer-events: none; will-change: transform; transform: translateZ(0); z-index: 0;
   animation: lpMeshFloat 18s ease-in-out infinite;
 }
 
 /* Giant ghost word */
 .lp-ghost {
   position: absolute; left: 50%; transform: translateX(-50%);
+  will-change: transform;
   font-family: 'Manrope', sans-serif; font-weight: 800;
   font-size: clamp(7rem, 26vw, 24rem); line-height: 1; white-space: nowrap;
   color: transparent; -webkit-text-stroke: 1px rgba(182,148,98,0.10);
