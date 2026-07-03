@@ -1471,6 +1471,83 @@ h1.lp-display { font-weight: 700; }
 
 .lp-wrap { max-width: 1240px; margin: 0 auto; padding: 0 28px; }
 
+/* ===== MENÚ MÓVIL (landing) — overlay a pantalla completa ===== */
+.lp-mobile-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 26px 34px;
+  background:
+    radial-gradient(130% 90% at 100% 0%, rgba(182, 148, 98, 0.14), transparent 55%),
+    rgba(8, 7, 6, 0.98);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: lpMmFade 0.35s ease both;
+}
+.lp-mm-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lp-mm-close {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f4efe6;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.lp-mm-close:hover { background: rgba(182, 148, 98, 0.18); border-color: rgba(182, 148, 98, 0.4); }
+.lp-mm-close:active { transform: scale(0.94); }
+.lp-mm-links {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.lp-mm-link {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  text-align: left;
+  cursor: pointer;
+  color: #f4efe6;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-size: clamp(2rem, 9vw, 3rem);
+  line-height: 1.1;
+  padding: 16px 4px;
+  opacity: 0;
+  transform: translateY(18px);
+  animation: lpMmUp 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  transition: color 0.2s ease, padding-left 0.25s ease;
+}
+.lp-mm-link:hover, .lp-mm-link:active { color: #b69462; padding-left: 12px; }
+.lp-mm-idx {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: #b69462;
+  transform: translateY(-0.4em);
+}
+.lp-mm-foot { padding-top: 22px; }
+@keyframes lpMmFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lpMmUp { to { opacity: 1; transform: none; } }
+
 /* Lámina de contenido que se desliza por encima de la portada fija */
 .lp-content {
   position: relative;
