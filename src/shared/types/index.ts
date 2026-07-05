@@ -25,16 +25,6 @@ export interface PaymentPlan {
   payments: Payment[]
 }
 
-export interface SavedPaymentPlan {
-  id: number
-  name: string
-  description?: string
-  installments: { name: string; percentage: number; order: number }[]
-  isDefault: boolean
-  createdAt: string
-  updatedAt: string
-}
-
 export interface CompanyInfo {
   enabled: boolean
   name: string
@@ -75,17 +65,10 @@ export interface InvoiceConfig {
   document: DocumentConfig
 }
 
-export interface CustomEstimation {
-  id: number | string
-  name: string
-  price: number
-}
-
 export interface EstimationConfig {
   obraNegraPrice: number
   obraGrisPrice: number
   acabadosPrice: number
-  customEstimations: CustomEstimation[]
 }
 
 export interface AppConfig {
@@ -111,20 +94,6 @@ export interface AdditionalService {
   unit: string
 }
 
-export interface InvoiceRecord {
-  id: string
-  number: number
-  installmentIndex: number  // qué cuota del plan de pagos representa (0-based)
-  createdAt: string
-  client: string
-  project: string
-  description: string
-  totalAmount: number       // monto de ESTA cuota, no el total de la cotización
-  status: 'pending' | 'paid'
-  paidAt?: string
-  formDataSnapshot: QuoteFormData
-}
-
 export interface QuoteFormData {
   client: string
   project: string
@@ -144,10 +113,6 @@ export interface QuoteFormData {
   hasCompletePackage: boolean
   discount: number
   additionalServices: AdditionalService[]
-  paymentPlanId?: number | string
-  parentQuoteId?: number | string
-  invoiceCount?: number
-  invoices?: InvoiceRecord[]
 }
 
 export interface AreaResult {
@@ -169,15 +134,18 @@ export interface User {
   email: string
   username: string
   token?: string
+<<<<<<< Updated upstream
+=======
   profession?: string
   phone?: string
   address?: string
+>>>>>>> Stashed changes
 }
 
 export type QuoteStatus = 'draft' | 'sent' | 'paid' | 'completed'
 
 export interface Quote {
-  id: number | string
+  id: number
   date: string
   client: string
   project: string
@@ -185,9 +153,6 @@ export interface Quote {
   price: number
   status: QuoteStatus
   data: string | any // string when parsed from DB, object when created locally for SaaS JSONB
-  paymentPlanId?: number | string
-  payments?: any[]
-  customerId?: string // owner customer_id from backend
 }
 
 // ── Quote Catalog (Materiales) ──────────────────────────

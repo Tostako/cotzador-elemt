@@ -40,7 +40,6 @@ export function TopNav({ onMenuClick }: TopNavProps) {
 
   return (
     <header
-      className="no-print"
       style={{
         position: 'sticky',
         top: 0,
@@ -65,6 +64,48 @@ export function TopNav({ onMenuClick }: TopNavProps) {
           gap: 16,
         }}
       >
+<<<<<<< Updated upstream
+        {/* Logo + Home */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            cursor: 'pointer',
+          }}
+          onClick={() => navigate('/dashboard')}
+        >
+          <img
+            src={logoAbbreviated}
+            alt="ELEMENThaus"
+            style={{
+              width: 40,
+              height: 'auto',
+              opacity: 0.9,
+            }}
+          />
+          <div
+            style={{
+              width: 1,
+              height: 24,
+              background: 'rgba(255,255,255,0.15)',
+            }}
+          />
+          <span
+            style={{
+              fontSize: 14,
+              color: '#b69462',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <span>🏠</span>
+            <span className="hide-mobile">Inicio</span>
+          </span>
+        </div>
+=======
         {/* Left: Logo (→ landing) */}
         <img
           src={logoPrincipal}
@@ -73,6 +114,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
           onClick={() => navigate('/')}
           style={{ height: 40, width: 'auto', opacity: 0.95, cursor: 'pointer', flexShrink: 0 }}
         />
+>>>>>>> Stashed changes
 
         {/* Center: function links */}
         <nav
@@ -86,6 +128,14 @@ export function TopNav({ onMenuClick }: TopNavProps) {
             gap: 6,
           }}
         >
+<<<<<<< Updated upstream
+          {location.pathname === '/dashboard' && 'Dashboard'}
+          {location.pathname === '/quote' && 'Nueva Cotización'}
+          {location.pathname === '/history' && 'Historial'}
+          {location.pathname.startsWith('/invoice') && 'Cuenta de Cobro'}
+          {location.pathname === '/settings' && 'Ajustes'}
+        </div>
+=======
           {navLinks.map((link) => {
             const active = link.match(location.pathname);
             return (
@@ -100,6 +150,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
             );
           })}
         </nav>
+>>>>>>> Stashed changes
 
         {/* Right: Hamburger + User */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

@@ -1,12 +1,15 @@
 import { useNavigate } from 'react-router-dom';
+<<<<<<< Updated upstream
+import { useEffect, useState } from 'react';
+=======
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties, type ComponentType } from 'react';
 import { PencilRuler, Receipt, CreditCard, Calculator, Package, Grid3x3, Wallet, X } from 'lucide-react';
+>>>>>>> Stashed changes
 import logoGold from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado Original 1.png';
 import logoWhite from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado White.png';
 import logoPrincipal from '../../assets/LogoPrincipal.png';
 import casaImage from '../../assets/casa.jpg';
 import casa2Image from '../../assets/casa2.png';
-import { useStore } from '../../shared/services/store';
 
 const navLinks = [
   { label: 'Inicio', href: '#hero' },
@@ -16,6 +19,10 @@ const navLinks = [
   { label: 'Contacto', href: '#cta' },
 ];
 
+<<<<<<< Updated upstream
+export function LandingPage() {
+  const navigate = useNavigate();
+=======
 function reduceMotion() {
   return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
@@ -169,10 +176,18 @@ export function LandingPage() {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const [scrollY, setScrollY] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+>>>>>>> Stashed changes
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [landingConfig, setLandingConfig] = useState<Record<string, any>>({});
   const [landingImages, setLandingImages] = useState<any[]>([]);
+<<<<<<< Updated upstream
+  const [_landingLoaded, setLandingLoaded] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', onScroll, { passive: true });
+=======
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -198,9 +213,11 @@ export function LandingPage() {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     update();
+>>>>>>> Stashed changes
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Load public landing data from SaaS
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -211,20 +228,36 @@ export function LandingPage() {
           apiService.getPublicLandingImages().catch(() => null),
         ]);
         if (cancelled) return;
-        setLandingConfig(extractData(configRes) || {});
-        setLandingImages(extractData(imagesRes) || []);
+        const config = extractData(configRes) || {};
+        const images = extractData(imagesRes) || [];
+        setLandingConfig(config);
+        setLandingImages(images);
+        setLandingLoaded(true);
       } catch {
+<<<<<<< Updated upstream
+        // Silently fail: use default assets
+        setLandingLoaded(true);
+=======
         /* defaults */
+>>>>>>> Stashed changes
       }
     })();
     return () => { cancelled = true; };
   }, []);
 
+  // Helper to get config value by section/key
   const getConfig = (section: string, key: string, fallback: string) => {
     const sec = landingConfig[section];
-    if (sec && typeof sec === 'object' && key in sec) return sec[key];
+    if (sec && typeof sec === 'object' && key in sec) {
+      return sec[key];
+    }
     return fallback;
   };
+<<<<<<< Updated upstream
+
+  // Helper to get image by type
+=======
+>>>>>>> Stashed changes
   const getImage = (type: string, fallback: string) => {
     const img = landingImages.find((i) => i.type === type && i.active);
     return img?.url || fallback;
@@ -235,6 +268,16 @@ export function LandingPage() {
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
+<<<<<<< Updated upstream
+  const features = [
+    { icon: '📐', title: 'Cotización Inteligente', desc: 'Wizard de 5 pasos con cálculo automático de áreas y precios en tiempo real.' },
+    { icon: '🏗️', title: 'Arquitectura Profesional', desc: '8 servicios de diseño especializados para proyectos de construcción de cualquier escala.' },
+    { icon: '📋', title: 'Cuentas de Cobro', desc: 'Documentos formales con datos de empresa, plan de pagos, firma y numeración automática.' },
+    { icon: '📱', title: '100% Responsive', desc: 'Accede desde cualquier dispositivo, en cualquier momento. Diseño mobile-first.' },
+    { icon: '💰', title: 'Precios en Tiempo Real', desc: 'Cálculo instantáneo con descuentos, servicios adicionales y estimaciones de obra.' },
+    { icon: '📊', title: 'Historial Completo', desc: 'Guarda, edita y gestiona todas tus cotizaciones con sincronización en la nube.' },
+  ];
+=======
   const reduce = reduceMotion();
   const par = (f: number) => (reduce ? 0 : scrollY * f);
   const heroOpacity = reduce ? 1 : Math.max(1 - scrollY / 760, 0);
@@ -245,6 +288,7 @@ export function LandingPage() {
   const bgEnd = [5, 5, 6]; // #050506 negro profundo
   const t = reduce ? 1 : scrollProgress;
   const bgColor = `rgb(${lerp(bgStart[0], bgEnd[0], t)}, ${lerp(bgStart[1], bgEnd[1], t)}, ${lerp(bgStart[2], bgEnd[2], t)})`;
+>>>>>>> Stashed changes
 
   const features: {
     icon: ComponentType<{ size?: number | string; strokeWidth?: number }>;
@@ -262,6 +306,39 @@ export function LandingPage() {
     { icon: Wallet, title: 'Tarifas configurables', desc: 'Define los precios de tus servicios y paquetes; el cotizador los aplica al instante.', span: { gridColumn: 'span 6' } as CSSProperties },
   ];
 
+<<<<<<< Updated upstream
+  return (
+    <div className="animated-bg" style={{ minHeight: '100vh' }}>
+      {/* Navbar */}
+      <nav className={`landing-nav ${scrolled ? 'scrolled' : ''}`}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <img
+            src={getImage('logo_abbreviated', logoGold)}
+            alt="ELEMENThaus"
+            style={{ height: 48, width: 'auto', cursor: 'pointer' }}
+            onClick={() => scrollTo('#hero')}
+          />
+
+          {/* Desktop links */}
+          <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+            {navLinks.map((link) => (
+              <span key={link.href} className="landing-nav-link" onClick={() => scrollTo(link.href)}>
+                {link.label}
+              </span>
+            ))}
+            <button className="btn btn-small" onClick={() => navigate('/login')} style={{ width: 'auto', padding: '10px 24px' }}>
+              Ingresar
+            </button>
+          </div>
+
+          {/* Mobile hamburger */}
+          <button
+            className="hamburger"
+            onClick={() => setMenuOpen(!menuOpen)}
+            style={{ display: 'none' }}
+            aria-label="Menú"
+          >
+=======
   const services = [
     { n: '01', t: 'Diseño Arquitectónico', d: 'Planos arquitectónicos completos con normativa local.' },
     { n: '02', t: 'Diseño Estructural', d: 'Cálculo de estructuras, cimentación y mampostería.' },
@@ -302,6 +379,7 @@ export function LandingPage() {
             </button>
           </div>
           <button className="hamburger show-mobile" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menú">
+>>>>>>> Stashed changes
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
               <span className="hamburger-line" style={{ transform: menuOpen ? 'rotate(45deg) translateY(3.5px)' : undefined }} />
               <span className="hamburger-line" style={{ opacity: menuOpen ? 0 : 1, width: 14 }} />
@@ -309,6 +387,40 @@ export function LandingPage() {
             </div>
           </button>
         </div>
+<<<<<<< Updated upstream
+
+        {/* Mobile menu */}
+        {menuOpen && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 8px)',
+              right: 24,
+              background: 'rgba(15,15,15,0.98)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 20,
+              padding: 16,
+              minWidth: 200,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+            }}
+          >
+            {navLinks.map((link) => (
+              <span
+                key={link.href}
+                style={{ padding: '10px 16px', borderRadius: 12, cursor: 'pointer', fontSize: 15, color: '#fff' }}
+                onClick={() => scrollTo(link.href)}
+              >
+                {link.label}
+              </span>
+            ))}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '8px 0' }} />
+            <button className="btn" onClick={() => navigate('/login')}>
+              Ingresar
+            </button>
+=======
         {menuOpen && (
           <div className="lp-mobile-menu" role="dialog" aria-modal="true">
             <div className="lp-mm-top">
@@ -337,11 +449,96 @@ export function LandingPage() {
                 {isAuthenticated ? 'Ir al Dashboard →' : 'Ingresar'}
               </button>
             </div>
+>>>>>>> Stashed changes
           </div>
         )}
       </nav>
 
       {/* Hero */}
+<<<<<<< Updated upstream
+      <section id="hero" className="hero-section" style={{ padding: '0 24px' }}>
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${getImage('hero_bg', casaImage)})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.12 }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,10,10,0.75) 0%, rgba(10,10,10,0.92) 100%)' }} />
+
+        {particles.map((p) => (
+          <div
+            key={p.id}
+            style={{
+              position: 'absolute',
+              top: p.top, left: p.left, right: p.right, bottom: p.bottom,
+              width: p.size, height: p.size,
+              background: `radial-gradient(circle, rgba(182,148,98,${p.opacity}) 0%, transparent 70%)`,
+              borderRadius: '50%', pointerEvents: 'none',
+              animation: `floatParticle ${p.duration} ease-in-out ${p.delay} infinite`,
+            }}
+          />
+        ))}
+
+        <div style={{ position: 'relative', zIndex: 1 }} className="animate-reveal-up">
+          <img
+            src={getImage('logo_main', logoGold)}
+            alt="ELEMENThaus"
+            style={{ width: 'clamp(220px, 32vw, 380px)', height: 'auto', filter: 'drop-shadow(0 0 30px rgba(182, 148, 98, 0.3))' }}
+          />
+        </div>
+
+        <h1 className="hero-title animate-slide-up" style={{ marginTop: 24 }}>
+          {getConfig('hero', 'title', 'Cotizador Profesional')}
+        </h1>
+
+        <p className="hero-subtitle animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          {getConfig('hero', 'subtitle', 'Sistema integral para cotización de proyectos de construcción y arquitectura')}
+        </p>
+
+        <div className="animate-reveal-up delay-3" style={{ display: 'flex', gap: 16, marginTop: 40, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button className="btn" style={{ width: 'auto', padding: '16px 40px', fontSize: 18 }} onClick={() => navigate('/login')}>
+            Comenzar Ahora →
+          </button>
+          <button className="btn btn-ghost" style={{ width: 'auto', padding: '16px 40px', fontSize: 18 }} onClick={() => scrollTo('#features')}>
+            Conocer Más
+          </button>
+        </div>
+
+        <div
+          style={{ position: 'absolute', bottom: 40, opacity: 0.5, animation: 'bounceArrow 2s ease-in-out infinite', zIndex: 1 }}
+          className="animate-reveal-up delay-5"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 5v14M5 12l7 7 7-7"/>
+          </svg>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section style={{ padding: '80px 24px', maxWidth: 1200, margin: '0 auto' }}>
+        <div className="grid-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+          {stats.map((stat, i) => (
+            <div key={i} className="stat-card animate-reveal-up" style={{ animationDelay: `${i * 0.1}s` }}>
+              <div className="stat-number">{stat.value}</div>
+              <p className="small" style={{ marginTop: 8 }}>{stat.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="features" style={{ padding: '80px 24px', maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 60 }} className="animate-reveal-up">
+          <h2
+            style={{
+              fontSize: 'clamp(2rem, 5vw, 3rem)',
+              fontWeight: 700,
+              marginBottom: 16,
+              background: 'linear-gradient(135deg, #ffffff, #b69462)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            Todo lo que necesitas
+          </h2>
+          <p style={{ color: '#999', fontSize: 18, lineHeight: 1.6, maxWidth: 600, margin: '0 auto' }}>
+            Herramientas profesionales diseñadas para arquitectos, ingenieros y constructoras
+=======
       <section
         id="hero"
         style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '100vh', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', overflow: 'hidden', padding: '120px 24px 90px' }}
@@ -361,6 +558,7 @@ export function LandingPage() {
           </div>
           <p className="animate-slide-up" style={{ animationDelay: '0.15s', fontSize: 'clamp(1.2rem, 2.4vw, 1.65rem)', color: '#b3ac9d', maxWidth: 700, margin: '32px auto 0', lineHeight: 1.6 }}>
             {getConfig('hero', 'subtitle', 'Sistema integral para cotización de proyectos de construcción y arquitectura, con cuentas de cobro profesionales.')}
+>>>>>>> Stashed changes
           </p>
           <div className="animate-reveal-up delay-3" style={{ display: 'flex', gap: 16, marginTop: 42, flexWrap: 'wrap', justifyContent: 'center' }}>
             <MagneticButton onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}>{isAuthenticated ? 'Ir al Dashboard →' : 'Comenzar ahora →'}</MagneticButton>
@@ -368,6 +566,30 @@ export function LandingPage() {
           </div>
         </div>
 
+<<<<<<< Updated upstream
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 40, alignItems: 'center' }}>
+          <div style={{ display: 'grid', gap: 20 }}>
+            {features.map((feature, i) => (
+              <div
+                key={i}
+                className="animate-slide-right"
+                style={{ animationDelay: `${i * 0.1}s`, display: 'flex', gap: 16, alignItems: 'flex-start' }}
+              >
+                <div style={{
+                  fontSize: 28,
+                  background: 'rgba(182, 148, 98, 0.1)',
+                  padding: '12px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(182, 148, 98, 0.2)',
+                  flexShrink: 0,
+                }}>
+                  {feature.icon}
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{feature.title}</h3>
+                  <p className="small" style={{ lineHeight: 1.6 }}>{feature.desc}</p>
+                </div>
+=======
       </section>
 
       {/* Espaciador para la portada fija */}
@@ -405,6 +627,7 @@ export function LandingPage() {
                 <MagneticButton onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}>
                   {isAuthenticated ? 'Crear cotización →' : 'Probar gratis →'}
                 </MagneticButton>
+>>>>>>> Stashed changes
               </div>
             </Reveal>
 
@@ -487,10 +710,74 @@ export function LandingPage() {
               </Reveal>
             ))}
           </div>
+<<<<<<< Updated upstream
+
+          <div className="animate-reveal-scale delay-4">
+            <img
+              src={casaImage}
+              alt="Casa moderna"
+              style={{ width: '100%', borderRadius: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', border: '1px solid rgba(182, 148, 98, 0.2)' }}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Services Grid */}
+      <section id="services" style={{ padding: '80px 24px', maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }} className="animate-reveal-up">
+          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 700, marginBottom: 12 }}>
+            Servicios Disponibles
+          </h2>
+          <p className="small" style={{ fontSize: 16 }}>Cada uno calculado al precio por m² de tu proyecto</p>
+        </div>
+
+        <div className="grid-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+          {[
+            { n: '01', t: 'Diseño Arquitectónico', d: 'Planos arquitectónicos completos con normativa local.' },
+            { n: '02', t: 'Diseño Estructural', d: 'Cálculo de estructuras, cimentación y mampostería.' },
+            { n: '03', t: 'Instalaciones Hidrosanitarias', d: 'Redes de agua, desagüe y sistemas sanitarios.' },
+            { n: '04', t: 'Diseño Eléctrico', d: 'Planos eléctricos, iluminación y tableros.' },
+            { n: '05', t: 'Renders 3D', d: 'Visualización fotorealista de tu proyecto.' },
+            { n: '06', t: 'Recorrido 3D', d: 'Tour virtual interactivo para tus clientes.' },
+            { n: '07', t: 'Presupuesto', d: 'Desglose detallado de costos de construcción.' },
+            { n: '08', t: 'Licencias', d: 'Trámites de licencias de construcción.' },
+          ].map((s, i) => (
+            <div
+              key={i}
+              className="card animate-reveal-up"
+              style={{ animationDelay: `${i * 0.06}s`, padding: 28 }}
+            >
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-accent)', letterSpacing: 1 }}>{s.n}</span>
+              <h4 style={{ fontSize: 18, fontWeight: 600, margin: '12px 0 8px' }}>{s.t}</h4>
+              <p className="small" style={{ lineHeight: 1.6 }}>{s.d}</p>
+            </div>
+          ))}
+=======
+>>>>>>> Stashed changes
         </div>
       </section>
 
       {/* CTA */}
+<<<<<<< Updated upstream
+      <section id="cta" style={{ padding: '100px 24px', textAlign: 'center', position: 'relative' }}>
+        <div style={{ position: 'absolute', top: '20%', left: '10%', width: 200, height: 200, background: 'radial-gradient(circle, rgba(182,148,98,0.06) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none', animation: 'floatParticle 10s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', bottom: '20%', right: '10%', width: 250, height: 250, background: 'radial-gradient(circle, rgba(182,148,98,0.05) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none', animation: 'floatParticle 8s ease-in-out 2s infinite' }} />
+
+        <div className="card-hero animate-reveal-scale" style={{ maxWidth: 800, margin: '0 auto', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${getImage('cta_bg', casa2Image)})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.05 }} />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <img src={logoWhite} alt="ELEMENThaus" style={{ width: 80, height: 'auto', marginBottom: 24, opacity: 0.9 }} />
+            <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', fontWeight: 700, marginBottom: 16 }}>
+              ¿Listo para profesionalizar tus cotizaciones?
+            </h2>
+            <p style={{ color: '#999', marginBottom: 32, fontSize: 18 }}>
+              Únete a los estudios de arquitectura que ya confían en ELEMENT
+            </p>
+            <button className="btn" style={{ width: 'auto', padding: '18px 48px', fontSize: 18 }} onClick={() => navigate('/login')}>
+              Empezar Gratis →
+            </button>
+          </div>
+=======
       <section id="cta" style={{ position: 'relative', padding: '80px 24px 110px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <Reveal>
@@ -514,10 +801,17 @@ export function LandingPage() {
               </div>
             </div>
           </Reveal>
+>>>>>>> Stashed changes
         </div>
       </section>
 
       {/* Footer */}
+<<<<<<< Updated upstream
+      <footer style={{ padding: '48px 24px', textAlign: 'center', borderTop: '1px solid var(--color-line)' }}>
+        <img src={getImage('logo_white', logoWhite)} alt="ELEMENThaus" style={{ width: 60, height: 'auto', marginBottom: 16, opacity: 0.8 }} />
+        <p className="small">{getConfig('footer', 'company_name', 'ELEMENThaus - Estudio de Diseño & Construcción')} © 2026</p>
+        <p className="small" style={{ marginTop: 4 }}>{getConfig('footer', 'tagline', 'Cotizador Profesional · Todos los derechos reservados')}</p>
+=======
       <footer style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '58px 24px 50px' }}>
         <div className="lp-wrap" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -530,6 +824,7 @@ export function LandingPage() {
             ))}
           </div>
         </div>
+>>>>>>> Stashed changes
       </footer>
       </div>{/* /lp-content */}
     </div>

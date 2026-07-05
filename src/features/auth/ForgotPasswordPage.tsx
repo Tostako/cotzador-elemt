@@ -53,30 +53,13 @@ export function ForgotPasswordPage() {
       <Toaster position="top-center" theme="dark" />
       <div className="animated-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         {/* Background effects */}
-        <div style={{
-          position: 'fixed',
-          top: '10%',
-          left: '5%',
-          width: '400px',
-          height: '400px',
-          background: 'radial-gradient(circle, rgba(182,148,98,0.08) 0%, transparent 70%)',
-          borderRadius: '50%',
-          pointerEvents: 'none',
-        }} />
-        <div style={{
-          position: 'fixed',
-          bottom: '10%',
-          right: '5%',
-          width: '300px',
-          height: '300px',
-          background: 'radial-gradient(circle, rgba(182,148,98,0.06) 0%, transparent 70%)',
-          borderRadius: '50%',
-          pointerEvents: 'none',
-        }} />
+        <div className="auth-blob auth-blob--1" />
+        <div className="auth-blob auth-blob--2" />
 
         <div style={{ maxWidth: 480, width: '100%' }}>
           {/* Back to login */}
           <button
+            type="button"
             className="btn btn-ghost btn-small"
             style={{ marginBottom: 32, gap: 6 }}
             onClick={() => navigate('/login')}
@@ -113,8 +96,9 @@ export function ForgotPasswordPage() {
 
             <div style={{ display: 'grid', gap: 16 }}>
               <div>
-                <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Correo electrónico</label>
+                <label htmlFor="fp-email" className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Correo electrónico</label>
                 <input
+                  id="fp-email"
                   className="input"
                   type="email"
                   placeholder="tu@email.com"
@@ -126,8 +110,9 @@ export function ForgotPasswordPage() {
                 <span className="small" style={{ color: '#666' }}>— o —</span>
               </div>
               <div>
-                <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Teléfono</label>
+                <label htmlFor="fp-phone" className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Teléfono</label>
                 <input
+                  id="fp-phone"
                   className="input"
                   type="tel"
                   placeholder="Ej: +57 300 123 4567"
@@ -139,9 +124,10 @@ export function ForgotPasswordPage() {
                 </p>
               </div>
               <div>
-                <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Nueva contraseña</label>
+                <label htmlFor="fp-new" className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Nueva contraseña</label>
                 <div style={{ position: 'relative' }}>
                   <input
+                    id="fp-new"
                     className="input"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Mínimo 6 caracteres"
@@ -170,8 +156,9 @@ export function ForgotPasswordPage() {
                 </div>
               </div>
               <div>
-                <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Confirmar contraseña</label>
+                <label htmlFor="fp-confirm" className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Confirmar contraseña</label>
                 <input
+                  id="fp-confirm"
                   className="input"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Repite la nueva contraseña"
@@ -181,6 +168,7 @@ export function ForgotPasswordPage() {
                 />
               </div>
               <button
+                type="button"
                 className="btn"
                 onClick={handleReset}
                 disabled={isLoading}

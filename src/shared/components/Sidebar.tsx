@@ -98,6 +98,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     };
   }, [open, onClose]);
 
+<<<<<<< Updated upstream
+  const items = [
+    { route: '/dashboard', icon: '🏠', label: 'Inicio' },
+    { route: '/quote', icon: '📐', label: 'Cotizar' },
+    { route: '/history', icon: '📂', label: 'Historial' },
+    { route: '/settings', icon: '⚙️', label: 'Ajustes' },
+  ];
+
+  const isActive = (route: string) => location.pathname === route;
+=======
   // Al abrir el sidebar, despliega el grupo de la ruta actual.
   useEffect(() => {
     if (!open) return;
@@ -109,6 +119,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       return next;
     });
   }, [open, location.pathname]);
+>>>>>>> Stashed changes
 
   const handleNavigate = (route: string) => {
     navigate(route);
@@ -135,9 +146,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   return (
     <>
       {/* Overlay */}
-      <div className={`sidebar-overlay no-print ${open ? 'open' : ''}`} onClick={onClose} />
+      <div className={`sidebar-overlay ${open ? 'open' : ''}`} onClick={onClose} />
 
       {/* Sidebar */}
+<<<<<<< Updated upstream
+      <aside ref={sidebarRef} className={`sidebar ${open ? 'open' : ''}`}>
+        {/* Logo header */}
+        <div style={{ padding: '0 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <span style={{ fontSize: 22 }}>🏗️</span>
+=======
       <aside ref={sidebarRef} className={`sidebar no-print ${open ? 'open' : ''}`}>
         {/* Logo header (→ landing) */}
         <div style={{ padding: '0 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 8 }}>
@@ -149,11 +167,30 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             onKeyDown={(e) => e.key === 'Enter' && navigate('/')}
           >
             <Building2 size={22} color="#b69462" />
+>>>>>>> Stashed changes
             <span style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>ELEMENT</span>
           </div>
           <p className="small" style={{ fontSize: 12, margin: 0 }}>Cotizador Profesional</p>
         </div>
 
+<<<<<<< Updated upstream
+        {/* Nav items */}
+        <nav style={{ flex: 1, overflowY: 'auto', padding: '0 12px' }}>
+          <p className="small" style={{ padding: '12px 12px 8px', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Menú Principal</p>
+          {items.map((item) => (
+            <div
+              key={item.route}
+              className={`sidebar-item ${isActive(item.route) ? 'active' : ''}`}
+              onClick={() => handleNavigate(item.route)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && handleNavigate(item.route)}
+            >
+              <span style={{ fontSize: 20, width: 28, textAlign: 'center' }}>{item.icon}</span>
+              <span>{item.label}</span>
+            </div>
+          ))}
+=======
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '0 12px' }}>
           {/* Home (acceso directo) */}
@@ -196,6 +233,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 8, paddingTop: 8 }}>
             {standaloneItems.map(renderItem)}
           </div>
+>>>>>>> Stashed changes
         </nav>
 
         {/* Usuario + Logout */}

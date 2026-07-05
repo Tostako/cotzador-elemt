@@ -1,6 +1,11 @@
 import { useNavigate } from 'react-router-dom';
+<<<<<<< Updated upstream
+import { useState } from 'react';
+import { useAppStore, NotificationContainer } from '../../shared/hooks/useNotifications';
+=======
 import { useState, useEffect } from 'react';
 import { showNotification, Toaster } from '../../shared/hooks/useNotifications';
+>>>>>>> Stashed changes
 import { useStore } from '../../shared/services/store';
 import logoAbbreviated from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado White.png';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
@@ -8,18 +13,14 @@ import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 export function RegisterPage() {
   const navigate = useNavigate();
   const login = useStore((s) => s.login);
-  const isAuthenticated = useStore((s) => s.isAuthenticated);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-
+  const loadFromBackend = useStore((s) => s.loadFromBackend);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+<<<<<<< Updated upstream
+=======
   const [profession, setProfession] = useState('');
+>>>>>>> Stashed changes
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -49,12 +50,13 @@ export function RegisterPage() {
         phone: phone.trim() || undefined,
         password: password.trim(),
         shop_slug: SHOP_SLUG,
-        address: profession || undefined,
       });
-      let token = res.token || (res.data && res.data.token);
+      const token = res.token || (res.data && res.data.token);
       if (!token) {
         throw new Error('El servidor no devolvió un token de sesión');
       }
+<<<<<<< Updated upstream
+=======
 
       // Check if token is pending (no shop_id) and resolve it
       let selectRes: any = null;
@@ -71,6 +73,7 @@ export function RegisterPage() {
           }
       }
 
+>>>>>>> Stashed changes
       let user = apiService.buildUserFromToken(token);
       if (!user) {
         throw new Error('No se pudieron leer los datos del usuario desde el token');
@@ -78,10 +81,6 @@ export function RegisterPage() {
       // Fallback: try response body name, then the form name
       if (!user.name || user.name === 'Usuario') {
         const bodyName =
-          selectRes?.user?.name ||
-          selectRes?.customer?.name ||
-          selectRes?.data?.user?.name ||
-          selectRes?.data?.customer?.name ||
           res.name ||
           res.customer_name ||
           res.user?.name ||
@@ -92,27 +91,17 @@ export function RegisterPage() {
           res.data?.customer?.name;
         user = { ...user, name: bodyName || name.trim() || 'Usuario' };
       }
-      // Extract profession from response if available
-      const bodyProfession =
-        selectRes?.user?.profession ||
-        selectRes?.customer?.profession ||
-        selectRes?.data?.user?.profession ||
-        selectRes?.data?.customer?.profession ||
-        res.user?.profession ||
-        res.customer?.profession ||
-        res.data?.user?.profession ||
-        res.data?.customer?.profession;
-      if (bodyProfession) {
-        user = { ...user, profession: bodyProfession };
-      } else if (profession) {
-        user = { ...user, profession };
-      }
       login(user);
+<<<<<<< Updated upstream
+      loadFromBackend().catch(() => {});
+      showNotification(`¡Bienvenido a ELEMENT, ${user.name}!`, 'success');
+=======
       showNotification('Correcto', 'success', `Registro exitoso. ¡Bienvenido a ELEMENT, ${user.name}! Tu cuenta ha sido creada correctamente.`);
       // Activate onboarding tour for new users
       localStorage.removeItem('element_tour_seen');
       localStorage.removeItem('element_tour_active');
       localStorage.removeItem('element_tour_step');
+>>>>>>> Stashed changes
       navigate('/dashboard');
     } catch (err: any) {
       showNotification('Error', 'error', err.message || 'No se pudo crear la cuenta. Verifica los datos e intenta de nuevo.');
@@ -209,6 +198,8 @@ export function RegisterPage() {
               />
             </div>
             <div>
+<<<<<<< Updated upstream
+=======
               <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Profesión <span style={{ opacity: 0.5 }}>(opcional)</span></label>
               <input
                 className="input"
@@ -218,6 +209,7 @@ export function RegisterPage() {
               />
             </div>
             <div>
+>>>>>>> Stashed changes
               <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Contraseña</label>
               <div style={{ position: 'relative' }}>
                 <input

@@ -52,7 +52,7 @@ export function QuoteStep2() {
 
       {formData.areaMode === 'direct' && (
         <div className="card">
-          <p className="small mb-1">Área del lote (m²)</p>
+          <p className="small mb-1">Área primer piso (m²)</p>
           <input
             className="input"
             type="number"
@@ -60,12 +60,60 @@ export function QuoteStep2() {
             step="0.1"
             onChange={(e) => setFormData({ directArea: e.target.value })}
           />
-          <p className="small mt-1" style={{ color: '#999' }}>
-            El área del primer piso se calculará automáticamente según el índice de ocupación.
-          </p>
         </div>
       )}
 
+<<<<<<< Updated upstream
+      {/* DIAGRAMA DEL TERRENO - NUEVO DISEÑO ESPACIOSO */}
+      <div className="card" style={{ padding: '40px 32px' }}>
+        <p className="small mb-4" style={{ color: '#b69462', fontSize: 14, fontWeight: 600 }}>
+          📐 Ingresa las dimensiones del terreno:
+        </p>
+
+        {/* TOP: FRONTAL */}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          marginBottom: 24,
+        }}>
+          <label style={{ 
+            fontSize: 13, 
+            color: '#999', 
+            textTransform: 'uppercase', 
+            letterSpacing: '1px',
+            marginBottom: 8,
+            fontWeight: 600,
+          }}>
+            Frontal
+          </label>
+          <div style={{ position: 'relative', width: 120 }}>
+            <input
+              type="number"
+              className="input"
+              value={formData.frontal}
+              step="0.1"
+              onChange={(e) => updateSide('frontal', e.target.value)}
+              style={{ 
+                textAlign: 'center', 
+                fontWeight: 700, 
+                fontSize: 18,
+                color: '#b69462',
+                borderColor: '#b69462',
+                padding: '12px 8px',
+              }}
+            />
+            <span style={{ 
+              position: 'absolute', 
+              right: 12, 
+              top: '50%', 
+              transform: 'translateY(-50%)',
+              color: '#b69462',
+              fontSize: 14,
+            }}>m</span>
+          </div>
+        </div>
+=======
       {/* DIAGRAMA DEL TERRENO */}
       <div className="card lot-card">
         {formData.areaMode === 'direct' ? (
@@ -82,207 +130,267 @@ export function QuoteStep2() {
             <p className="small mb-4" style={{ color: '#b69462', fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <PencilRuler size={15} /> Ingresa las dimensiones del terreno:
             </p>
+>>>>>>> Stashed changes
 
-            {/* TOP: POSTERIOR */}
-            <div className="lot-dim lot-dim-top">
-              {formData.lotShape === 'irregular' ? (
-                <>
-                  <label className="lot-label">Posterior</label>
-                  <div style={{ position: 'relative', width: 120 }}>
-                    <input
-                      type="number"
-                      className="input"
-                      value={formData.posterior}
-                      step="0.1"
-                      onChange={(e) => updateSide('posterior', e.target.value)}
-                      style={{
-                        textAlign: 'center',
-                        fontWeight: 700,
-                        fontSize: 18,
-                        color: '#b69462',
-                        borderColor: '#b69462',
-                        padding: '12px 8px',
-                      }}
-                    />
-                    <span className="lot-unit">m</span>
-                  </div>
-                </>
-              ) : (
-                <div className="lot-readonly">
-                  <label className="lot-label ro">Posterior</label>
-                  <div className="lot-ro-value">= {formData.frontal}m</div>
-                  <p className="lot-ro-hint">Igual a Frontal</p>
-                </div>
-              )}
+        {/* MIDDLE: SIDES + LOT DIAGRAM */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          gap: 40,
+          marginBottom: 24,
+        }}>
+          {/* LEFT: LAT IZQ */}
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center',
+            minWidth: 100,
+          }}>
+            <label style={{ 
+              fontSize: 13, 
+              color: '#999', 
+              textTransform: 'uppercase', 
+              letterSpacing: '1px',
+              marginBottom: 8,
+              fontWeight: 600,
+            }}>
+              Lat Izq
+            </label>
+            <div style={{ position: 'relative', width: 100 }}>
+              <input
+                type="number"
+                className="input"
+                value={formData.latIzq}
+                step="0.1"
+                onChange={(e) => updateSide('latIzq', e.target.value)}
+                style={{ 
+                  textAlign: 'center', 
+                  fontWeight: 700, 
+                  fontSize: 18,
+                  color: '#b69462',
+                  borderColor: '#b69462',
+                  padding: '12px 8px',
+                }}
+              />
+              <span style={{ 
+                position: 'absolute', 
+                right: 12, 
+                top: '50%', 
+                transform: 'translateY(-50%)',
+                color: '#b69462',
+                fontSize: 14,
+              }}>m</span>
             </div>
+          </div>
 
-            {/* MIDDLE: SIDES + LOT DIAGRAM */}
-            <div className="lot-middle">
-              {/* LEFT: LAT IZQ */}
-              <div className="lot-side">
-                <label className="lot-label">Lat Izq</label>
+          {/* CENTER: LOT DIAGRAM */}
+          <div style={{ 
+            width: 220, 
+            height: 220, 
+            minWidth: 220,
+            minHeight: 220,
+            border: '3px solid #b69462',
+            borderRadius: 8,
+            background: 'rgba(182, 148, 98, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            boxShadow: '0 0 30px rgba(182, 148, 98, 0.1), inset 0 0 30px rgba(182, 148, 98, 0.05)',
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 14, color: '#999', marginBottom: 4 }}>Lote</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: '#b69462' }}>
+                {area.lot.toFixed(1)}m²
+              </div>
+            </div>
+            
+            {/* Corner decorations */}
+            <div style={{ position: 'absolute', top: -2, left: -2, width: 16, height: 16, borderTop: '3px solid #b69462', borderLeft: '3px solid #b69462' }} />
+            <div style={{ position: 'absolute', top: -2, right: -2, width: 16, height: 16, borderTop: '3px solid #b69462', borderRight: '3px solid #b69462' }} />
+            <div style={{ position: 'absolute', bottom: -2, left: -2, width: 16, height: 16, borderBottom: '3px solid #b69462', borderLeft: '3px solid #b69462' }} />
+            <div style={{ position: 'absolute', bottom: -2, right: -2, width: 16, height: 16, borderBottom: '3px solid #b69462', borderRight: '3px solid #b69462' }} />
+          </div>
+
+          {/* RIGHT: LAT DER */}
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center',
+            minWidth: 100,
+          }}>
+            {formData.lotShape === 'irregular' ? (
+              <>
+                <label style={{ 
+                  fontSize: 13, 
+                  color: '#999', 
+                  textTransform: 'uppercase', 
+                  letterSpacing: '1px',
+                  marginBottom: 8,
+                  fontWeight: 600,
+                }}>
+                  Lat Der
+                </label>
                 <div style={{ position: 'relative', width: 100 }}>
                   <input
                     type="number"
                     className="input"
-                    value={formData.latIzq}
+                    value={formData.latDer}
                     step="0.1"
-                    onChange={(e) => updateSide('latIzq', e.target.value)}
-                    style={{
-                      textAlign: 'center',
-                      fontWeight: 700,
+                    onChange={(e) => updateSide('latDer', e.target.value)}
+                    style={{ 
+                      textAlign: 'center', 
+                      fontWeight: 700, 
                       fontSize: 18,
                       color: '#b69462',
                       borderColor: '#b69462',
                       padding: '12px 8px',
                     }}
                   />
-                  <span className="lot-unit">m</span>
+                  <span style={{ 
+                    position: 'absolute', 
+                    right: 12, 
+                    top: '50%', 
+                    transform: 'translateY(-50%)',
+                    color: '#b69462',
+                    fontSize: 14,
+                  }}>m</span>
                 </div>
-              </div>
-
-              {/* CENTER: LOT DIAGRAM */}
-              <div className="lot-box">
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 14, color: '#999', marginBottom: 4 }}>Lote</div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: '#b69462' }}>
-                    {area.lot.toFixed(1)}m²
-                  </div>
+              </>
+            ) : (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '20px 12px',
+                background: 'rgba(255,255,255,0.03)',
+                borderRadius: 12,
+                border: '1px dashed rgba(255,255,255,0.1)',
+              }}>
+                <label style={{ 
+                  fontSize: 12, 
+                  color: '#666', 
+                  textTransform: 'uppercase', 
+                  letterSpacing: '1px',
+                  fontWeight: 600,
+                }}>
+                  Lat Der
+                </label>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#666', marginTop: 8 }}>
+                  = {formData.latIzq}m
                 </div>
-
-                {/* Corner decorations */}
-                <div style={{ position: 'absolute', top: -2, left: -2, width: 16, height: 16, borderTop: '3px solid #b69462', borderLeft: '3px solid #b69462' }} />
-                <div style={{ position: 'absolute', top: -2, right: -2, width: 16, height: 16, borderTop: '3px solid #b69462', borderRight: '3px solid #b69462' }} />
-                <div style={{ position: 'absolute', bottom: -2, left: -2, width: 16, height: 16, borderBottom: '3px solid #b69462', borderLeft: '3px solid #b69462' }} />
-                <div style={{ position: 'absolute', bottom: -2, right: -2, width: 16, height: 16, borderBottom: '3px solid #b69462', borderRight: '3px solid #b69462' }} />
+                <p style={{ fontSize: 11, color: '#555', marginTop: 4 }}>Igual a Lat Izq</p>
               </div>
+            )}
+          </div>
+        </div>
 
-              {/* RIGHT: LAT DER */}
-              <div className="lot-side">
-                {formData.lotShape === 'irregular' ? (
-                  <>
-                    <label className="lot-label">Lat Der</label>
-                    <div style={{ position: 'relative', width: 100 }}>
-                      <input
-                        type="number"
-                        className="input"
-                        value={formData.latDer}
-                        step="0.1"
-                        onChange={(e) => updateSide('latDer', e.target.value)}
-                        style={{
-                          textAlign: 'center',
-                          fontWeight: 700,
-                          fontSize: 18,
-                          color: '#b69462',
-                          borderColor: '#b69462',
-                          padding: '12px 8px',
-                        }}
-                      />
-                      <span className="lot-unit">m</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="lot-readonly">
-                    <label className="lot-label ro">Lat Der</label>
-                    <div className="lot-ro-value">= {formData.latIzq}m</div>
-                    <p className="lot-ro-hint">Igual a Lat Izq</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* BOTTOM: FRONTAL */}
-            <div className="lot-dim lot-dim-bottom">
-              <label className="lot-label">Frontal</label>
+        {/* BOTTOM: POSTERIOR */}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center',
+        }}>
+          {formData.lotShape === 'irregular' ? (
+            <>
+              <label style={{ 
+                fontSize: 13, 
+                color: '#999', 
+                textTransform: 'uppercase', 
+                letterSpacing: '1px',
+                marginBottom: 8,
+                fontWeight: 600,
+              }}>
+                Posterior
+              </label>
               <div style={{ position: 'relative', width: 120 }}>
                 <input
                   type="number"
                   className="input"
-                  value={formData.frontal}
+                  value={formData.posterior}
                   step="0.1"
-                  onChange={(e) => updateSide('frontal', e.target.value)}
-                  style={{
-                    textAlign: 'center',
-                    fontWeight: 700,
+                  onChange={(e) => updateSide('posterior', e.target.value)}
+                  style={{ 
+                    textAlign: 'center', 
+                    fontWeight: 700, 
                     fontSize: 18,
                     color: '#b69462',
                     borderColor: '#b69462',
                     padding: '12px 8px',
                   }}
                 />
-                <span className="lot-unit">m</span>
+                <span style={{ 
+                  position: 'absolute', 
+                  right: 12, 
+                  top: '50%', 
+                  transform: 'translateY(-50%)',
+                  color: '#b69462',
+                  fontSize: 14,
+                }}>m</span>
+              </div>
+            </>
+          ) : (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '16px 24px',
+              background: 'rgba(255,255,255,0.03)',
+              borderRadius: 12,
+              border: '1px dashed rgba(255,255,255,0.1)',
+            }}>
+              <label style={{ 
+                fontSize: 12, 
+                color: '#666', 
+                textTransform: 'uppercase', 
+                letterSpacing: '1px',
+                fontWeight: 600,
+              }}>
+                Posterior
+              </label>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#666', marginTop: 8 }}>
+                = {formData.frontal}m
+              </div>
+              <p style={{ fontSize: 11, color: '#555', marginTop: 4 }}>Igual a Frontal</p>
+            </div>
+          )}
+        </div>
+
+        {/* Connector lines visualization */}
+        <div style={{ 
+          marginTop: 32, 
+          padding: 20, 
+          background: 'rgba(182, 148, 98, 0.05)', 
+          borderRadius: 16,
+          border: '1px solid rgba(182, 148, 98, 0.15)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
+            <div>
+              <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Frontal</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{formData.frontal}m</div>
+            </div>
+            <div style={{ width: 1, background: 'rgba(255,255,255,0.1)' }} />
+            <div>
+              <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Lateral Izq</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{formData.latIzq}m</div>
+            </div>
+            <div style={{ width: 1, background: 'rgba(255,255,255,0.1)' }} />
+            <div>
+              <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>
+                {formData.lotShape === 'rectangular' ? 'Posterior (=Frontal)' : 'Posterior'}
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>
+                {formData.lotShape === 'rectangular' ? formData.frontal : formData.posterior}m
               </div>
             </div>
-
-            {/* Connector lines visualization */}
-            <div className="lot-connector">
-              <div className="lot-connector-inner">
-                <div>
-                  <div className="lot-conn-label">Frontal</div>
-                  <div className="lot-conn-value">{formData.frontal}m</div>
-                </div>
-                <div className="lot-conn-line" />
-                <div>
-                  <div className="lot-conn-label">Lateral Izq</div>
-                  <div className="lot-conn-value">{formData.latIzq}m</div>
-                </div>
-                <div className="lot-conn-line" />
-                <div>
-                  <div className="lot-conn-label">
-                    {formData.lotShape === 'rectangular' ? 'Posterior (=Frontal)' : 'Posterior'}
-                  </div>
-                  <div className="lot-conn-value">
-                    {formData.lotShape === 'rectangular' ? formData.frontal : formData.posterior}m
-                  </div>
-                </div>
-                <div className="lot-conn-line" />
-                <div>
-                  <div className="lot-conn-label">
-                    {formData.lotShape === 'rectangular' ? 'Lat Der (=Lat Izq)' : 'Lat Der'}
-                  </div>
-                  <div className="lot-conn-value">
-                    {formData.lotShape === 'rectangular' ? formData.latIzq : formData.latDer}m
-                  </div>
-                </div>
+            <div style={{ width: 1, background: 'rgba(255,255,255,0.1)' }} />
+            <div>
+              <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>
+                {formData.lotShape === 'rectangular' ? 'Lat Der (=Lat Izq)' : 'Lat Der'}
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>
+                {formData.lotShape === 'rectangular' ? formData.latIzq : formData.latDer}m
               </div>
             </div>
-          </>
-        )}
-
-        <style>{`
-          .lot-card { padding: 40px 32px; }
-          .lot-dim { display: flex; flex-direction: column; align-items: center; margin-bottom: 24px; }
-          .lot-label { font-size: 13px; color: #999; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 600; }
-          .lot-unit { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #b69462; font-size: 14px; }
-          .lot-readonly { text-align: center; padding: 16px 24px; background: rgba(255,255,255,0.03); border-radius: 12; border: 1px dashed rgba(255,255,255,0.1); }
-          .lot-label.ro { font-size: 12px; color: #666; }
-          .lot-ro-value { font-size: 20px; font-weight: 700; color: #666; margin-top: 8px; }
-          .lot-ro-hint { font-size: 11px; color: #555; margin-top: 4px; }
-          .lot-middle { display: flex; align-items: center; justify-content: center; gap: 40px; margin-bottom: 24px; }
-          .lot-side { display: flex; flex-direction: column; align-items: center; min-width: 100px; }
-          .lot-box { width: 220px; height: 220px; min-width: 220px; min-height: 220px; border: 3px solid #b69462; border-radius: 8px; background: rgba(182, 148, 98, 0.08); display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 0 30px rgba(182, 148, 98, 0.1), inset 0 0 30px rgba(182, 148, 98, 0.05); }
-          .lot-connector { margin-top: 32px; padding: 20px; background: rgba(182, 148, 98, 0.05); border-radius: 16px; border: 1px solid rgba(182, 148, 98, 0.15); }
-          .lot-connector-inner { display: flex; justify-content: space-around; text-align: center; }
-          .lot-conn-label { font-size: 12px; color: #999; margin-bottom: 4px; }
-          .lot-conn-value { font-size: 18px; font-weight: 700; color: #fff; }
-          .lot-conn-line { width: 1px; background: rgba(255,255,255,0.1); }
-
-          @media (max-width: 640px) {
-            .lot-card { padding: 24px 12px !important; }
-            .lot-middle {
-              display: grid !important;
-              grid-template-columns: 1fr auto 1fr !important;
-              gap: 8px !important;
-              align-items: center !important;
-              justify-content: center !important;
-            }
-            .lot-side { min-width: auto !important; width: 100%; }
-            .lot-box { width: 120px !important; height: 120px !important; min-width: 120px !important; min-height: 120px !important; }
-            .lot-dim { margin-bottom: 12px; }
-            .lot-connector-inner { flex-direction: column !important; gap: 12px !important; }
-            .lot-conn-line { width: 100% !important; height: 1px !important; }
-          }
-        `}</style>
+          </div>
+        </div>
       </div>
 
       <div className="card">

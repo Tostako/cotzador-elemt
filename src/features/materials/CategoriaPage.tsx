@@ -92,12 +92,12 @@ export function CategoriaPage() {
           <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Nuevo Producto</h3>
           <div style={{ display: 'grid', gap: 12 }}>
             <div>
-              <label className="small" style={{ display: 'block', marginBottom: 4 }}>Nombre</label>
-              <input className="input" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} />
+              <label htmlFor="cat-prod-name" className="small" style={{ display: 'block', marginBottom: 4 }}>Nombre</label>
+              <input id="cat-prod-name" className="input" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} />
             </div>
             <div>
-              <label className="small" style={{ display: 'block', marginBottom: 4 }}>Descripción <span style={{ opacity: 0.5 }}>(opcional)</span></label>
-              <input className="input" value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
+              <label htmlFor="cat-prod-desc" className="small" style={{ display: 'block', marginBottom: 4 }}>Descripción <span style={{ opacity: 0.5 }}>(opcional)</span></label>
+              <input id="cat-prod-desc" className="input" value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
             </div>
             <div className="grid-2">
               <button className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancelar</button>

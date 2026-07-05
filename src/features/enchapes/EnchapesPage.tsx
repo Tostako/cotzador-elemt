@@ -235,16 +235,16 @@ export function EnchapesPage() {
       {/* Project info */}
       <div className="card mt-2" style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
         <div>
-          <label className="small" style={{ display: 'block', marginBottom: 4 }}>Proyecto</label>
-          <input className="input" value={proyecto.nombre} onChange={(e) => updateProyecto('nombre', e.target.value)} placeholder="Nombre del proyecto" />
+          <label htmlFor="ench-proyecto" className="small" style={{ display: 'block', marginBottom: 4 }}>Proyecto</label>
+          <input id="ench-proyecto" className="input" value={proyecto.nombre} onChange={(e) => updateProyecto('nombre', e.target.value)} placeholder="Nombre del proyecto" />
         </div>
         <div>
-          <label className="small" style={{ display: 'block', marginBottom: 4 }}>Propietario</label>
-          <input className="input" value={proyecto.propietario} onChange={(e) => updateProyecto('propietario', e.target.value)} placeholder="Propietario" />
+          <label htmlFor="ench-propietario" className="small" style={{ display: 'block', marginBottom: 4 }}>Propietario</label>
+          <input id="ench-propietario" className="input" value={proyecto.propietario} onChange={(e) => updateProyecto('propietario', e.target.value)} placeholder="Propietario" />
         </div>
         <div>
-          <label className="small" style={{ display: 'block', marginBottom: 4 }}>Ubicación</label>
-          <input className="input" value={proyecto.ubicacion} onChange={(e) => updateProyecto('ubicacion', e.target.value)} placeholder="Ubicación" />
+          <label htmlFor="ench-ubicacion" className="small" style={{ display: 'block', marginBottom: 4 }}>Ubicación</label>
+          <input id="ench-ubicacion" className="input" value={proyecto.ubicacion} onChange={(e) => updateProyecto('ubicacion', e.target.value)} placeholder="Ubicación" />
         </div>
       </div>
 
@@ -256,17 +256,12 @@ export function EnchapesPage() {
           return (
             <button
               key={phase}
+              type="button"
               onClick={() => setFase(phase)}
+              className="ench-phase-btn"
               style={{
-                padding: '10px 18px',
-                borderRadius: 8,
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: 14,
                 background: active ? '#b69462' : 'rgba(255,255,255,0.06)',
                 color: active ? '#111' : '#fff',
-                transition: 'all 0.2s',
               }}
             >
               {label}

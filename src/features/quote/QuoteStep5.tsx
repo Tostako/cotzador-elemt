@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useStore } from '../../shared/services/store';
 import type { AreaResult } from '../../shared/types';
 import { CreditCard, TriangleAlert, Check, Settings, ClipboardCheck } from 'lucide-react';
@@ -9,77 +9,12 @@ interface QuoteStep5Props {
 }
 
 export function QuoteStep5({ area, price }: QuoteStep5Props) {
-  const { formData, config, setFormData, paymentPlans, loadPaymentPlans, editingQuoteId } = useStore();
+  const { formData, config, setFormData } = useStore();
   const [showForm, setShowForm] = useState(false);
   const [newService, setNewService] = useState({ name: '', price: '' });
-  const [hasPayments, setHasPayments] = useState(false);
-
-  useEffect(() => {
-    loadPaymentPlans();
-  }, [loadPaymentPlans]);
-
-  // Check if editing quote already has payments
-  useEffect(() => {
-    if (editingQuoteId) {
-      const loadPayments = async () => {
-        try {
-          const { apiService, extractData } = await import('../../shared/services/api');
-          const res = await apiService.getQuotePayments(editingQuoteId);
-          const payments = extractData(res);
-          if (Array.isArray(payments) && payments.length > 0) {
-            const confirmed = payments.some((p: any) => p.status === 'confirmed' || p.status === 'approved');
-            setHasPayments(confirmed);
-          }
-        } catch {
-          // Silently fail
-        }
-      };
-      loadPayments();
-    } else {
-      setHasPayments(false);
-    }
-  }, [editingQuoteId]);
 
   const basePrice = price + (formData.discount || 0);
   const finalPrice = price;
-
-  // Determine selected plan ID: formData.paymentPlanId or undefined (manual)
-  const selectedPlanId = formData.paymentPlanId;
-
-  // Derive payment plan for THIS quote
-  const selectedPlan = selectedPlanId !== undefined
-    ? paymentPlans.find((p) => String(p.id) === String(selectedPlanId))
-    : undefined;
-  const planPayments = selectedPlan ? selectedPlan.installments : config.paymentPlan.payments;
-
-  // Debug
-  console.log('[QuoteStep5] plan:', { selectedPlanId, selectedPlanName: selectedPlan?.name, planPaymentsCount: planPayments.length, paymentPlansCount: paymentPlans.length });
-
-  const handleSelectPlan = (planId: number | undefined) => {
-    setFormData({ paymentPlanId: planId });
-  };
-
-  // Radio indicator component
-  const RadioIndicator = ({ checked }: { checked: boolean }) => (
-    <div
-      style={{
-        width: 20,
-        height: 20,
-        borderRadius: '50%',
-        border: checked ? '2px solid #b69462' : '2px solid rgba(255,255,255,0.3)',
-        background: checked ? '#b69462' : 'transparent',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-        transition: 'all 0.2s ease',
-      }}
-    >
-      {checked && (
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#000' }} />
-      )}
-    </div>
-  );
 
   const addAdditionalService = () => {
     if (!newService.name.trim() || !newService.price) return;
@@ -104,11 +39,6 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
     });
   };
 
-  const isPlanSelected = (planId: number | undefined) => {
-    if (planId === undefined) return selectedPlanId === undefined;
-    return String(selectedPlanId) === String(planId);
-  };
-
   return (
     <>
       <div className="card mt-2">
@@ -117,6 +47,8 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
         <p className="small mt-1">Área: {area.total.toFixed(2)} m²</p>
       </div>
 
+<<<<<<< Updated upstream
+=======
       {/* Plan de pagos */}
       <div className="card">
         <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><CreditCard size={18} color="#b69462" /> Plan de Pagos</h3>
@@ -212,6 +144,7 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
         ))}
       </div>
 
+>>>>>>> Stashed changes
       <div className="card">
         <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Servicios Adicionales</h3>
         <p className="small mb-2" style={{ color: '#999' }}>
@@ -291,18 +224,11 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
           <p className="small mb-1">Descuento (ajuste de valor)</p>
           <input
             className="input"
-            type="text"
-            inputMode="numeric"
+            type="number"
+            step={100}
+            value={formData.discount || 0}
+            onChange={(e) => setFormData({ discount: parseInt(e.target.value) || 0 })}
             placeholder="0"
-            value={formData.discount === 0 ? '' : String(formData.discount || '')}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val === '') {
-                setFormData({ discount: 0 });
-              } else if (/^\d*$/.test(val)) {
-                setFormData({ discount: parseInt(val) || 0 });
-              }
-            }}
           />
           <p className="small mt-1" style={{ color: '#999' }}>
             Ej: 7800 para redondear valores
@@ -319,6 +245,8 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
 
       <div className="card">
         <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Plan de Pagos</h3>
+<<<<<<< Updated upstream
+=======
         {selectedPlan ? (
           <p className="small mb-2" style={{ color: '#b69462', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <ClipboardCheck size={15} /> Plan seleccionado: <strong style={{ marginLeft: 2 }}>{selectedPlan.name}</strong> ({planPayments.length} cuotas)
@@ -328,21 +256,18 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
             <Settings size={15} /> Usando configuración manual
           </p>
         )}
+>>>>>>> Stashed changes
         <div style={{ display: 'grid', gap: 10 }}>
-          {planPayments.length > 0 ? (
-            planPayments.map((payment, i) => (
-              <div key={i} className="flex-between">
-                <span>
-                  {payment.percentage}% {payment.name}
-                </span>
-                <span style={{ fontWeight: 600 }}>
-                  ${Math.round(finalPrice * payment.percentage / 100).toLocaleString('es-CO')}
-                </span>
-              </div>
-            ))
-          ) : (
-            <p className="small" style={{ color: '#999' }}>No hay cuotas configuradas</p>
-          )}
+          {config.paymentPlan.payments.map((payment, i) => (
+            <div key={i} className="flex-between">
+              <span>
+                {payment.percentage}% {payment.name}
+              </span>
+              <span style={{ fontWeight: 600 }}>
+                ${Math.round(finalPrice * payment.percentage / 100).toLocaleString('es-CO')}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </>

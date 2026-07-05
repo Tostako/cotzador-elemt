@@ -262,7 +262,7 @@ export function QuoteInvoicesPage() {
     <main>
       <div className="flex-between" style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}><Receipt size={22} color="#b69462" /> Cuentas de Cobro</h1>
-        <button className="btn btn-small btn-secondary" onClick={() => navigate('/history')} style={{ gap: 6 }}>
+        <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate('/history')} style={{ gap: 6 }}>
           <ArrowLeft size={15} /> Volver al Historial
         </button>
       </div>

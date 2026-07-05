@@ -71,46 +71,41 @@ body {
   animation: gradientShift 15s ease infinite;
 }
 
-/* ===== LOADER ANIMATIONS ===== */
-@keyframes loaderPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(0.95); }
+/* Botón de fase en la calculadora de enchapes (props estáticas) */
+.ench-phase-btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
 }
 
-@keyframes loaderDots {
-  0%, 100% { transform: scale(0.6); opacity: 0.4; }
-  50% { transform: scale(1); opacity: 1; }
+/* Banner del tour guiado (props estáticas; el resto queda inline por depender de isMobile) */
+.tour-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
 }
 
-/* GPU-accelerated scroll reveal elements */
-.scroll-reveal-up,
-.scroll-reveal-scale,
-.scroll-reveal-right,
-.scroll-reveal-left,
-.scroll-reveal-fade {
-  will-change: transform, opacity;
-  backface-visibility: hidden;
+/* Blobs decorativos de fondo en pantallas de autenticación */
+.auth-blob {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(182, 148, 98, 0.08) 0%, transparent 70%);
 }
-
-/* Reduce motion for users who prefer it */
-@media (prefers-reduced-motion: reduce) {
-  .scroll-reveal-up,
-  .scroll-reveal-scale,
-  .scroll-reveal-right,
-  .scroll-reveal-left,
-  .scroll-reveal-fade {
-    transition: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-  .stagger-children:not(.visible) .scroll-reveal-up,
-  .stagger-children:not(.visible) .scroll-reveal-scale,
-  .stagger-children:not(.visible) .scroll-reveal-right,
-  .stagger-children:not(.visible) .scroll-reveal-left,
-  .stagger-children:not(.visible) .scroll-reveal-fade {
-    opacity: 1 !important;
-    transform: none !important;
-  }
+.auth-blob--1 { top: 10%; left: 5%; width: 400px; height: 400px; }
+.auth-blob--2 {
+  bottom: 10%;
+  right: 5%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(182, 148, 98, 0.06) 0%, transparent 70%);
 }
 
 /* Particle animations */
@@ -172,6 +167,8 @@ body {
 .delay-5 { animation-delay: 0.5s; }
 .delay-6 { animation-delay: 0.6s; }
 
+<<<<<<< Updated upstream
+=======
 /* ===== ENHANCED LANDING MOTION ===== */
 
 /* Scroll progress bar (top of viewport) */
@@ -456,6 +453,7 @@ body {
   opacity: 0;
 }
 
+>>>>>>> Stashed changes
 /* Glow effects */
 .glow {
   box-shadow: 0 0 20px rgba(182, 148, 98, 0.3), 0 0 40px rgba(182, 148, 98, 0.1);

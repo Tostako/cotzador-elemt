@@ -141,16 +141,11 @@ export function TourBanner() {
   return (
     <>
     <div
+      className="tour-banner"
       style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
         background: isMobile ? 'rgba(10,10,10,0.95)' : 'linear-gradient(to top, #0a0a0a 0%, rgba(10,10,10,0.97) 100%)',
         borderTop: isMobile ? '1px solid rgba(182,148,98,0.3)' : '2px solid #b69462',
         padding: isMobile ? '10px 16px' : '16px 20px',
-        boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
       }}
     >
       <div style={{ maxWidth: 720, margin: '0 auto' }}>

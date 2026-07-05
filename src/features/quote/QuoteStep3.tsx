@@ -1,11 +1,9 @@
-import { useState } from 'react';
 import { useStore } from '../../shared/services/store';
 import { calculateArea } from '../../shared/services/calculator';
 
 export function QuoteStep3() {
   const { formData, setFormData } = useStore();
   const area = calculateArea(formData);
-  const [rawOverhang, setRawOverhang] = useState(String(formData.overhangSize));
 
   const toggleFacade = (side: 'frontal' | 'posterior' | 'lateralLeft' | 'lateralRight') => {
     setFormData({
@@ -36,24 +34,10 @@ export function QuoteStep3() {
             <p className="small mb-1">Tamaño del volado (metros)</p>
             <input
               className="input"
-              type="text"
-              inputMode="decimal"
-              value={rawOverhang}
-              onChange={(e) => {
-                const val = e.target.value;
-                // Allow empty, digits, and one decimal point
-                if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                  setRawOverhang(val);
-                  const parsed = parseFloat(val);
-                  if (!isNaN(parsed)) {
-                    setFormData({ overhangSize: parsed });
-                  }
-                }
-              }}
-              onBlur={() => {
-                const parsed = parseFloat(rawOverhang);
-                setRawOverhang(String(isNaN(parsed) ? 0 : parsed));
-              }}
+              type="number"
+              step="0.01"
+              value={formData.overhangSize}
+              onChange={(e) => setFormData({ overhangSize: parseFloat(e.target.value) || 0 })}
             />
           </div>
 

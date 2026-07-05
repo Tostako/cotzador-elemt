@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   PencilRuler, Settings, History, Receipt, Building2,
   Wallet, CreditCard, User, Calculator,
 } from 'lucide-react';
 import { useStore } from '../../shared/services/store';
-
 import logoSinBaner from '../../assets/LOGO SIN BANER/ELEMENThaus - Transparent White.png';
 
 export function DashboardPage() {
   const navigate = useNavigate();
+<<<<<<< Updated upstream
+  const { quotes, config, user } = useStore();
+=======
   const { quotes, config, user, paymentPlans } = useStore();
   const [showWelcome, setShowWelcome] = useState(false);
   const [tourActive, setTourActive] = useState(false);
@@ -40,6 +41,7 @@ export function DashboardPage() {
     localStorage.setItem('element_tour_seen', 'true');
     setShowWelcome(false);
   };
+>>>>>>> Stashed changes
 
   const quickActions = [
     { icon: PencilRuler, title: 'Nueva Cotización', desc: 'Crear cotización profesional', color: '#b69462', route: '/quote' },
@@ -52,6 +54,8 @@ export function DashboardPage() {
 
   return (
     <main>
+<<<<<<< Updated upstream
+=======
       {/* Welcome Modal */}
       {showWelcome && (
         <div
@@ -166,6 +170,7 @@ export function DashboardPage() {
         </div>
       )}
 
+>>>>>>> Stashed changes
       {/* Header with logo */}
       <div style={{ 
         display: 'flex', 

@@ -12,14 +12,12 @@ export function calculateArea(formData: QuoteFormData): AreaResult {
   let latDer = 0;
 
   if (formData.areaMode === 'direct') {
-    // Área Directa: el usuario ingresa el área del LOTE, no del primer piso
-    lot = parseFloat(formData.directArea) || 0;
-    first = lot * (formData.occ / 100);
-    // En modo directo no hay dimensiones, usamos valores neutros para evitar NaN
-    frontal = 0;
-    posterior = 0;
-    latIzq = 0;
-    latDer = 0;
+    first = parseFloat(formData.directArea) || 0;
+    lot = first / (formData.occ / 100);
+    frontal = parseFloat(formData.frontal) || 0;
+    posterior = parseFloat(formData.posterior) || 0;
+    latIzq = parseFloat(formData.latIzq) || 0;
+    latDer = parseFloat(formData.latDer) || 0;
   } else {
     if (formData.lotShape === 'irregular') {
       frontal = parseFloat(formData.frontal) || 0;
@@ -38,15 +36,8 @@ export function calculateArea(formData: QuoteFormData): AreaResult {
   }
 
   if (formData.floors > 1) {
-    let avgFrontal = (frontal + posterior) / 2;
-    let avgLateral = (latIzq + latDer) / 2;
-
-    // En modo área directa no hay dimensiones; estimamos lado cuadrado a partir del lote
-    if (formData.areaMode === 'direct' && lot > 0) {
-      const estimatedSide = Math.sqrt(lot);
-      avgFrontal = estimatedSide;
-      avgLateral = estimatedSide;
-    }
+    const avgFrontal = (frontal + posterior) / 2;
+    const avgLateral = (latIzq + latDer) / 2;
 
     if (formData.facades.frontal) overhangArea += avgFrontal * formData.overhangSize;
     if (formData.facades.posterior) overhangArea += avgFrontal * formData.overhangSize;

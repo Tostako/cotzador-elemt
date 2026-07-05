@@ -1,142 +1,37 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../../shared/services/store';
-
 import { safeParseQuoteData } from '../../shared/utils/parseQuoteData';
 import { calculateArea, calculatePrice, roundTo50 } from '../../shared/services/calculator';
+<<<<<<< Updated upstream
+import logoBlack from '../../assets/LOGO SIN BANER/ELEMENThaus - Transparent Black.png';
+=======
 import type { QuoteFormData, InvoiceRecord } from '../../shared/types';
 import { ArrowLeft, Printer, Check } from 'lucide-react';
+>>>>>>> Stashed changes
 
 export function InvoicePage() {
   const navigate = useNavigate();
   const { quoteId } = useParams();
-  const [searchParams] = useSearchParams();
-  const mode = searchParams.get('mode'); // 'generate'
-  const invoiceId = searchParams.get('invoiceId');
-  const installmentIndexParam = searchParams.get('installmentIndex');
+  const { formData, config, getQuoteById, setFormData } = useStore();
 
-  const { formData: currentFormData, config, getQuoteById, setFormData, paymentPlans, updateQuote } = useStore();
-
-  const [quotePayments, setQuotePayments] = useState<any[]>([]);
-  const [displayFormData, setDisplayFormData] = useState<QuoteFormData | null>(null);
-  const [invoiceNumber, setInvoiceNumber] = useState('0001');
-  const [invoiceDate, setInvoiceDate] = useState('');
-  const [targetInstallmentIndex, setTargetInstallmentIndex] = useState<number>(0);
-
-  const isGenerateMode = mode === 'generate';
-
-  // Resolve installments for this quote
-  const selectedPlan = paymentPlans.find((p) => String(p.id) === String(displayFormData?.paymentPlanId ?? currentFormData.paymentPlanId));
-  const planPayments = selectedPlan ? selectedPlan.installments : config.paymentPlan.payments;
-
-  // Load quote and determine what to display
+  // If formData is empty (refresh/direct navigation), load from the quote ID in the URL
   useEffect(() => {
-    if (!quoteId) return;
-
-    const quote = getQuoteById(quoteId);
-    if (!quote) {
-      loadQuoteFromBackend(quoteId);
-      return;
-    }
-
-    const data = safeParseQuoteData(quote.data);
-    if (!data) return;
-
-    if (isGenerateMode) {
-      // Use current quote data (live)
-      setDisplayFormData(data);
-      const count = (data.invoiceCount || 0) + 1;
-      setInvoiceNumber(String(count).padStart(4, '0'));
-      setInvoiceDate(new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }));
-
-      // Determine which installment this invoice targets
-      const existingInvoices = data.invoices || [];
-      let targetIdx = 0;
-      if (installmentIndexParam !== null) {
-        targetIdx = parseInt(installmentIndexParam, 10) || 0;
-      } else {
-        // Find first installment without an invoice
-        for (let i = 0; i < planPayments.length; i++) {
-          if (!existingInvoices.some((inv: InvoiceRecord) => inv.installmentIndex === i)) {
-            targetIdx = i;
-            break;
-          }
-        }
-      }
-      setTargetInstallmentIndex(targetIdx);
-    } else if (invoiceId && data.invoices) {
-      // Use snapshot from specific invoice
-      const inv = data.invoices.find((i: InvoiceRecord) => i.id === invoiceId);
-      if (inv) {
-        setDisplayFormData(inv.formDataSnapshot);
-        setInvoiceNumber(String(inv.number).padStart(4, '0'));
-        setInvoiceDate(new Date(inv.createdAt).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }));
-        setTargetInstallmentIndex(inv.installmentIndex);
-      } else {
-        setDisplayFormData(data);
-        setInvoiceNumber('0001');
-      }
-    } else {
-      // Fallback: show current data
-      setDisplayFormData(data);
-      setInvoiceNumber(String((data.invoiceCount || 0) + 1).padStart(4, '0'));
-      setInvoiceDate(new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }));
-    }
-  }, [quoteId, getQuoteById, isGenerateMode, invoiceId, installmentIndexParam]);
-
-  const loadQuoteFromBackend = async (id: number | string) => {
-    try {
-      const { apiService, extractData } = await import('../../shared/services/api');
-      const res = await apiService.getQuote(id);
-      const quote = extractData(res);
+    if (!formData.client && quoteId) {
+      const quote = getQuoteById(Number(quoteId));
       if (quote) {
         const data = safeParseQuoteData(quote.data);
-        if (data) {
-          setDisplayFormData(data);
-          const count = (data.invoiceCount || 0) + 1;
-          setInvoiceNumber(String(count).padStart(4, '0'));
-          setInvoiceDate(new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }));
-        }
+        if (data) setFormData(data);
       }
-    } catch {
-      // Silently fail
     }
-  };
-
-  // Load payment plans if empty
-  useEffect(() => {
-    if (paymentPlans.length === 0) {
-      const { loadPaymentPlans } = useStore.getState();
-      loadPaymentPlans();
-    }
-  }, [paymentPlans.length]);
-
-  // Load payments for this quote
-  useEffect(() => {
-    if (quoteId) {
-      loadQuotePayments(quoteId);
-    }
-  }, [quoteId]);
-
-  const loadQuotePayments = async (id: number | string) => {
-    try {
-      const { apiService, extractData } = await import('../../shared/services/api');
-      const res = await apiService.getQuotePayments(id);
-      const payments = extractData(res);
-      if (Array.isArray(payments)) {
-        setQuotePayments(payments);
-      }
-    } catch {
-      // Silently fail
-    }
-  };
-
-  // Use displayFormData if available, otherwise fall back to current store formData
-  const activeFormData = displayFormData || currentFormData;
-
-  const area = calculateArea(activeFormData);
-  const price = calculatePrice(activeFormData, config);
+  }, [formData.client, quoteId, getQuoteById, setFormData]);
+  const area = calculateArea(formData);
+  const price = calculatePrice(formData, config);
   const inv = config.invoice;
+<<<<<<< Updated upstream
+  const invoiceNumber = (inv.document.consecutiveNumber - 1).toString().padStart(4, '0');
+  const today = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+=======
   const totalPrice = roundTo50(price);
 
   const targetInstallment = planPayments[targetInstallmentIndex];
@@ -160,80 +55,20 @@ export function InvoicePage() {
       return PAID_STATUSES.includes(pStatus);
     })
     .reduce((sum, p) => sum + (parseFloat(p.transactionAmount ?? p.amount ?? p.transaction_amount ?? 0) || 0), 0);
+>>>>>>> Stashed changes
 
   const handlePrint = () => window.print();
 
-  const handleFinalize = () => {
-    if (!quoteId || !displayFormData) return;
-
-    const installmentName = targetInstallment?.name || `Cuota ${targetInstallmentIndex + 1}`;
-
-    // Create invoice record linked to specific installment
-    const newInvoice: InvoiceRecord = {
-      id: crypto.randomUUID(),
-      number: (displayFormData.invoiceCount || 0) + 1,
-      installmentIndex: targetInstallmentIndex,
-      createdAt: new Date().toISOString(),
-      client: displayFormData.client,
-      project: displayFormData.project,
-      description: generateDescription(activeFormData, config, area, installmentName),
-      totalAmount: installmentAmount,
-      status: 'pending',
-      formDataSnapshot: { ...displayFormData },
-    };
-
-    // Update quote data with new invoice and incremented count
-    const updatedData = {
-      ...displayFormData,
-      invoiceCount: newInvoice.number,
-      invoices: [...(displayFormData.invoices || []), newInvoice],
-    };
-
-    setFormData(updatedData);
-    updateQuote(quoteId, { data: updatedData });
-
-    // Also update via backend to persist
-    try {
-      import('../../shared/services/api').then(({ apiService }) => {
-        apiService.updateQuote(quoteId, { data: updatedData }).catch(() => {});
-      });
-    } catch {}
-
-    navigate(`/quotes/${quoteId}/invoices`);
-  };
-
-  const generateDescription = (data: QuoteFormData, cfg: typeof config, ar: typeof area, installmentName: string): string => {
-    const parts: string[] = [];
-    if (data.hasCompletePackage) {
-      parts.push(cfg.completePackage.name);
-    } else {
-      data.selectedSubPackages.forEach((id) => {
-        const pkg = cfg.subPackages[id];
-        if (pkg) parts.push(pkg.name);
-      });
-      data.selectedServices.forEach((id) => {
-        const svc = cfg.services[id];
-        if (svc) parts.push(svc.name);
-      });
-    }
-    if (parts.length === 0) parts.push('Servicios profesionales');
-    const shortList = parts.slice(0, 2).join(', ');
-    const more = parts.length > 2 ? ` y ${parts.length - 2} más` : '';
-    return `${installmentName}: ${shortList}${more} — ${ar.total.toFixed(2)}m²`;
-  };
-
-  if (!activeFormData.client) {
-    return (
-      <main>
-        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <p className="small">Cargando cotización...</p>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main>
+<<<<<<< Updated upstream
+      <div className="no-print" style={{ marginBottom: 20 }}>
+        <button className="btn btn-small btn-secondary" onClick={() => navigate('/history')}>
+          ← Volver al Historial
+        </button>
+        <button className="btn btn-small" onClick={handlePrint} style={{ float: 'right' }}>
+          🖨️ Imprimir / PDF
+=======
       <div className="no-print" style={{ marginBottom: 20, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button
           className="btn btn-small btn-secondary"
@@ -245,27 +80,9 @@ export function InvoicePage() {
 
         <button className="btn btn-small" onClick={handlePrint} style={{ flex: '1 1 auto', minWidth: 140, gap: 6 }}>
           <Printer size={15} /> Imprimir / PDF
+>>>>>>> Stashed changes
         </button>
       </div>
-
-      {/* Installment info banner in generate mode */}
-      {isGenerateMode && targetInstallment && (
-        <div className="no-print" style={{
-          background: 'rgba(182,148,98,0.1)',
-          border: '1px solid rgba(182,148,98,0.3)',
-          borderRadius: 8,
-          padding: '12px 16px',
-          marginBottom: 16,
-          textAlign: 'center',
-        }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#b69462' }}>
-            Generando cuenta de cobro para: {targetInstallment.name} ({targetInstallment.percentage}%)
-          </div>
-          <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
-            Monto de esta cuota: ${installmentAmount.toLocaleString('es-CO')} COP
-          </div>
-        </div>
-      )}
 
       <div
         className="invoice-doc"
@@ -290,8 +107,8 @@ export function InvoicePage() {
           }}
         >
           <div>
-            {inv.company.enabled && inv.company.logo && (
-              <img src={inv.company.logo} style={{ maxWidth: 160, maxHeight: 80, marginBottom: 8, display: 'block' }} />
+            {inv.company.enabled && (
+              <img src={inv.company.logo || logoBlack} style={{ maxWidth: 160, maxHeight: 80, marginBottom: 8, display: 'block' }} />
             )}
             {inv.company.enabled && (
               <>
@@ -311,12 +128,7 @@ export function InvoicePage() {
               CUENTA DE COBRO
             </div>
             <div style={{ fontSize: 14, color: '#666', lineHeight: 1.2 }}>No. {invoiceNumber}</div>
-            <div style={{ fontSize: 10, color: '#666', marginTop: 3, lineHeight: 1.2 }}>{invoiceDate}</div>
-            {targetInstallment && (
-              <div style={{ fontSize: 10, color: '#b69462', marginTop: 4, fontWeight: 600 }}>
-                {targetInstallment.name} ({targetInstallment.percentage}%)
-              </div>
-            )}
+            <div style={{ fontSize: 10, color: '#666', marginTop: 3, lineHeight: 1.2 }}>{today}</div>
           </div>
         </div>
 
@@ -326,9 +138,9 @@ export function InvoicePage() {
             Cliente
           </div>
           <div>
-            <strong>{activeFormData.client}</strong>
+            <strong>{formData.client}</strong>
           </div>
-          <div style={{ color: '#666' }}>{activeFormData.project}</div>
+          <div style={{ color: '#666' }}>{formData.project}</div>
         </div>
 
         {/* Services Table */}
@@ -358,7 +170,7 @@ export function InvoicePage() {
             </tr>
           </thead>
           <tbody>
-            {activeFormData.hasCompletePackage && (
+            {formData.hasCompletePackage && (
               <tr>
                 <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, wordWrap: 'break-word', lineHeight: 1.3 }}>{config.completePackage.name}</td>
                 <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'center' }}>{area.total.toFixed(2)} m²</td>
@@ -366,7 +178,7 @@ export function InvoicePage() {
                 <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'right' }}>${roundTo50(area.total * config.completePackage.price).toLocaleString('es-CO')}</td>
               </tr>
             )}
-            {activeFormData.selectedSubPackages.map((id) => {
+            {formData.selectedSubPackages.map((id) => {
               const pkg = config.subPackages[id];
               const total = pkg.unit === '/m²' ? area.total * pkg.price : pkg.price;
               return (
@@ -378,7 +190,7 @@ export function InvoicePage() {
                 </tr>
               );
             })}
-            {activeFormData.selectedServices.map((id) => {
+            {formData.selectedServices.map((id) => {
               const service = config.services[id];
               const total = service.unit === '/m²' ? area.total * service.price : service.price;
               return (
@@ -390,7 +202,7 @@ export function InvoicePage() {
                 </tr>
               );
             })}
-            {activeFormData.additionalServices.map((service) => (
+            {formData.additionalServices.map((service) => (
               <tr key={service.id}>
                 <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11 }}>{service.name}</td>
                 <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'center' }}>1</td>
@@ -398,6 +210,14 @@ export function InvoicePage() {
                 <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'right' }}>${roundTo50(service.price).toLocaleString('es-CO')}</td>
               </tr>
             ))}
+            {formData.discount > 0 && (
+              <tr>
+                <td colSpan={3} style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'right', fontWeight: 'bold' }}>Descuento</td>
+                <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'right', color: '#ff3b30' }}>
+                  -${formData.discount.toLocaleString('es-CO')}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
 
@@ -414,22 +234,11 @@ export function InvoicePage() {
             pageBreakInside: 'avoid',
           }}
         >
-          {targetInstallment ? (
-            <>
-              <div style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>
-                Valor total cotización: ${totalPrice.toLocaleString('es-CO')} COP
-              </div>
-              <div>
-                VALOR CUOTA ({targetInstallment.name}): ${installmentAmount.toLocaleString('es-CO')} COP
-              </div>
-            </>
-          ) : (
-            <>VALOR TOTAL: ${totalPrice.toLocaleString('es-CO')} COP</>
-          )}
+          VALOR TOTAL: ${roundTo50(price).toLocaleString('es-CO')} COP
         </div>
 
-        {/* Payment Plan with Payment Status */}
-        {planPayments.length > 0 && (
+        {/* Payment Plan */}
+        {config.paymentPlan.payments.length > 0 && (
           <div style={{ marginBottom: 10, pageBreakInside: 'avoid' }}>
             <div style={{ fontSize: 12, fontWeight: 'bold', color: '#333', marginBottom: 5, textTransform: 'uppercase' }}>
               Plan de Pagos
@@ -440,10 +249,20 @@ export function InvoicePage() {
                   <th style={{ background: '#f5f5f5', padding: '8px 6px', textAlign: 'left', fontWeight: 'bold', border: '1px solid #ddd', fontSize: 11 }}>Concepto</th>
                   <th style={{ background: '#f5f5f5', padding: '8px 6px', textAlign: 'center', fontWeight: 'bold', border: '1px solid #ddd', fontSize: 11 }}>Porcentaje</th>
                   <th style={{ background: '#f5f5f5', padding: '8px 6px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #ddd', fontSize: 11 }}>Valor</th>
-                  <th style={{ background: '#f5f5f5', padding: '8px 6px', textAlign: 'center', fontWeight: 'bold', border: '1px solid #ddd', fontSize: 11 }}>Estado</th>
                 </tr>
               </thead>
               <tbody>
+<<<<<<< Updated upstream
+                {config.paymentPlan.payments.map((payment, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11 }}>{payment.name}</td>
+                    <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'center' }}>{payment.percentage}%</td>
+                    <td style={{ padding: 6, border: '1px solid #ddd', fontSize: 11, textAlign: 'right' }}>
+                      ${roundTo50(roundTo50(price) * payment.percentage / 100).toLocaleString('es-CO')}
+                    </td>
+                  </tr>
+                ))}
+=======
                 {planPayments.map((payment, i) => {
                   const amount = roundTo50(totalPrice * payment.percentage / 100);
                   const paid = isPaid(i);
@@ -467,20 +286,9 @@ export function InvoicePage() {
                     </tr>
                   );
                 })}
+>>>>>>> Stashed changes
               </tbody>
             </table>
-
-            {/* Payment summary */}
-            <div style={{ marginTop: 12, padding: 12, background: '#fafafa', borderRadius: 8, border: '1px solid #eee' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontWeight: 600 }}>Total Pagado:</span>
-                <span style={{ color: '#2ecc71', fontWeight: 600 }}>${Math.round(totalPaid).toLocaleString('es-CO')}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontWeight: 600 }}>Pendiente:</span>
-                <span style={{ color: '#e74c3c', fontWeight: 600 }}>${Math.round(totalPrice - totalPaid).toLocaleString('es-CO')}</span>
-              </div>
-            </div>
           </div>
         )}
 
@@ -513,26 +321,15 @@ export function InvoicePage() {
 
         {/* Signature */}
         {inv.representative.enabled && (
-          <div style={{ marginTop: 25, textAlign: 'center', pageBreakInside: 'avoid', position: 'relative' }}>
-            {inv.representative.signature ? (
-              <>
-                <div style={{ height: 20 }} />
-                <img
-                  src={inv.representative.signature}
-                  style={{
-                    maxWidth: 220,
-                    maxHeight: 80,
-                    marginBottom: -10,
-                    display: 'block',
-                    marginLeft: 'auto',
-                    marginRight: 'auto',
-                    position: 'relative',
-                    zIndex: 1,
-                  }}
-                />
-                <div style={{ borderTop: '2px solid #333', width: 260, margin: '0 auto 8px' }} />
-              </>
-            ) : null}
+          <div style={{ marginTop: 15, textAlign: 'center', pageBreakInside: 'avoid' }}>
+            {inv.representative.signature && (
+              <img
+                src={inv.representative.signature}
+                style={{ maxWidth: 160, maxHeight: 50, marginBottom: 6, display: 'block', marginLeft: 'auto', marginRight: 'auto' }}
+              />
+            )}
+            {!inv.representative.signature && <div style={{ height: 40 }} />}
+            <div style={{ borderTop: '2px solid #333', width: 220, margin: '0 auto 8px' }} />
             <div style={{ fontSize: 12, fontWeight: 'bold', lineHeight: 1.2 }}>{inv.representative.name}</div>
             {inv.representative.position && <div style={{ fontSize: 10, color: '#666', lineHeight: 1.2 }}>{inv.representative.position}</div>}
             {inv.representative.document && <div style={{ fontSize: 10, color: '#666', lineHeight: 1.2 }}>{inv.representative.document}</div>}
@@ -547,6 +344,8 @@ export function InvoicePage() {
         )}
       </div>
 
+<<<<<<< Updated upstream
+=======
       {/* Generate mode: Finalize button */}
       {isGenerateMode && (
         <div className="no-print" style={{ marginTop: 20 }}>
@@ -556,6 +355,7 @@ export function InvoicePage() {
         </div>
       )}
 
+>>>>>>> Stashed changes
       <style>{`
         @media print {
           .no-print { display: none !important; }

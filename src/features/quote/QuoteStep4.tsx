@@ -38,7 +38,7 @@ export function QuoteStep4() {
   return (
     <>
       <div className="card mt-2">
-        <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Paquete Técnico Completo</h3>
+        <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Paquete Completo</h3>
         <div
           className={`service-item ${formData.hasCompletePackage ? 'selected' : ''}`}
           onClick={toggleCompletePackage}

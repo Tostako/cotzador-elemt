@@ -1,6 +1,11 @@
 import { useNavigate } from 'react-router-dom';
+<<<<<<< Updated upstream
+import { useState } from 'react';
+import { useAppStore, NotificationContainer } from '../../shared/hooks/useNotifications';
+=======
 import { useState, useEffect } from 'react';
 import { showNotification, Toaster } from '../../shared/hooks/useNotifications';
+>>>>>>> Stashed changes
 import { useStore } from '../../shared/services/store';
 import logoAbbreviated from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado White.png';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
@@ -8,14 +13,7 @@ import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 export function LoginPage() {
   const navigate = useNavigate();
   const login = useStore((s) => s.login);
-  const isAuthenticated = useStore((s) => s.isAuthenticated);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-
+  const loadFromBackend = useStore((s) => s.loadFromBackend);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,10 +28,12 @@ export function LoginPage() {
     try {
       const { apiService, SHOP_SLUG } = await import('../../shared/services/api');
       const res = await apiService.login({ email: email.trim(), password: password.trim(), shop_slug: SHOP_SLUG });
-      let token = res.token || (res.data && res.data.token);
+      const token = res.token || (res.data && res.data.token);
       if (!token) {
         throw new Error('El servidor no devolvió un token de sesión');
       }
+<<<<<<< Updated upstream
+=======
 
       // Check if token is pending (no shop_id) and resolve it
       let selectRes: any = null;
@@ -50,6 +50,7 @@ export function LoginPage() {
         }
       }
 
+>>>>>>> Stashed changes
       let user = apiService.buildUserFromToken(token);
       if (!user) {
         throw new Error('No se pudieron leer los datos del usuario desde el token');
@@ -57,10 +58,6 @@ export function LoginPage() {
       // Fallback: if token has no name, try response body in every possible shape
       if (!user.name || user.name === 'Usuario') {
         const bodyName =
-          selectRes?.user?.name ||
-          selectRes?.customer?.name ||
-          selectRes?.data?.user?.name ||
-          selectRes?.data?.customer?.name ||
           res.name ||
           res.customer_name ||
           res.user?.name ||
@@ -73,21 +70,14 @@ export function LoginPage() {
           user = { ...user, name: bodyName };
         }
       }
-      // Extract profession from response if available
-      const bodyProfession =
-        selectRes?.user?.profession ||
-        selectRes?.customer?.profession ||
-        selectRes?.data?.user?.profession ||
-        selectRes?.data?.customer?.profession ||
-        res.user?.profession ||
-        res.customer?.profession ||
-        res.data?.user?.profession ||
-        res.data?.customer?.profession;
-      if (bodyProfession) {
-        user = { ...user, profession: bodyProfession };
-      }
       login(user);
+<<<<<<< Updated upstream
+      // Cargar datos del SaaS
+      loadFromBackend().catch(() => {});
+      showNotification(`¡Bienvenido a ELEMENT, ${user.name}!`, 'success');
+=======
       showNotification('Correcto', 'success', `Inicio de sesión exitoso. ¡Bienvenido a ELEMENT, ${user.name}!`);
+>>>>>>> Stashed changes
       navigate('/dashboard');
     } catch (err: any) {
       showNotification('Error', 'error', err.message || 'Verifica tus credenciales e intenta de nuevo.');

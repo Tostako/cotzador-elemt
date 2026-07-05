@@ -14,7 +14,7 @@ function parseJwt(token: string): any {
   }
 }
 
-// Extract data from backend responses (they wrap in { data: ... })
+// Extract data from SaaS responses (they wrap in { data: ... })
 export function extractData(response: any): any {
   if (response && typeof response === 'object' && 'data' in response) {
     return response.data;
@@ -48,7 +48,6 @@ export function toSaaSConfig(frontendConfig: any): any {
       obra_negra: frontendConfig.estimation.obraNegraPrice,
       obra_gris: frontendConfig.estimation.obraGrisPrice,
       acabados: frontendConfig.estimation.acabadosPrice,
-      custom_estimations: frontendConfig.estimation.customEstimations ?? [],
     };
   }
 
@@ -82,7 +81,6 @@ export function fromSaaSConfig(saasConfig: any): any {
       obraNegraPrice: saasConfig.estimation.obra_negra ?? saasConfig.estimation.obraNegraPrice ?? 0,
       obraGrisPrice: saasConfig.estimation.obra_gris ?? saasConfig.estimation.obraGrisPrice ?? 0,
       acabadosPrice: saasConfig.estimation.acabados ?? saasConfig.estimation.acabadosPrice ?? 0,
-      customEstimations: saasConfig.estimation.custom_estimations ?? saasConfig.estimation.customEstimations ?? [],
     };
   }
 
@@ -92,7 +90,7 @@ export function fromSaaSConfig(saasConfig: any): any {
 // Runtime env from Docker (window.__ENV is injected by entrypoint.sh)
 const runtimeEnv = (typeof window !== 'undefined' && (window as any).__ENV) || {};
 
-const API_URL = import.meta.env.VITE_API_URL || runtimeEnv.VITE_API_URL || 'http://localhost:3000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || runtimeEnv.VITE_API_URL || 'http://localhost:3001/api/v1';
 export const SHOP_SLUG = import.meta.env.VITE_SHOP_SLUG || runtimeEnv.VITE_SHOP_SLUG || 'elemet-haus';
 
 function getToken() {
@@ -108,18 +106,8 @@ function getToken() {
 function buildUserFromToken(token: string) {
   const payload = parseJwt(token);
   if (!payload) return null;
-  // Try to preserve existing name from localStorage if JWT has no name
-  let existingName = '';
-  try {
-    const stored = localStorage.getItem('element_user');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed.name && parsed.name !== parsed.email && parsed.name !== 'Usuario') {
-        existingName = parsed.name;
-      }
-    }
-  } catch {}
-  const name = payload.name || payload.customer_name || payload.full_name || payload.first_name || payload.display_name || existingName || 'Usuario';
+  // SaaS may use different field names for the user's name
+  const name = payload.name || payload.customer_name || payload.full_name || payload.first_name || payload.display_name || payload.email || 'Usuario';
   return {
     id: payload.customer_id || payload.sub || payload.id || '',
     name,
@@ -127,9 +115,12 @@ function buildUserFromToken(token: string) {
     username: payload.email || payload.username || '',
     token,
     role: payload.role || 'customer',
+<<<<<<< Updated upstream
+=======
     profession: payload.profession,
     phone: payload.phone,
     address: payload.address,
+>>>>>>> Stashed changes
   };
 }
 
@@ -137,7 +128,10 @@ async function api(path: string, options: RequestInit = {}) {
   const token = getToken();
 
   // Add shop_slug as query param if not already present and not a public route
+<<<<<<< Updated upstream
+=======
   // Auth routes ALSO need shop_slug so the backend can identify the shop
+>>>>>>> Stashed changes
   let finalPath = path;
   if (!path.includes('shop_slug') && !path.startsWith('/public/')) {
     const separator = path.includes('?') ? '&' : '?';
@@ -156,6 +150,17 @@ async function api(path: string, options: RequestInit = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // DEBUG: log every request
+  console.log('[API REQUEST]', options.method || 'GET', url);
+  if (options.body) {
+    try {
+      const parsed = JSON.parse(options.body as string);
+      console.log('[API BODY]', JSON.stringify(parsed, null, 2));
+    } catch {
+      console.log('[API BODY]', options.body);
+    }
+  }
+
   try {
     const response = await fetch(url, {
       ...options,
@@ -169,6 +174,7 @@ async function api(path: string, options: RequestInit = {}) {
     }
 
     const data = await response.json();
+    console.log('[API RESPONSE]', response.status, JSON.stringify(data, null, 2).substring(0, 500));
     return data;
   } catch (err: any) {
     if (err.name === 'TypeError' || err.message?.includes('Failed to fetch')) {
@@ -180,9 +186,14 @@ async function api(path: string, options: RequestInit = {}) {
 
 export const apiService = {
   // ── Auth ──────────────────────────────────────────
-  register: (data: any) =>
+  register: (data: { name: string; email: string; phone?: string; password: string; shop_slug: string }) =>
     api('/auth/customer/register', { method: 'POST', body: JSON.stringify(data) }),
 
+<<<<<<< Updated upstream
+  login: (data: { email: string; password: string; shop_slug: string }) =>
+    api('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+
+=======
   login: (data: any) =>
     api('/auth/customer/login', { method: 'POST', body: JSON.stringify(data) }),
 
@@ -193,17 +204,8 @@ export const apiService = {
   updateMe: (data: any) => api('/customers/me', { method: 'PATCH', body: JSON.stringify(data) }),
   resetPassword: (data: any) => api('/auth/customer/reset-password', { method: 'PATCH', body: JSON.stringify(data) }),
 
+>>>>>>> Stashed changes
   buildUserFromToken,
-
-  // Helper: check if token is pending (no shop_id)
-  isTokenPending: (token: string) => {
-    try {
-      const payload = parseJwt(token);
-      return !payload?.shop_id || payload.shop_id === '' || payload.sub === 'pending';
-    } catch {
-      return false;
-    }
-  },
 
   // ── Public Landing ──────────────────────────────
   getPublicSiteConfig: () =>
@@ -214,24 +216,10 @@ export const apiService = {
 
   // ── Quotes (Auth) ───────────────────────────────
   getQuotes: () => api('/quotes'),
-  getQuote: (id: number | string) => api(`/quotes/${id}`),
+  getQuote: (id: number) => api(`/quotes/${id}`),
   createQuote: (data: any) => api('/quotes', { method: 'POST', body: JSON.stringify(data) }),
-  updateQuote: (id: number | string, data: any) => api(`/quotes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-  deleteQuote: (id: number | string) => api(`/quotes/${id}`, { method: 'DELETE' }),
-  selectPaymentPlan: (quoteId: number | string, data: any) => api(`/quotes/${quoteId}/select-plan`, { method: 'POST', body: JSON.stringify(data) }),
-
-  // ── Payment Plans (Auth) ──────────────────────────
-  getPaymentPlans: () => api('/payment-plans'),
-  getPaymentPlan: (id: number | string) => api(`/payment-plans/${id}`),
-  createPaymentPlan: (data: any) => api('/payment-plans', { method: 'POST', body: JSON.stringify(data) }),
-  updatePaymentPlan: (id: number | string, data: any) => api(`/payment-plans/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  deletePaymentPlan: (id: number | string) => api(`/payment-plans/${id}`, { method: 'DELETE' }),
-  setDefaultPaymentPlan: (id: number | string) => api(`/payment-plans/${id}/default`, { method: 'PATCH' }),
-
-  // ── Quote Payments (Auth) ─────────────────────────
-  getQuotePayments: (quoteId: number | string) => api(`/quotes/${quoteId}/payments`),
-  createQuotePayment: (quoteId: number | string, data: any) => api(`/quotes/${quoteId}/payments`, { method: 'POST', body: JSON.stringify(data) }),
-  deleteQuotePayment: (quoteId: number | string, paymentId: number | string) => api(`/quotes/${quoteId}/payments/${paymentId}`, { method: 'DELETE' }),
+  updateQuote: (id: number, data: any) => api(`/quotes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteQuote: (id: number) => api(`/quotes/${id}`, { method: 'DELETE' }),
 
   // ── Customer Config (Auth) ────────────────────────
   getMyConfig: () => api('/customer-config/me'),
