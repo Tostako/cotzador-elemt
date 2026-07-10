@@ -10,12 +10,11 @@ import {
 export function TourBanner() {
   const navigate = useNavigate();
   const current = getCurrentTourStep();
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
   const [showIntro, setShowIntro] = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
-    check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
@@ -65,19 +64,7 @@ export function TourBanner() {
   // Mobile intro modal
   if (isMobile && showIntro) {
     return (
-      <div
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 99999,
-          background: 'rgba(0,0,0,0.92)',
-          backdropFilter: 'blur(12px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 24,
-        }}
-      >
+      <div className="modal-overlay modal-overlay-tour">
         <div
           style={{
             background: '#0f0f0f',
@@ -112,16 +99,16 @@ export function TourBanner() {
             {current.description}
           </p>
 
-          <button className="btn" style={{ width: '100%', marginBottom: 12 }} onClick={enterZone}>
+          <button type="button" className="btn" style={{ width: '100%', marginBottom: 12 }} onClick={enterZone}>
             Entrar a configurar
           </button>
           <div style={{ display: 'flex', gap: 12 }}>
             {currentIndex > 0 && (
-              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={prev}>
+              <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={prev}>
                 ← Anterior
               </button>
             )}
-            <button
+            <button type="button"
               className="btn btn-secondary"
               style={{ flex: 1 }}
               onClick={skip}
@@ -141,16 +128,11 @@ export function TourBanner() {
   return (
     <>
     <div
+      className="tour-banner-bar"
       style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
         background: isMobile ? 'rgba(10,10,10,0.95)' : 'linear-gradient(to top, #0a0a0a 0%, rgba(10,10,10,0.97) 100%)',
         borderTop: isMobile ? '1px solid rgba(182,148,98,0.3)' : '2px solid #b69462',
         padding: isMobile ? '10px 16px' : '16px 20px',
-        boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
       }}
     >
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
@@ -176,14 +158,14 @@ export function TourBanner() {
         {isMobile ? (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {currentIndex > 0 && (
-              <button className="btn btn-small btn-secondary" style={{ flex: 1 }} onClick={prev}>
+              <button type="button" className="btn btn-small btn-secondary" style={{ flex: 1 }} onClick={prev}>
                 ← Anterior
               </button>
             )}
-            <button className="btn btn-small" style={{ flex: 1 }} onClick={next}>
+            <button type="button" className="btn btn-small" style={{ flex: 1 }} onClick={next}>
               {isLast ? '¡Finalizar!' : 'Siguiente →'}
             </button>
-            <button
+            <button type="button"
               onClick={skip}
               style={{
                 background: 'none',
@@ -209,10 +191,10 @@ export function TourBanner() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-              <button className="btn btn-small" onClick={next}>
+              <button type="button" className="btn btn-small" onClick={next}>
                 {isLast ? '¡Finalizar!' : 'Siguiente zona →'}
               </button>
-              <button
+              <button type="button"
                 onClick={skip}
                 style={{
                   background: 'none',

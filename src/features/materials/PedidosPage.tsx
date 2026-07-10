@@ -29,7 +29,7 @@ export function PedidosPage() {
 
   return (
     <main>
-      <button className="btn btn-ghost btn-small mb-2" onClick={() => navigate('/materiales')} style={{ gap: 6 }}>
+      <button type="button" className="btn btn-ghost btn-small mb-2" onClick={() => navigate('/materiales')} style={{ gap: 6 }}>
         <ArrowLeft size={15} /> Volver a Materiales
       </button>
 
@@ -73,9 +73,9 @@ export function PedidosPage() {
 
               {order.items && order.items.length > 0 && (
                 <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
-                  {order.items.map((item, idx) => (
+                  {order.items.map((item) => (
                     <div
-                      key={idx}
+                      key={item.id || item.product_name}
                       style={{
                         padding: '10px 12px',
                         background: '#0a0a0a',

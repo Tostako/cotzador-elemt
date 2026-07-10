@@ -16,7 +16,7 @@ export function EstimacionModule() {
   const [tab, setTab] = useState<Tab>('calculadora');
 
   const tabButton = (value: Tab, Icon: IconType, label: string) => (
-    <button
+    <button type="button"
       onClick={() => setTab(value)}
       className={`btn btn-small ${tab === value ? '' : 'btn-secondary'}`}
       style={{ flex: 1, gap: 6 }}

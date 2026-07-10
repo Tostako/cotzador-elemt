@@ -33,6 +33,10 @@ export interface Espacio {
   ajusteDesperdicio: number
   orientacionManual?: 'largo' | 'ancho' | null
   filtroTipoAcabado?: string | null
+  // Geometría real del plano (opcional; si el backend la envía se dibuja el polígono en vez del cuadrito).
+  nodos?: { id: string; x: number; y: number }[]
+  muros?: { a: string; b: string; abertura?: boolean }[]
+  puntos?: { x: number; y: number }[]
 }
 
 export interface Segmento {

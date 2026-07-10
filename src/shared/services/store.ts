@@ -132,9 +132,23 @@ const demoConfig: AppConfig = {
   },
 };
 
+// Key de sesión versionada: si algún día cambia la forma del objeto User,
+// se sube el sufijo (v2, v3…) y los datos viejos se ignoran sin romper.
+export const USER_KEY = 'element_user:v1';
+const LEGACY_USER_KEY = 'element_user';
+
 const getStoredUser = (): User | null => {
   try {
-    const raw = localStorage.getItem('element_user');
+    let raw = localStorage.getItem(USER_KEY);
+    if (!raw) {
+      // Migración única desde la key sin versión (no desloguea a usuarios actuales)
+      const legacy = localStorage.getItem(LEGACY_USER_KEY);
+      if (legacy) {
+        localStorage.setItem(USER_KEY, legacy);
+        localStorage.removeItem(LEGACY_USER_KEY);
+        raw = legacy;
+      }
+    }
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -147,11 +161,11 @@ export const useStore = create<AppState>((set, get) => ({
   user: getStoredUser(),
   isAuthenticated: !!getStoredUser(),
   login: (user) => {
-    localStorage.setItem('element_user', JSON.stringify(user));
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
     set({ user, isAuthenticated: true });
   },
   logout: () => {
-    localStorage.removeItem('element_user');
+    localStorage.removeItem(USER_KEY);
     set({ user: null, isAuthenticated: false, quotes: [], config: demoConfig });
   },
   loadFromBackend: async () => {
@@ -242,7 +256,7 @@ export const useStore = create<AppState>((set, get) => ({
               email: customerData.email || currentUser.email,
               profession: customerData.address || currentUser.profession,
             };
-            localStorage.setItem('element_user', JSON.stringify(updatedUser));
+            localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
             set({ user: updatedUser });
           }
         }

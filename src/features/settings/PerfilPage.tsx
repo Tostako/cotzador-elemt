@@ -106,22 +106,22 @@ export function PerfilPage() {
         <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><User size={18} color="#b69462" /> Información Personal</h3>
         <div style={{ display: 'grid', gap: 12 }}>
           <div>
-            <label className="small" style={{ display: 'block', marginBottom: 4 }}>Nombre completo</label>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+            <label className="small" style={{ display: 'block', marginBottom: 4 }} htmlFor="perfil-nombre">Nombre completo</label>
+            <input id="perfil-nombre" className="input" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <label className="small" style={{ display: 'block', marginBottom: 4 }}>Correo electrónico</label>
-            <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <label className="small" style={{ display: 'block', marginBottom: 4 }} htmlFor="perfil-email">Correo electrónico</label>
+            <input id="perfil-email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div>
-            <label className="small" style={{ display: 'block', marginBottom: 4 }}>Teléfono</label>
-            <input className="input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ej: +57 300 123 4567" />
+            <label className="small" style={{ display: 'block', marginBottom: 4 }} htmlFor="perfil-telefono">Teléfono</label>
+            <input id="perfil-telefono" className="input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ej: +57 300 123 4567" />
           </div>
           <div>
-            <label className="small" style={{ display: 'block', marginBottom: 4 }}>Profesión</label>
-            <input className="input" value={profession} onChange={(e) => setProfession(e.target.value)} placeholder="Ej: Arquitecto, Ingeniero..." />
+            <label className="small" style={{ display: 'block', marginBottom: 4 }} htmlFor="perfil-profesion">Profesión</label>
+            <input id="perfil-profesion" className="input" value={profession} onChange={(e) => setProfession(e.target.value)} placeholder="Ej: Arquitecto, Ingeniero..." />
           </div>
-          <button className="btn" onClick={handleSaveProfile} disabled={isSaving} style={{ gap: 6 }}>
+          <button type="button" className="btn" onClick={handleSaveProfile} disabled={isSaving} style={{ gap: 6 }}>
             {isSaving ? 'Guardando...' : <><Save size={16} /> Guardar Perfil</>}
           </button>
         </div>
@@ -139,6 +139,7 @@ export function PerfilPage() {
             type="file"
             accept="image/*"
             style={{ display: 'none' }}
+            aria-label="Subir logo de empresa"
             onChange={(e) => handleImageUpload(e, 'company', 'logo')}
           />
           {config.invoice.company.logo ? (
@@ -149,28 +150,24 @@ export function PerfilPage() {
                 style={{ maxHeight: 120, maxWidth: '100%', borderRadius: 8, objectFit: 'contain' }}
               />
               <div style={{ display: 'flex', gap: 8, marginTop: 8, justifyContent: 'center' }}>
-                <button className="btn btn-small btn-secondary" onClick={() => logoInputRef.current?.click()}>
+                <button type="button" className="btn btn-small btn-secondary" onClick={() => logoInputRef.current?.click()}>
                   <Upload size={14} /> Cambiar
                 </button>
-                <button className="btn btn-small btn-danger" onClick={() => clearImage('company', 'logo')}>
+                <button type="button" className="btn btn-small btn-danger" onClick={() => clearImage('company', 'logo')}>
                   <Trash2 size={14} /> Eliminar
                 </button>
               </div>
             </div>
           ) : (
-            <div
-              style={{
-                padding: 32,
-                border: '2px dashed var(--color-line)',
-                borderRadius: 12,
-                textAlign: 'center',
-                cursor: 'pointer',
-              }}
+            <button
+              type="button"
+              className="upload-area-btn"
+              aria-label="Subir logo de empresa"
               onClick={() => logoInputRef.current?.click()}
             >
               <Building2 size={30} color="#8c8578" style={{ marginBottom: 8 }} />
               <p className="small" style={{ color: '#999' }}>Haz clic para subir tu logo</p>
-            </div>
+            </button>
           )}
         </div>
       </div>
@@ -187,6 +184,7 @@ export function PerfilPage() {
             type="file"
             accept="image/*"
             style={{ display: 'none' }}
+            aria-label="Subir firma digital"
             onChange={(e) => handleImageUpload(e, 'representative', 'signature')}
           />
           {config.invoice.representative.signature ? (
@@ -197,28 +195,24 @@ export function PerfilPage() {
                 style={{ maxHeight: 80, maxWidth: '100%', borderRadius: 8, objectFit: 'contain' }}
               />
               <div style={{ display: 'flex', gap: 8, marginTop: 8, justifyContent: 'center' }}>
-                <button className="btn btn-small btn-secondary" onClick={() => signatureInputRef.current?.click()}>
+                <button type="button" className="btn btn-small btn-secondary" onClick={() => signatureInputRef.current?.click()}>
                   <Upload size={14} /> Cambiar
                 </button>
-                <button className="btn btn-small btn-danger" onClick={() => clearImage('representative', 'signature')}>
+                <button type="button" className="btn btn-small btn-danger" onClick={() => clearImage('representative', 'signature')}>
                   <Trash2 size={14} /> Eliminar
                 </button>
               </div>
             </div>
           ) : (
-            <div
-              style={{
-                padding: 32,
-                border: '2px dashed var(--color-line)',
-                borderRadius: 12,
-                textAlign: 'center',
-                cursor: 'pointer',
-              }}
+            <button
+              type="button"
+              className="upload-area-btn"
+              aria-label="Subir firma digital"
               onClick={() => signatureInputRef.current?.click()}
             >
               <Signature size={30} color="#8c8578" style={{ marginBottom: 8 }} />
               <p className="small" style={{ color: '#999' }}>Haz clic para subir tu firma</p>
-            </div>
+            </button>
           )}
         </div>
       </div>

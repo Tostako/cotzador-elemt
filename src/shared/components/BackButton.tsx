@@ -13,7 +13,7 @@ export function BackButton({ to = '/dashboard', label = 'Volver al inicio' }: Ba
   const navigate = useNavigate();
 
   return (
-    <button
+    <button type="button"
       className="btn btn-ghost btn-small mb-2"
       onClick={() => navigate(to)}
       style={{ width: 'auto', gap: 6 }}

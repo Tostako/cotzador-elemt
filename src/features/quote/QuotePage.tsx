@@ -80,20 +80,20 @@ export function QuotePage() {
 
       <div className="flex-between mt-2" style={{ gap: 12 }}>
         {quoteStep > 1 ? (
-          <button className="btn btn-secondary" onClick={prevStep} style={{ flex: 1, gap: 6 }}>
+          <button type="button" className="btn btn-secondary" onClick={prevStep} style={{ flex: 1, gap: 6 }}>
             <ArrowLeft size={16} /> ATRÁS
           </button>
         ) : (
-          <button className="btn btn-secondary" onClick={() => { if (isEditing) { setEditingQuoteId(null); resetForm(); } navigate('/dashboard'); }} style={{ flex: 1, gap: 6 }}>
+          <button type="button" className="btn btn-secondary" onClick={() => { if (isEditing) { setEditingQuoteId(null); resetForm(); } navigate('/dashboard'); }} style={{ flex: 1, gap: 6 }}>
             {isEditing ? <><X size={16} /> CANCELAR</> : <><ArrowLeft size={16} /> INICIO</>}
           </button>
         )}
         {quoteStep < 5 ? (
-          <button className="btn" onClick={nextStep} style={{ flex: 2, gap: 6 }}>
+          <button type="button" className="btn" onClick={nextStep} style={{ flex: 2, gap: 6 }}>
             CONTINUAR <ArrowRight size={16} />
           </button>
         ) : (
-          <button className="btn" onClick={saveQuote} style={{ flex: 2, gap: 6 }}>
+          <button type="button" className="btn" onClick={saveQuote} style={{ flex: 2, gap: 6 }}>
             {isEditing ? <><RefreshCw size={16} /> ACTUALIZAR</> : <><Save size={16} /> GUARDAR</>}
           </button>
         )}

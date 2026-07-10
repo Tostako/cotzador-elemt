@@ -15,18 +15,22 @@ export function QuoteStep2() {
       <div className="card mt-2">
         <p className="small mb-2">¿Cómo quieres ingresar el área?</p>
         <div className="grid-2">
-          <div
+          <button
+            type="button"
             className={`toggle-option ${formData.areaMode === 'dimensions' ? 'active' : ''}`}
             onClick={() => setFormData({ areaMode: 'dimensions' })}
+            style={{ background: 'transparent', border: 'none', font: 'inherit', color: 'inherit', width: '100%' }}
           >
             Dimensiones
-          </div>
-          <div
+          </button>
+          <button
+            type="button"
             className={`toggle-option ${formData.areaMode === 'direct' ? 'active' : ''}`}
             onClick={() => setFormData({ areaMode: 'direct' })}
+            style={{ background: 'transparent', border: 'none', font: 'inherit', color: 'inherit', width: '100%' }}
           >
             Área Directa
-          </div>
+          </button>
         </div>
       </div>
 
@@ -34,26 +38,31 @@ export function QuoteStep2() {
         <div className="card">
           <p className="small mb-2">Forma del lote</p>
           <div className="grid-2">
-            <div
+            <button
+              type="button"
               className={`toggle-option ${formData.lotShape === 'rectangular' ? 'active' : ''}`}
               onClick={() => setFormData({ lotShape: 'rectangular' })}
+              style={{ background: 'transparent', border: 'none', font: 'inherit', color: 'inherit', width: '100%' }}
             >
               Rectangular
-            </div>
-            <div
+            </button>
+            <button
+              type="button"
               className={`toggle-option ${formData.lotShape === 'irregular' ? 'active' : ''}`}
               onClick={() => setFormData({ lotShape: 'irregular' })}
+              style={{ background: 'transparent', border: 'none', font: 'inherit', color: 'inherit', width: '100%' }}
             >
               Irregular
-            </div>
+            </button>
           </div>
         </div>
       )}
 
       {formData.areaMode === 'direct' && (
         <div className="card">
-          <p className="small mb-1">Área del lote (m²)</p>
+          <label className="small mb-1" htmlFor="quote-direct-area">Área del lote (m²)</label>
           <input
+            id="quote-direct-area"
             className="input"
             type="number"
             value={formData.directArea}
@@ -87,9 +96,10 @@ export function QuoteStep2() {
             <div className="lot-dim lot-dim-top">
               {formData.lotShape === 'irregular' ? (
                 <>
-                  <label className="lot-label">Posterior</label>
+                  <label className="lot-label" htmlFor="quote-posterior">Posterior</label>
                   <div style={{ position: 'relative', width: 120 }}>
                     <input
+                      id="quote-posterior"
                       type="number"
                       className="input"
                       value={formData.posterior}
@@ -109,7 +119,7 @@ export function QuoteStep2() {
                 </>
               ) : (
                 <div className="lot-readonly">
-                  <label className="lot-label ro">Posterior</label>
+                  <span className="lot-label ro">Posterior</span>
                   <div className="lot-ro-value">= {formData.frontal}m</div>
                   <p className="lot-ro-hint">Igual a Frontal</p>
                 </div>
@@ -120,9 +130,10 @@ export function QuoteStep2() {
             <div className="lot-middle">
               {/* LEFT: LAT IZQ */}
               <div className="lot-side">
-                <label className="lot-label">Lat Izq</label>
+                <label className="lot-label" htmlFor="quote-lat-izq">Lat Izq</label>
                 <div style={{ position: 'relative', width: 100 }}>
                   <input
+                    id="quote-lat-izq"
                     type="number"
                     className="input"
                     value={formData.latIzq}
@@ -161,9 +172,10 @@ export function QuoteStep2() {
               <div className="lot-side">
                 {formData.lotShape === 'irregular' ? (
                   <>
-                    <label className="lot-label">Lat Der</label>
+                    <label className="lot-label" htmlFor="quote-lat-der">Lat Der</label>
                     <div style={{ position: 'relative', width: 100 }}>
                       <input
+                        id="quote-lat-der"
                         type="number"
                         className="input"
                         value={formData.latDer}
@@ -183,7 +195,7 @@ export function QuoteStep2() {
                   </>
                 ) : (
                   <div className="lot-readonly">
-                    <label className="lot-label ro">Lat Der</label>
+                    <span className="lot-label ro">Lat Der</span>
                     <div className="lot-ro-value">= {formData.latIzq}m</div>
                     <p className="lot-ro-hint">Igual a Lat Izq</p>
                   </div>
@@ -193,9 +205,10 @@ export function QuoteStep2() {
 
             {/* BOTTOM: FRONTAL */}
             <div className="lot-dim lot-dim-bottom">
-              <label className="lot-label">Frontal</label>
+              <label className="lot-label" htmlFor="quote-frontal">Frontal</label>
               <div style={{ position: 'relative', width: 120 }}>
                 <input
+                  id="quote-frontal"
                   type="number"
                   className="input"
                   value={formData.frontal}
@@ -287,10 +300,11 @@ export function QuoteStep2() {
 
       <div className="card">
         <div>
-          <p className="small mb-1">
+          <label htmlFor="occ-slider" className="small mb-1">
             Índice de ocupación: <span style={{ color: '#b69462', fontWeight: 700 }}>{formData.occ}%</span>
-          </p>
+          </label>
           <input
+            id="occ-slider"
             type="range"
             min={50}
             max={100}

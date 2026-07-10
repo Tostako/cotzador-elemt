@@ -18,6 +18,9 @@ import { ProductoPage } from '../features/materials/ProductoPage';
 import { PedidosPage } from '../features/materials/PedidosPage';
 import { QuoteInvoicesPage } from '../features/invoice/QuoteInvoicesPage';
 import { EnchapesPage } from '../features/enchapes/EnchapesPage';
+import { PlanosPage } from '../features/planos/PlanosPage';
+import { PlanoEditorPage } from '../features/planos/PlanoEditorPage';
+import { BarrederasPage } from '../features/barrederas/BarrederasPage';
 // import { EstimationCalculatorPage } from '../features/calculator/EstimationCalculatorPage';
 import { Layout } from './Layout';
 import { useStore } from '../shared/services/store';
@@ -84,6 +87,26 @@ export const router = createBrowserRouter([
   {
     path: '/calculadoras/enchapes',
     element: <ProtectedRoute><Layout><EnchapesPage /></Layout></ProtectedRoute>,
+  },
+  {
+    path: '/calculadoras/barrederas',
+    element: <ProtectedRoute><Layout><BarrederasPage /></Layout></ProtectedRoute>,
+  },
+  {
+    path: '/calculadoras/barrederas/:planId',
+    element: <ProtectedRoute><Layout><BarrederasPage /></Layout></ProtectedRoute>,
+  },
+  {
+    path: '/planos',
+    element: <ProtectedRoute><Layout><PlanosPage /></Layout></ProtectedRoute>,
+  },
+  {
+    path: '/planos/nuevo',
+    element: <ProtectedRoute><Layout><PlanoEditorPage /></Layout></ProtectedRoute>,
+  },
+  {
+    path: '/planos/:id',
+    element: <ProtectedRoute><Layout><PlanoEditorPage /></Layout></ProtectedRoute>,
   },
   {
     path: '/perfil',

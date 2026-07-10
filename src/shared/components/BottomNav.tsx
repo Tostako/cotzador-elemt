@@ -22,14 +22,15 @@ export function BottomNav() {
   return (
     <nav className="tab">
       {tabs.map((tab) => (
-        <div
+        <button
+          type="button"
           key={tab.route}
           className={`tab-item ${isActive(tab.route) ? 'active' : ''}`}
           onClick={() => navigate(tab.route)}
         >
           {tab.icon}
           <span>{tab.label}</span>
-        </div>
+        </button>
       ))}
     </nav>
   );

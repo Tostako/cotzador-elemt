@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../../shared/services/store';
 import { showNotification } from '../../shared/hooks/useNotifications';
+import { useEscapeKey } from '../../shared/hooks/useEscapeKey';
 import { TourBanner } from '../../shared/components/TourBanner';
 import { isTourActiveForRoute } from '../../shared/utils/tour';
 import type { SavedPaymentPlan } from '../../shared/types';
@@ -31,6 +32,9 @@ export function PagosPage() {
 
   const [deletePlanConfirm, setDeletePlanConfirm] = useState<number | null>(null);
   const [deletePaymentConfirm, setDeletePaymentConfirm] = useState<{ index: number; name: string } | null>(null);
+
+  useEscapeKey(() => setDeletePlanConfirm(null), deletePlanConfirm != null);
+  useEscapeKey(() => setDeletePaymentConfirm(null), deletePaymentConfirm !== null);
 
   useEffect(() => {
     loadPaymentPlans();
@@ -161,7 +165,7 @@ export function PagosPage() {
       <div className="card mt-2" style={{ marginBottom: 24 }}>
         <div className="flex-between mb-2">
           <h3 style={{ fontSize: 18, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}><FolderOpen size={18} color="#b69462" /> Mis Planes Guardados</h3>
-          <button className="btn btn-small" onClick={() => { resetPlanForm(); setShowPlanForm(!showPlanForm); }}>
+          <button type="button" className="btn btn-small" onClick={() => { resetPlanForm(); setShowPlanForm(!showPlanForm); }}>
             {showPlanForm ? '× Cancelar' : '+ Nuevo Plan'}
           </button>
         </div>
@@ -171,22 +175,23 @@ export function PagosPage() {
             <h4 className="mb-2" style={{ fontWeight: 600 }}>{editingPlan ? 'Editar Plan' : 'Crear Plan'}</h4>
             <div style={{ display: 'grid', gap: 12 }}>
               <div>
-                <p className="small mb-1">Nombre del plan</p>
-                <input className="input" placeholder="Ej: 50/30/20 Estándar" value={planForm.name} onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })} />
+                <label className="small mb-1" htmlFor="pago-plan-nombre">Nombre del plan</label>
+                <input id="pago-plan-nombre" className="input" placeholder="Ej: 50/30/20 Estándar" value={planForm.name} onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })} />
               </div>
               <div>
-                <p className="small mb-1">Descripción <span style={{ opacity: 0.5 }}>(opcional)</span></p>
-                <input className="input" placeholder="Ej: Plan usado para clientes corporativos" value={planForm.description} onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })} />
+                <label className="small mb-1" htmlFor="pago-plan-descripcion">Descripción <span style={{ opacity: 0.5 }}>(opcional)</span></label>
+                <input id="pago-plan-descripcion" className="input" placeholder="Ej: Plan usado para clientes corporativos" value={planForm.description} onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })} />
               </div>
 
               <div>
                 <p className="small mb-1">Cuotas (deben sumar 100%)</p>
                 {planForm.installments.map((inst, idx) => (
-                  <div key={idx} className="flex-between mb-1" style={{ gap: 8 }}>
+                  <div key={`${inst.name}-${idx}`} className="flex-between mb-1" style={{ gap: 8 }}>
                     <input
                       className="input"
                       style={{ flex: 2 }}
                       placeholder="Nombre"
+                      aria-label={`Nombre de cuota ${idx + 1}`}
                       value={inst.name}
                       onChange={(e) => updateInstallment(idx, 'name', e.target.value)}
                     />
@@ -195,14 +200,15 @@ export function PagosPage() {
                       style={{ flex: 1 }}
                       type="number"
                       placeholder="%"
+                      aria-label={`Porcentaje de cuota ${idx + 1}`}
                       value={inst.percentage}
                       onChange={(e) => updateInstallment(idx, 'percentage', e.target.value)}
                     />
-                    <button className="btn btn-danger btn-small" style={{ width: 40 }} onClick={() => removeInstallmentField(idx)}>×</button>
+                    <button type="button" className="btn btn-danger btn-small" style={{ width: 40 }} onClick={() => removeInstallmentField(idx)}>×</button>
                   </div>
                 ))}
                 <div className="flex-between mt-1" style={{ padding: '8px 0' }}>
-                  <button className="btn btn-ghost btn-small" onClick={addInstallmentField}>+ Agregar cuota</button>
+                  <button type="button" className="btn btn-ghost btn-small" onClick={addInstallmentField}>+ Agregar cuota</button>
                   {(() => {
                     const total = planForm.installments.reduce((sum, i) => sum + (parseFloat(i.percentage) || 0), 0);
                     return (
@@ -215,8 +221,8 @@ export function PagosPage() {
               </div>
 
               <div className="grid-2">
-                <button className="btn btn-secondary" onClick={() => setShowPlanForm(false)}>Cancelar</button>
-                <button className="btn" onClick={handleSavePlan}>Guardar Plan</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowPlanForm(false)}>Cancelar</button>
+                <button type="button" className="btn" onClick={handleSavePlan}>Guardar Plan</button>
               </div>
             </div>
           </div>
@@ -234,8 +240,8 @@ export function PagosPage() {
                 {plan.isDefault && <span style={{ marginLeft: 8, fontSize: 11, color: '#b69462', background: 'rgba(182,148,98,0.15)', padding: '2px 8px', borderRadius: 8 }}>Predeterminado</span>}
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                <button className="btn btn-small" onClick={() => handleEditPlan(plan)}>Editar</button>
-                <button className="btn btn-small btn-danger" onClick={() => handleDeletePlan(plan.id)}>Eliminar</button>
+                <button type="button" className="btn btn-small" onClick={() => handleEditPlan(plan)}>Editar</button>
+                <button type="button" className="btn btn-small btn-danger" onClick={() => handleDeletePlan(plan.id)}>Eliminar</button>
               </div>
             </div>
             {plan.description && <p className="small" style={{ color: '#999', marginBottom: 4 }}>{plan.description}</p>}
@@ -251,7 +257,7 @@ export function PagosPage() {
       </div>
 
       {/* ── LOCAL PAYMENT CONFIG (current quote defaults) ── */}
-      <button className="btn mt-2 mb-2" onClick={() => setShowPaymentForm(!showPaymentForm)}>
+      <button type="button" className="btn mt-2 mb-2" onClick={() => setShowPaymentForm(!showPaymentForm)}>
         {showPaymentForm ? '× Cancelar' : '+ Nuevo Pago (cotización actual)'}
       </button>
 
@@ -260,8 +266,9 @@ export function PagosPage() {
             <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600 }}>Nuevo Pago</h3>
             <div style={{ display: 'grid', gap: 12 }}>
               <div>
-                <p className="small mb-1">Nombre del pago</p>
+                <label className="small mb-1" htmlFor="pago-nombre">Nombre del pago</label>
                 <input
+                  id="pago-nombre"
                   className="input"
                   placeholder="Ej: Avance 50%"
                   value={newPayment.name}
@@ -269,8 +276,9 @@ export function PagosPage() {
                 />
               </div>
               <div>
-                <p className="small mb-1">Porcentaje</p>
+                <label className="small mb-1" htmlFor="pago-porcentaje">Porcentaje</label>
                 <input
+                  id="pago-porcentaje"
                   className="input"
                   type="number"
                   placeholder="Ej: 25"
@@ -284,8 +292,8 @@ export function PagosPage() {
                 </p>
               </div>
               <div className="grid-2">
-                <button className="btn btn-secondary" onClick={() => setShowPaymentForm(false)}>Cancelar</button>
-                <button className="btn" onClick={handleSavePayment}>Guardar</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowPaymentForm(false)}>Cancelar</button>
+                <button type="button" className="btn" onClick={handleSavePayment}>Guardar</button>
               </div>
             </div>
           </div>
@@ -296,19 +304,21 @@ export function PagosPage() {
         <p className="small mb-2" style={{ color: '#999' }}>Suma total debe ser 100%</p>
 
         {config.paymentPlan.payments.map((payment, i) => (
-          <div key={i} className="mb-2" style={{ padding: 12, background: '#0a0a0a', borderRadius: 12 }}>
+          <div key={`${payment.name}-${i}`} className="mb-2" style={{ padding: 12, background: '#0a0a0a', borderRadius: 12 }}>
             <div className="flex-between mb-2">
               <span style={{ fontWeight: 600 }}>Pago {i + 1}</span>
-              <button
+              <button type="button"
                 className="btn-small btn-danger"
                 onClick={() => setDeletePaymentConfirm({ index: i, name: payment.name })}
               >
                 ×
               </button>
             </div>
-            <p className="small mb-1">Nombre</p>
+            <label className="small mb-1" htmlFor={`pago-actual-nombre-${i}`}>Nombre</label>
             <input
+              id={`pago-actual-nombre-${i}`}
               className="input mb-1"
+              aria-label={`Nombre del pago ${i + 1}`}
               value={payment.name}
               onChange={(e) => {
                 const payments = [...config.paymentPlan.payments];
@@ -316,11 +326,13 @@ export function PagosPage() {
                 updateConfig({ paymentPlan: { payments } });
               }}
             />
-            <p className="small mb-1">Porcentaje</p>
+            <label className="small mb-1" htmlFor={`pago-actual-porcentaje-${i}`}>Porcentaje</label>
             <input
+              id={`pago-actual-porcentaje-${i}`}
               className="input"
               type="text"
               inputMode="numeric"
+              aria-label={`Porcentaje del pago ${i + 1}`}
               placeholder="0"
               value={payment.percentage === 0 ? '' : String(payment.percentage || '')}
               onChange={(e) => {
@@ -356,20 +368,17 @@ export function PagosPage() {
 
       {/* Delete Plan Confirmation Modal */}
       {deletePlanConfirm != null && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => { if (e.target === e.currentTarget) setDeletePlanConfirm(null); }}
-        >
+        <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 400 }}>
             <h3 style={{ marginBottom: 8 }}>¿Eliminar plan de pagos?</h3>
             <p className="small mb-2" style={{ color: '#999' }}>
               Esta acción no se puede deshacer.
             </p>
             <div className="grid-2" style={{ marginTop: 24 }}>
-              <button className="btn btn-secondary" onClick={() => setDeletePlanConfirm(null)}>
+              <button type="button" className="btn btn-secondary" onClick={() => setDeletePlanConfirm(null)}>
                 Cancelar
               </button>
-              <button className="btn btn-danger" onClick={confirmDeletePlan}>
+              <button type="button" className="btn btn-danger" onClick={confirmDeletePlan}>
                 <Trash2 size={16} /> Eliminar
               </button>
             </div>
@@ -379,20 +388,17 @@ export function PagosPage() {
 
       {/* Delete Payment Confirmation Modal */}
       {deletePaymentConfirm && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => { if (e.target === e.currentTarget) setDeletePaymentConfirm(null); }}
-        >
+        <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 400 }}>
             <h3 style={{ marginBottom: 8 }}>¿Eliminar pago?</h3>
             <p className="small mb-2" style={{ color: '#999' }}>
               Vas a eliminar <strong style={{ color: '#fff' }}>{deletePaymentConfirm.name}</strong>.
             </p>
             <div className="grid-2" style={{ marginTop: 24 }}>
-              <button className="btn btn-secondary" onClick={() => setDeletePaymentConfirm(null)}>
+              <button type="button" className="btn btn-secondary" onClick={() => setDeletePaymentConfirm(null)}>
                 Cancelar
               </button>
-              <button
+              <button type="button"
                 className="btn btn-danger"
                 onClick={() => {
                   deletePayment(deletePaymentConfirm.index);

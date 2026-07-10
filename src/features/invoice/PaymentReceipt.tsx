@@ -69,6 +69,7 @@ export function PaymentReceipt({ invoice, config, paidAt, totalPaid }: PaymentRe
             {inv.company.enabled && inv.company.logo && (
               <img
                 src={inv.company.logo}
+                alt="Logo empresa"
                 style={{ maxWidth: 140, maxHeight: 70, marginBottom: 8, display: 'block' }}
               />
             )}
@@ -124,6 +125,7 @@ export function PaymentReceipt({ invoice, config, paidAt, totalPaid }: PaymentRe
           <div style={{ textAlign: 'center', marginTop: 30, marginBottom: 20 }}>
             <img
               src={inv.company.logo}
+              alt="Logo empresa"
               style={{ maxWidth: 120, maxHeight: 60, opacity: 0.4 }}
             />
           </div>
@@ -136,7 +138,7 @@ export function PaymentReceipt({ invoice, config, paidAt, totalPaid }: PaymentRe
       </div>
 
       <div style={{ textAlign: 'center', marginTop: 16 }}>
-        <button className="btn btn-small" onClick={handleDownloadPDF}>
+        <button type="button" className="btn btn-small" onClick={handleDownloadPDF}>
           📄 Descargar PDF
         </button>
       </div>

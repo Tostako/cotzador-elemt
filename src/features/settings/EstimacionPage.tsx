@@ -77,10 +77,11 @@ export function EstimacionPage() {
               </div>
               <span style={{ fontSize: 28 }}>🧱</span>
             </div>
-            <p className="small mb-1">Precio por m²</p>
+            <label className="small mb-1" htmlFor="est-obra-negra">Precio por m²</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ color: '#b69462', fontSize: 14, fontWeight: 600 }}>$</span>
               <input
+                id="est-obra-negra"
                 className="input"
                 type="text"
                 inputMode="numeric"
@@ -99,10 +100,11 @@ export function EstimacionPage() {
               </div>
               <span style={{ fontSize: 28 }}>🏠</span>
             </div>
-            <p className="small mb-1">Precio por m²</p>
+            <label className="small mb-1" htmlFor="est-obra-gris">Precio por m²</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ color: '#b69462', fontSize: 14, fontWeight: 600 }}>$</span>
               <input
+                id="est-obra-gris"
                 className="input"
                 type="text"
                 inputMode="numeric"
@@ -121,10 +123,11 @@ export function EstimacionPage() {
               </div>
               <span style={{ fontSize: 28 }}>✨</span>
             </div>
-            <p className="small mb-1">Precio por m²</p>
+            <label className="small mb-1" htmlFor="est-acabados">Precio por m²</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ color: '#b69462', fontSize: 14, fontWeight: 600 }}>$</span>
               <input
+                id="est-acabados"
                 className="input"
                 type="text"
                 inputMode="numeric"
@@ -141,7 +144,7 @@ export function EstimacionPage() {
       <div className="card" style={{ marginBottom: 100 }}>
         <div className="flex-between mb-2">
           <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600 }}>📐 Mis Estimaciones Personalizadas</h3>
-          <button className="btn btn-small" onClick={() => setShowForm(!showForm)}>
+          <button type="button" className="btn btn-small" onClick={() => setShowForm(!showForm)}>
             {showForm ? '✕ Cancelar' : '➕ Crear Estimación'}
           </button>
         </div>
@@ -153,8 +156,9 @@ export function EstimacionPage() {
           <div style={{ padding: 16, background: '#0a0a0a', borderRadius: 12, marginBottom: 16, border: '1px solid var(--color-line)' }}>
             <div style={{ display: 'grid', gap: 12 }}>
               <div>
-                <p className="small mb-1">Nombre de la estimación</p>
+                <label className="small mb-1" htmlFor="est-nombre">Nombre de la estimación</label>
                 <input
+                  id="est-nombre"
                   className="input"
                   placeholder="Ej: Primer piso, Sótano, Remodelación..."
                   value={newEstimation.name}
@@ -162,10 +166,11 @@ export function EstimacionPage() {
                 />
               </div>
               <div>
-                <p className="small mb-1">Precio por m²</p>
+                <label className="small mb-1" htmlFor="est-precio">Precio por m²</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ color: '#b69462', fontSize: 14, fontWeight: 600 }}>$</span>
                   <input
+                    id="est-precio"
                     className="input"
                     type="text"
                     inputMode="numeric"
@@ -181,10 +186,10 @@ export function EstimacionPage() {
                 </div>
               </div>
               <div className="grid-2">
-                <button className="btn btn-secondary" onClick={() => setShowForm(false)}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
                   Cancelar
                 </button>
-                <button className="btn" onClick={addCustomEstimation}>
+                <button type="button" className="btn" onClick={addCustomEstimation}>
                   Guardar Estimación
                 </button>
               </div>
@@ -215,7 +220,7 @@ export function EstimacionPage() {
                     ${Number(est.price).toLocaleString('es-CO')} / m²
                   </div>
                 </div>
-                <button
+                <button type="button"
                   className="btn-small btn-danger"
                   onClick={() => deleteCustomEstimation(est.id)}
                 >

@@ -1,13 +1,44 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import {
-  Home, PencilRuler, Grid3x3, Package, Calculator, History,
-  Wrench, Settings, Wallet, User, Receipt, CreditCard,
-  LogOut, Building2, ChevronDown,
+  Home, PencilRuler, Grid3x3, Package, Calculator,
+  Settings, Wallet, User, Receipt, CreditCard,
+  LogOut, Building2, ChevronDown, DraftingCompass, Frame, FileText, LayoutGrid, ScrollText,
 } from 'lucide-react';
 import { useStore } from '../../shared/services/store';
 
 type IconType = ComponentType<{ size?: number | string; strokeWidth?: number }>;
+
+interface NavItem {
+  route: string;
+  icon: IconType;
+  label: string;
+}
+
+interface SidebarItemProps {
+  item: NavItem;
+  pathname: string;
+  onNavigate: (route: string) => void;
+}
+
+function itemIsActive(item: NavItem, pathname: string) {
+  if (item.route === '/dashboard') return pathname === '/dashboard' || pathname === '/';
+  return pathname.startsWith(item.route);
+}
+
+function SidebarItem({ item, pathname, onNavigate }: SidebarItemProps) {
+  const Icon = item.icon;
+  return (
+    <button
+      type="button"
+      className={`sidebar-item ${itemIsActive(item, pathname) ? 'active' : ''}`}
+      onClick={() => onNavigate(item.route)}
+    >
+      <span style={{ width: 28, display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}><Icon size={19} /></span>
+      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>
+    </button>
+  );
+}
 
 interface SidebarProps {
   open: boolean;
@@ -31,15 +62,25 @@ interface NavGroup {
 
 const groups: NavGroup[] = [
   {
-    key: 'herramientas',
-    title: 'Herramientas',
-    icon: Wrench,
+    key: 'calculadoras',
+    title: 'Calculadoras',
+    icon: LayoutGrid,
+    items: [
+      { route: '/planos', icon: DraftingCompass, label: 'Planos', match: (p) => p.startsWith('/planos') },
+      { route: '/calculadoras/enchapes', icon: Grid3x3, label: 'Enchapes', match: (p) => p.startsWith('/calculadoras/enchapes') },
+      { route: '/calculadoras/barrederas', icon: Frame, label: 'Barrederas', match: (p) => p.startsWith('/calculadoras/barrederas') },
+      { route: '/materiales', icon: Package, label: 'Materiales', match: (p) => p.startsWith('/materiales') },
+    ],
+  },
+  {
+    key: 'cotizador',
+    title: 'Cotizador',
+    icon: FileText,
     items: [
       { route: '/quote', icon: PencilRuler, label: 'Cotizar' },
-      { route: '/calculadoras/enchapes', icon: Grid3x3, label: 'Enchapes' },
-      { route: '/materiales', icon: Package, label: 'Materiales', match: (p) => p.startsWith('/materiales') },
-      { route: '/estimacion', icon: Calculator, label: 'Estimación de Obra' },
-      { route: '/history', icon: History, label: 'Historial' },
+      { route: '/estimacion', icon: Calculator, label: 'Estimaciones de Obra' },
+      { route: '/tarifas', icon: Wallet, label: 'Tarifas' },
+      { route: '/history', icon: ScrollText, label: 'Cotizaciones' },
     ],
   },
   {
@@ -54,15 +95,6 @@ const groups: NavGroup[] = [
   },
 ];
 
-// Ítem suelto (fuera de los grupos).
-const standaloneItems: NavItem[] = [
-  { route: '/tarifas', icon: Wallet, label: 'Tarifas' },
-];
-
-function itemIsActive(item: NavItem, path: string) {
-  return item.match ? item.match(path) : path === item.route;
-}
-
 export function Sidebar({ open, onClose }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -75,17 +107,20 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     for (const g of groups) {
       state[g.key] = g.items.some((it) => itemIsActive(it, location.pathname));
     }
-    if (!Object.values(state).some(Boolean)) state['herramientas'] = true;
+    if (!Object.values(state).some(Boolean)) state['calculadoras'] = true;
     return state;
   });
 
   const toggleGroup = (key: string) =>
     setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
 
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
-        onClose();
+        onCloseRef.current();
       }
     }
     if (open) {
@@ -96,7 +131,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       document.removeEventListener('mousedown', handleClickOutside);
       document.body.style.overflow = '';
     };
-  }, [open, onClose]);
+  }, [open]);
 
   // Al abrir el sidebar, despliega el grupo de la ruta actual.
   useEffect(() => {
@@ -115,49 +150,33 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     onClose();
   };
 
-  const renderItem = (item: NavItem) => {
-    const Icon = item.icon;
-    return (
-      <div
-        key={item.route}
-        className={`sidebar-item ${itemIsActive(item, location.pathname) ? 'active' : ''}`}
-        onClick={() => handleNavigate(item.route)}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === 'Enter' && handleNavigate(item.route)}
-      >
-        <span style={{ width: 28, display: 'inline-flex', justifyContent: 'center' }}><Icon size={19} /></span>
-        <span>{item.label}</span>
-      </div>
-    );
-  };
-
   return (
     <>
       {/* Overlay */}
-      <div className={`sidebar-overlay no-print ${open ? 'open' : ''}`} onClick={onClose} />
+      <div
+        className={`sidebar-overlay no-print ${open ? 'open' : ''}`}
+        aria-label="Cerrar menú"
+      />
 
       {/* Sidebar */}
       <aside ref={sidebarRef} className={`sidebar no-print ${open ? 'open' : ''}`}>
         {/* Logo header (→ landing) */}
         <div style={{ padding: '0 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 8 }}>
-          <div
-            style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, cursor: 'pointer' }}
+          <button
+            type="button"
+            style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, cursor: 'pointer', border: 'none', background: 'transparent', padding: 0, font: 'inherit', color: 'inherit' }}
             onClick={() => { navigate('/'); onClose(); }}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && navigate('/')}
           >
             <Building2 size={22} color="#b69462" />
             <span style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>ELEMENT</span>
-          </div>
+          </button>
           <p className="small" style={{ fontSize: 12, margin: 0 }}>Cotizador Profesional</p>
         </div>
 
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '0 12px' }}>
           {/* Home (acceso directo) */}
-          {renderItem({ route: '/dashboard', icon: Home, label: 'Home' })}
+          <SidebarItem item={{ route: '/dashboard', icon: Home, label: 'Home' }} pathname={location.pathname} onNavigate={handleNavigate} />
 
           {/* Grupos desplegables */}
           {groups.map((group) => {
@@ -165,7 +184,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             const GroupIcon = group.icon;
             return (
               <div key={group.key} style={{ marginTop: 6 }}>
-                <button
+                <button type="button"
                   className="sidebar-group-toggle"
                   onClick={() => toggleGroup(group.key)}
                   aria-expanded={isOpen}
@@ -185,32 +204,28 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 </button>
                 {isOpen && (
                   <div style={{ paddingLeft: 8, marginTop: 2, marginBottom: 4 }}>
-                    {group.items.map(renderItem)}
+                    {group.items.map((it) => (
+                      <SidebarItem key={it.route} item={it} pathname={location.pathname} onNavigate={handleNavigate} />
+                    ))}
                   </div>
                 )}
               </div>
             );
           })}
-
-          {/* Ítems sueltos */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 8, paddingTop: 8 }}>
-            {standaloneItems.map(renderItem)}
-          </div>
         </nav>
 
         {/* Usuario + Logout */}
         <div style={{ padding: '12px 12px 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 'auto' }}>
-          <div
+          <button
+            type="button"
             className={`sidebar-item ${location.pathname === '/perfil' ? 'active' : ''}`}
             onClick={() => handleNavigate('/perfil')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && handleNavigate('/perfil')}
           >
             <span style={{ width: 28, display: 'inline-flex', justifyContent: 'center' }}><User size={19} /></span>
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'Mi Perfil'}</span>
-          </div>
-          <div
+          </button>
+          <button
+            type="button"
             className="sidebar-item"
             onClick={() => {
               logout();
@@ -218,13 +233,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               navigate('/login');
             }}
             style={{ color: '#ff3b30' }}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && (logout(), onClose(), navigate('/login'))}
           >
             <span style={{ width: 28, display: 'inline-flex', justifyContent: 'center' }}><LogOut size={19} /></span>
             <span>Cerrar Sesión</span>
-          </div>
+          </button>
         </div>
       </aside>
     </>

@@ -6,6 +6,7 @@ interface InputProps {
   onChange?: (value: string) => void;
   onInput?: (value: string) => void;
   className?: string;
+  ariaLabel?: string;
 }
 
 export function Input({
@@ -16,6 +17,7 @@ export function Input({
   onChange,
   onInput,
   className = '',
+  ariaLabel,
 }: InputProps) {
   return (
     <input
@@ -24,6 +26,7 @@ export function Input({
       placeholder={placeholder}
       value={value}
       step={step}
+      aria-label={ariaLabel}
       onChange={(e) => onChange?.(e.target.value)}
       onInput={(e) => onInput?.(e.currentTarget.value)}
     />

@@ -96,7 +96,7 @@ const API_URL = import.meta.env.VITE_API_URL || runtimeEnv.VITE_API_URL || 'http
 export const SHOP_SLUG = import.meta.env.VITE_SHOP_SLUG || runtimeEnv.VITE_SHOP_SLUG || 'elemet-haus';
 
 function getToken() {
-  const user = localStorage.getItem('element_user');
+  const user = localStorage.getItem('element_user:v1');
   if (!user) return null;
   try {
     return JSON.parse(user).token;
@@ -111,7 +111,7 @@ function buildUserFromToken(token: string) {
   // Try to preserve existing name from localStorage if JWT has no name
   let existingName = '';
   try {
-    const stored = localStorage.getItem('element_user');
+    const stored = localStorage.getItem('element_user:v1');
     if (stored) {
       const parsed = JSON.parse(stored);
       if (parsed.name && parsed.name !== parsed.email && parsed.name !== 'Usuario') {
@@ -144,7 +144,8 @@ async function api(path: string, options: RequestInit = {}) {
     finalPath = `${path}${separator}shop_slug=${SHOP_SLUG}`;
   }
 
-  const url = `${API_URL}${finalPath}`;
+  const baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+  const url = `${baseUrl}${finalPath}`;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -260,4 +261,25 @@ export const apiService = {
   createTileProject: (data: any) => api('/tile-calculator/projects', { method: 'POST', body: JSON.stringify(data) }),
   updateTileProject: (id: string, data: any) => api(`/tile-calculator/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteTileProject: (id: string) => api(`/tile-calculator/projects/${id}`, { method: 'DELETE' }),
+
+  // ── Planos de Casa (plantilla maestra) ────────────
+  getHousePlans: () => api('/tile-calculator/house-plans'),
+  getHousePlan: (id: string) => api(`/tile-calculator/house-plans/${id}`),
+  createHousePlan: (data: any) => api('/tile-calculator/house-plans', { method: 'POST', body: JSON.stringify(data) }),
+  updateHousePlan: (id: string, data: any) => api(`/tile-calculator/house-plans/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteHousePlan: (id: string) => api(`/tile-calculator/house-plans/${id}`, { method: 'DELETE' }),
+
+  // Derivar plano → calculadoras
+  importPlanToTiles: (id: string, data: any) => api(`/tile-calculator/house-plans/${id}/import-to-tiles`, { method: 'POST', body: JSON.stringify(data) }),
+  importPlanToGuardaescobas: (id: string, data: any) => api(`/tile-calculator/house-plans/${id}/import-to-guardaescobas`, { method: 'POST', body: JSON.stringify(data) }),
+  syncPlanToTiles: (id: string, projectId: string) => api(`/tile-calculator/house-plans/${id}/sync-to-tiles/${projectId}`, { method: 'POST' }),
+  syncPlanToGuardaescobas: (id: string, projectId: string) => api(`/tile-calculator/house-plans/${id}/sync-to-guardaescobas/${projectId}`, { method: 'POST' }),
+
+  // ── Barrederas (endpoints backend: guardaescobas) ──
+  getGuardaescobasProjects: () => api('/tile-calculator/guardaescobas-projects'),
+  getGuardaescobasProject: (id: string) => api(`/tile-calculator/guardaescobas-projects/${id}`),
+  createGuardaescobasProject: (data: any) => api('/tile-calculator/guardaescobas-projects', { method: 'POST', body: JSON.stringify(data) }),
+  updateGuardaescobasProject: (id: string, data: any) => api(`/tile-calculator/guardaescobas-projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteGuardaescobasProject: (id: string) => api(`/tile-calculator/guardaescobas-projects/${id}`, { method: 'DELETE' }),
+  calculateGuardaescobas: (id: string) => api(`/tile-calculator/guardaescobas-projects/${id}/calculate`, { method: 'POST' }),
 };

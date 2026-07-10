@@ -8,6 +8,20 @@ interface QuoteStep5Props {
   price: number;
 }
 
+function RadioIndicator({ checked }: { checked: boolean }) {
+  return (
+    <div
+      className="radio-indicator"
+      style={{
+        border: checked ? '2px solid #b69462' : '2px solid rgba(255,255,255,0.3)',
+        background: checked ? '#b69462' : 'transparent',
+      }}
+    >
+      {checked && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
+    </div>
+  );
+}
+
 export function QuoteStep5({ area, price }: QuoteStep5Props) {
   const { formData, config, setFormData, paymentPlans, loadPaymentPlans, editingQuoteId } = useStore();
   const [showForm, setShowForm] = useState(false);
@@ -52,34 +66,9 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
     : undefined;
   const planPayments = selectedPlan ? selectedPlan.installments : config.paymentPlan.payments;
 
-  // Debug
-  console.log('[QuoteStep5] plan:', { selectedPlanId, selectedPlanName: selectedPlan?.name, planPaymentsCount: planPayments.length, paymentPlansCount: paymentPlans.length });
-
   const handleSelectPlan = (planId: number | undefined) => {
     setFormData({ paymentPlanId: planId });
   };
-
-  // Radio indicator component
-  const RadioIndicator = ({ checked }: { checked: boolean }) => (
-    <div
-      style={{
-        width: 20,
-        height: 20,
-        borderRadius: '50%',
-        border: checked ? '2px solid #b69462' : '2px solid rgba(255,255,255,0.3)',
-        background: checked ? '#b69462' : 'transparent',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-        transition: 'all 0.2s ease',
-      }}
-    >
-      {checked && (
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#000' }} />
-      )}
-    </div>
-  );
 
   const addAdditionalService = () => {
     if (!newService.name.trim() || !newService.price) return;
@@ -131,20 +120,16 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
         )}
 
         {/* Opción: configuración manual actual */}
-        <div
-          onClick={() => !hasPayments && handleSelectPlan(undefined)}
+        <button
+          type="button"
+          disabled={hasPayments}
+          onClick={() => handleSelectPlan(undefined)}
+          className="plan-select-btn"
           style={{
-            padding: 16,
-            borderRadius: 12,
             border: isPlanSelected(undefined) ? '2px solid #b69462' : '1px solid rgba(255,255,255,0.1)',
             background: isPlanSelected(undefined) ? 'rgba(182,148,98,0.08)' : 'rgba(255,255,255,0.03)',
             cursor: hasPayments ? 'not-allowed' : 'pointer',
             opacity: hasPayments ? 0.6 : 1,
-            marginBottom: 12,
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 12,
           }}
         >
           <RadioIndicator checked={isPlanSelected(undefined)} />
@@ -157,7 +142,7 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
               <div style={{ marginTop: 8, fontSize: 12, color: '#b69462', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Check size={14} /> Seleccionado</div>
             )}
           </div>
-        </div>
+        </button>
 
         {/* Planes guardados */}
         {paymentPlans.length === 0 && (
@@ -167,21 +152,17 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
         )}
 
         {paymentPlans.map((plan) => (
-          <div
+          <button
+            type="button"
             key={plan.id}
-            onClick={() => !hasPayments && handleSelectPlan(plan.id)}
+            disabled={hasPayments}
+            onClick={() => handleSelectPlan(plan.id)}
+            className="plan-select-btn"
             style={{
-              padding: 16,
-              borderRadius: 12,
               border: isPlanSelected(plan.id) ? '2px solid #b69462' : '1px solid rgba(255,255,255,0.1)',
               background: isPlanSelected(plan.id) ? 'rgba(182,148,98,0.08)' : 'rgba(255,255,255,0.03)',
               cursor: hasPayments ? 'not-allowed' : 'pointer',
               opacity: hasPayments ? 0.6 : 1,
-              marginBottom: 12,
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 12,
             }}
           >
             <RadioIndicator checked={isPlanSelected(plan.id)} />
@@ -208,7 +189,7 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
                 <div style={{ marginTop: 8, fontSize: 12, color: '#b69462', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Check size={14} /> Seleccionado</div>
               )}
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -223,8 +204,9 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
             <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600 }}>Nuevo Servicio Adicional</h3>
             <div style={{ display: 'grid', gap: 12 }}>
               <div>
-                <p className="small mb-1">Nombre del servicio</p>
+                <label className="small mb-1" htmlFor="quote-add-name">Nombre del servicio</label>
                 <input
+                  id="quote-add-name"
                   className="input"
                   placeholder="Ej: Estudio de suelos"
                   value={newService.name}
@@ -232,8 +214,9 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
                 />
               </div>
               <div>
-                <p className="small mb-1">Valor</p>
+                <label className="small mb-1" htmlFor="quote-add-price">Valor</label>
                 <input
+                  id="quote-add-price"
                   className="input"
                   type="number"
                   placeholder="Ej: 3500000"
@@ -242,10 +225,10 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
                 />
               </div>
               <div className="grid-2">
-                <button className="btn btn-secondary" onClick={() => setShowForm(false)}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
                   Cancelar
                 </button>
-                <button className="btn" onClick={addAdditionalService}>
+                <button type="button" className="btn" onClick={addAdditionalService}>
                   Guardar
                 </button>
               </div>
@@ -263,7 +246,7 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
                   {service.unit}
                 </div>
               </div>
-              <button className="btn-small btn-danger" onClick={() => removeAdditionalService(i)}>
+              <button type="button" className="btn-small btn-danger" onClick={() => removeAdditionalService(i)}>
                 ×
               </button>
             </div>
@@ -276,7 +259,7 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
           )
         )}
 
-        <button className="btn btn-small btn-secondary mt-2" onClick={() => setShowForm(!showForm)}>
+        <button type="button" className="btn btn-small btn-secondary mt-2" onClick={() => setShowForm(!showForm)}>
           {showForm ? '× Cancelar' : '+ Agregar Servicio Adicional'}
         </button>
       </div>
@@ -288,8 +271,9 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
         </div>
 
         <div>
-          <p className="small mb-1">Descuento (ajuste de valor)</p>
+          <label className="small mb-1" htmlFor="quote-discount">Descuento (ajuste de valor)</label>
           <input
+            id="quote-discount"
             className="input"
             type="text"
             inputMode="numeric"
@@ -330,8 +314,8 @@ export function QuoteStep5({ area, price }: QuoteStep5Props) {
         )}
         <div style={{ display: 'grid', gap: 10 }}>
           {planPayments.length > 0 ? (
-            planPayments.map((payment, i) => (
-              <div key={i} className="flex-between">
+            planPayments.map((payment) => (
+              <div key={payment.name} className="flex-between">
                 <span>
                   {payment.percentage}% {payment.name}
                 </span>

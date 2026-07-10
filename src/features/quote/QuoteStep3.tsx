@@ -33,8 +33,9 @@ export function QuoteStep3() {
       {formData.floors > 1 && (
         <>
           <div>
-            <p className="small mb-1">Tamaño del volado (metros)</p>
+            <label className="small mb-1" htmlFor="quote-volado">Tamaño del volado (metros)</label>
             <input
+              id="quote-volado"
               className="input"
               type="text"
               inputMode="decimal"
@@ -66,15 +67,17 @@ export function QuoteStep3() {
                 { key: 'lateralLeft' as const, label: 'Lateral Izquierdo', value: area.latIzq },
                 { key: 'lateralRight' as const, label: 'Lateral Derecho', value: area.latDer },
               ].map((item) => (
-                <div
+                <button
+                  type="button"
                   key={item.key}
                   className={`checkbox ${formData.facades[item.key] ? 'checked' : ''}`}
                   onClick={() => toggleFacade(item.key)}
+                  style={{ background: 'transparent', border: 'none', font: 'inherit', color: 'inherit', textAlign: 'left', width: '100%' }}
                 >
                   <span>
                     {item.label} ({Number(item.value).toFixed(1)}m)
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           </div>

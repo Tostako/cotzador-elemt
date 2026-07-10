@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import type { QuoteCatalogProduct, QuoteCatalogCategory } from '../../shared/types';
-import { ArrowLeft, ArrowRight, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 
 export function CategoriaPage() {
   const navigate = useNavigate();
@@ -14,13 +14,8 @@ export function CategoriaPage() {
   const [showForm, setShowForm] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: '', description: '' });
 
-  useEffect(() => {
-    if (categoryId) {
-      loadCategoryAndProducts();
-    }
-  }, [categoryId]);
-
-  const loadCategoryAndProducts = async () => {
+  const loadCategoryAndProducts = useCallback(async () => {
+    if (!categoryId) return;
     try {
       const { apiService, extractData } = await import('../../shared/services/api');
       const [catRes, prodRes] = await Promise.all([
@@ -38,7 +33,11 @@ export function CategoriaPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [categoryId]);
+
+  useEffect(() => {
+    loadCategoryAndProducts();
+  }, [loadCategoryAndProducts]);
 
   const handleCreate = async () => {
     if (!newProduct.name.trim()) {
@@ -74,7 +73,7 @@ export function CategoriaPage() {
 
   return (
     <main>
-      <button className="btn btn-ghost btn-small mb-2" onClick={() => navigate('/materiales')} style={{ gap: 6 }}>
+      <button type="button" className="btn btn-ghost btn-small mb-2" onClick={() => navigate('/materiales')} style={{ gap: 6 }}>
         <ArrowLeft size={15} /> Volver a Materiales
       </button>
 
@@ -83,7 +82,7 @@ export function CategoriaPage() {
       </h1>
       {category?.description && <p className="small" style={{ color: '#999', marginBottom: 16 }}>{category.description}</p>}
 
-      <button className="btn mt-2 mb-2" onClick={() => setShowForm(!showForm)}>
+      <button type="button" className="btn mt-2 mb-2" onClick={() => setShowForm(!showForm)}>
         {showForm ? '× Cancelar' : '+ Nuevo Producto'}
       </button>
 
@@ -92,16 +91,16 @@ export function CategoriaPage() {
           <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Nuevo Producto</h3>
           <div style={{ display: 'grid', gap: 12 }}>
             <div>
-              <label className="small" style={{ display: 'block', marginBottom: 4 }}>Nombre</label>
-              <input className="input" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} />
+              <label htmlFor="productName" className="small" style={{ display: 'block', marginBottom: 4 }}>Nombre</label>
+              <input id="productName" className="input" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} />
             </div>
             <div>
-              <label className="small" style={{ display: 'block', marginBottom: 4 }}>Descripción <span style={{ opacity: 0.5 }}>(opcional)</span></label>
-              <input className="input" value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
+              <label htmlFor="productDescription" className="small" style={{ display: 'block', marginBottom: 4 }}>Descripción <span style={{ opacity: 0.5 }}>(opcional)</span></label>
+              <input id="productDescription" className="input" value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
             </div>
             <div className="grid-2">
-              <button className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancelar</button>
-              <button className="btn" onClick={handleCreate}>Crear</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancelar</button>
+              <button type="button" className="btn" onClick={handleCreate}>Crear</button>
             </div>
           </div>
         </div>
@@ -119,11 +118,25 @@ export function CategoriaPage() {
             <div
               key={prod.id}
               className="card"
-              style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-              onClick={() => navigate(`/materiales/productos/${prod.id}`)}
+              style={{ position: 'relative' }}
             >
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 600 }}>{prod.name}</h3>
+              <div className="flex-between mb-1">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/materiales/productos/${prod.id}`)}
+                  style={{ border: 'none', background: 'transparent', padding: 0, font: 'inherit', color: 'inherit', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <h3 style={{ fontSize: 16, fontWeight: 600 }}>{prod.name}</h3>
+                </button>
+                <button type="button" className="btn btn-small btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(prod.id); }}>
+                  <Trash2 size={15} />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate(`/materiales/productos/${prod.id}`)}
+                style={{ border: 'none', background: 'transparent', padding: 0, font: 'inherit', color: 'inherit', textAlign: 'left', cursor: 'pointer', display: 'block', width: '100%' }}
+              >
                 {prod.description && <p className="small" style={{ color: '#999' }}>{prod.description}</p>}
                 <div style={{ marginTop: 4 }}>
                   <span className="small" style={{ color: '#b69462' }}>
@@ -133,15 +146,7 @@ export function CategoriaPage() {
                     {prod.prices_count} ferretería{prod.prices_count !== 1 ? 's' : ''}
                   </span>
                 </div>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-small" onClick={(e) => { e.stopPropagation(); navigate(`/materiales/productos/${prod.id}`); }} style={{ gap: 6 }}>
-                  Ver <ArrowRight size={14} />
-                </button>
-                <button className="btn btn-small btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(prod.id); }}>
-                  <Trash2 size={15} />
-                </button>
-              </div>
+              </button>
             </div>
           ))}
         </div>

@@ -71,6 +71,154 @@ body {
   animation: gradientShift 15s ease infinite;
 }
 
+/* Blobs decorativos de fondo en pantallas de autenticación */
+.auth-blob {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(182, 148, 98, 0.08) 0%, transparent 70%);
+}
+.auth-blob--tl { top: 10%; left: 5%; width: 400px; height: 400px; }
+.auth-blob--br {
+  bottom: 10%;
+  right: 5%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(182, 148, 98, 0.06) 0%, transparent 70%);
+}
+
+/* Enlace en forma de texto pero accesible (botón real: teclado + rol nativos) */
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #b69462;
+  font-weight: 600;
+  cursor: pointer;
+}
+.link-btn:hover { text-decoration: underline; }
+
+/* ===== TARJETAS DE ACCESO RÁPIDO (Dashboard) ===== */
+.action-card {
+  --accent: #b69462;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px;
+  border-radius: 20px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+.action-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(130% 90% at 0% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 58%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.action-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+.action-card:hover::before { opacity: 1; }
+.action-card:active { transform: translateY(-1px); }
+.action-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.action-card-icon {
+  position: relative;
+  z-index: 1;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+}
+.action-card-title { position: relative; z-index: 1; font-size: 17px; font-weight: 700; color: #f4efe6; }
+.action-card-desc { position: relative; z-index: 1; font-size: 13px; color: #9b9486; margin-top: 3px; }
+
+/* ===== TARJETAS DE MÉTRICAS (Dashboard) ===== */
+.metric-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+}
+.metric-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(182, 148, 98, 0.3);
+}
+.metric-card-ic {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(182, 148, 98, 0.15);
+  border: 1px solid rgba(182, 148, 98, 0.28);
+  color: #b69462;
+}
+.metric-card-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: #f4efe6;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.metric-card-lbl { font-size: 12.5px; color: #9b9486; margin-top: 3px; }
+
+/* Botón de mostrar/ocultar contraseña dentro de un input */
+.input-eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+}
+
+/* Título con icono en pantallas de autenticación (props estáticas) */
+.auth-title {
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 /* ===== LOADER ANIMATIONS ===== */
 @keyframes loaderPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
@@ -1453,7 +1601,8 @@ input[type="range"]::-moz-range-thumb {
   position: relative;
   background: #070707;
   color: #f4efe6;
-  overflow-x: hidden;
+  /* Sin overflow-x aquí: rompería el position: sticky de las secuencias de scroll.
+     El recorte horizontal lo hace body { overflow-x: hidden } y los contenedores sticky. */
 }
 
 .lp-display {
@@ -1691,6 +1840,320 @@ h1.lp-display { font-weight: 700; }
   .lp-mesh, .lp-marquee-track, .lp-grain { animation: none !important; }
 }
 
+/* ===== REFACTORED UTILITY CLASSES (React Doctor fixes) ===== */
+
+/* Locked banner — replaces 9-property inline style */
+.locked-banner {
+  padding: 12px 16px;
+  background: rgba(182,148,98,0.12);
+  border: 1px solid rgba(182,148,98,0.3);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Result row — replaces repeated 3-property inline style */
+.result-row {
+  padding: 12px 16px;
+  background: #0a0a0a;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Result card — replaces repeated 4-property inline style */
+.result-card {
+  padding: 16px;
+  background: #0a0a0a;
+  border-radius: 12px;
+  border: 1px solid var(--color-line);
+}
+
+/* Toggle option row */
+.toggle-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #111;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.toggle-option-row:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Summary stat card */
+.summary-stat {
+  padding: 14px;
+  text-align: center;
+}
+
+/* Service tag */
+.service-tag {
+  background: rgba(182,148,98,0.1);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  border: 1px solid rgba(182,148,98,0.2);
+}
+
+.service-tag--strong {
+  background: rgba(182,148,98,0.15);
+  border: 1px solid rgba(182,148,98,0.3);
+  font-weight: 600;
+}
+
+/* Additional service tag */
+.addon-tag {
+  background: rgba(255,255,255,0.05);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Phase button */
+.phase-btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  transition: all 0.2s;
+}
+.phase-btn--active {
+  background: #b69462;
+  color: #111;
+}
+
+/* Level tab */
+.level-tab {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 400;
+}
+.level-tab--active {
+  background: rgba(182,148,98,0.2);
+  color: #b69462;
+  font-weight: 700;
+}
+
+/* Toolbar button */
+.toolbar-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  background: #b69462;
+  color: #111;
+}
+.toolbar-btn--secondary {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.toolbar-btn--outline {
+  background: transparent;
+  color: #b69462;
+  border: 1px dashed rgba(255,255,255,0.15);
+}
+.toolbar-btn--danger {
+  background: transparent;
+  color: #ff3b30;
+  border: 1px solid rgba(255,59,48,0.3);
+}
+.toolbar-btn--connect {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.toolbar-btn--connect-active {
+  background: rgba(182,148,98,0.2);
+  color: #b69462;
+  border: 1px solid #b69462;
+}
+
+/* Space card on canvas */
+.space-card {
+  position: absolute;
+  width: 220px;
+  padding: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  cursor: grab;
+  z-index: 2;
+  user-select: none;
+}
+.space-card--selected {
+  background: rgba(182,148,98,0.15);
+  border-color: #b69462;
+}
+.space-card--connect {
+  cursor: crosshair;
+}
+
+/* Material card */
+.material-card {
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Assignment card */
+.assignment-card {
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.assignment-card--complete {
+  background: rgba(16,185,129,0.06);
+  border-color: rgba(16,185,129,0.2);
+}
+
+/* Budget total banner */
+.budget-total {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 12px;
+  background: rgba(182,148,98,0.1);
+  border: 1px solid rgba(182,148,98,0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Grand total block */
+.grand-total {
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Preview button */
+.preview-btn {
+  margin-top: 10px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(182,148,98,0.3);
+  background: rgba(182,148,98,0.08);
+  color: #b69462;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Save button */
+.save-btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  background: #b69462;
+  color: #111;
+  transition: all 0.2s;
+}
+.save-btn:disabled {
+  background: rgba(182,148,98,0.3);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* History child item */
+.history-child {
+  border-left: 3px solid #b69462;
+  margin-bottom: 8px;
+  padding-left: 16px;
+}
+
+/* Estimation toggle */
+.est-toggle {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* Modal compact */
+.modal-compact {
+  max-width: 520px;
+  width: 100%;
+  max-height: 80vh;
+  overflow: hidden;
+}
+
+/* Modal scrollable list */
+.modal-scroll {
+  overflow-y: auto;
+  max-height: calc(80vh - 140px);
+  display: grid;
+  gap: 8px;
+}
+
+/* Flex gap utility */
+.flex-gap {
+  display: flex;
+  gap: 8px;
+}
+.flex-gap-sm {
+  display: flex;
+  gap: 6px;
+}
+
+/* Grid 2-col responsive */
+.grid-2-responsive {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Section title */
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+/* Text muted small */
+.text-muted-sm {
+  color: #999;
+  font-size: 11px;
+}
+
+/* Form section card */
+.form-section {
+  padding: 16px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
 /* ===== SILEO TOAST THEME OVERRIDES ===== */
 /* Custom dark theme matching ELEMENT app colors — fondo negro / gris grafito */
 
@@ -1756,3 +2219,230 @@ h1.lp-display { font-weight: 700; }
 [data-sileo-button]:hover {
   background: rgba(182, 148, 98, 0.2) !important;
 }
+
+/* ===== REACT DOCTOR FIXES — Utility classes for extracted inline styles ===== */
+
+/* Modal overlay variants */
+.modal-overlay-tour {
+  background: rgba(0,0,0,0.92);
+  backdrop-filter: blur(12px);
+  z-index: 99999;
+  padding: 24px;
+}
+
+/* Modal content overrides */
+.modal-welcome {
+  border-color: rgba(182,148,98,0.2);
+  border-radius: 20px;
+  padding: 40px 32px;
+  max-width: 460px;
+  text-align: center;
+}
+
+.modal-tour-intro {
+  border-color: rgba(182,148,98,0.2);
+  border-radius: 20px;
+  padding: 32px 28px;
+  max-width: 440px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+}
+
+/* Dashboard tour final message */
+.tour-final-msg {
+  background: linear-gradient(135deg, rgba(182,148,98,0.15) 0%, rgba(182,148,98,0.05) 100%);
+  border: 1px solid rgba(182,148,98,0.3);
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  display: flex;
+}
+
+/* Upload area buttons (PerfilPage) */
+.upload-area-btn {
+  padding: 32px;
+  border: 2px dashed var(--color-line);
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+/* Enchapes buttons */
+.btn-reset-project {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  background: transparent;
+  color: #ff3b30;
+}
+
+.btn-tipo-toggle {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.btn-add-pared {
+  display: block;
+  margin-top: 10px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px dashed rgba(96,165,250,0.4);
+  background: transparent;
+  color: #60a5fa;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.btn-export-catalogo {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(182,148,98,0.4);
+  background: transparent;
+  color: #b69462;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* QuoteStep5 */
+.plan-select-btn {
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.radio-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+/* Invoice print styles */
+.invoice-th {
+  background: #f5f5f5;
+  padding: 8px 6px;
+  font-weight: bold;
+  border: 1px solid #ddd;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.invoice-total-box {
+  text-align: right;
+  font-size: 16px;
+  font-weight: bold;
+  margin: 8px 0;
+  padding: 10px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  page-break-inside: avoid;
+}
+
+.signature-img-print {
+  max-width: 220px;
+  max-height: 80px;
+  margin-bottom: -10px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* LandingPage hero */
+.hero-section-lp {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+  padding: 120px 24px 90px;
+}
+
+/* TopNav */
+.top-nav-bar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px 24px;
+}
+
+.user-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(182, 148, 98, 0.1);
+  border-radius: 12px;
+  border: 1px solid rgba(182, 148, 98, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: inherit;
+  font: inherit;
+}
+
+.dropdown-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  padding: 8px;
+  min-width: 200px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  z-index: 100;
+}
+
+/* TourBanner */
+.tour-banner-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+}
+

@@ -6,8 +6,9 @@ export function QuoteStep1() {
   return (
     <div className="card mt-2" style={{ display: 'grid', gap: 16 }}>
       <div>
-        <p className="small mb-1">Nombre completo</p>
+        <label className="small mb-1" htmlFor="quote-client">Nombre completo</label>
         <input
+          id="quote-client"
           className="input"
           placeholder="Juan Pérez"
           value={formData.client}
@@ -15,8 +16,9 @@ export function QuoteStep1() {
         />
       </div>
       <div>
-        <p className="small mb-1">Proyecto</p>
+        <label className="small mb-1" htmlFor="quote-project">Proyecto</label>
         <input
+          id="quote-project"
           className="input"
           placeholder="Casa habitación"
           value={formData.project}

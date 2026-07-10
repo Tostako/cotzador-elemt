@@ -42,38 +42,40 @@ export function CuentaCobroPage() {
       <div className="card mt-2">
         <div className="flex-between mb-2">
           <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><Building2 size={18} color="#b69462" /> Datos de la Empresa</h3>
-          <div
+          <button
+            type="button"
+            aria-label="Activar datos de la empresa"
             className={`checkbox ${config.invoice.company.enabled ? 'checked' : ''}`}
             onClick={() => toggleInvoiceSection('company')}
-            style={{ width: 'auto', padding: '8px 12px', margin: 0 }}
-          />
+            style={{ width: 'auto', padding: '8px 12px', margin: 0, background: 'none', border: 'none', cursor: 'pointer' }}
+          ></button>
         </div>
 
         {config.invoice.company.enabled ? (
           <div style={{ display: 'grid', gap: 12 }}>
             <div>
-              <p className="small mb-1">Nombre de la empresa</p>
-              <input className="input" value={config.invoice.company.name} onChange={(e) => updateInvoiceField('company', 'name', e.target.value)} />
+              <label className="small mb-1" htmlFor="cc-nombre">Nombre de la empresa</label>
+              <input id="cc-nombre" className="input" value={config.invoice.company.name} onChange={(e) => updateInvoiceField('company', 'name', e.target.value)} />
             </div>
             <div>
-              <p className="small mb-1">NIT/RUT/RFC</p>
-              <input className="input" value={config.invoice.company.nit} onChange={(e) => updateInvoiceField('company', 'nit', e.target.value)} />
+              <label className="small mb-1" htmlFor="cc-nit">NIT/RUT/RFC</label>
+              <input id="cc-nit" className="input" value={config.invoice.company.nit} onChange={(e) => updateInvoiceField('company', 'nit', e.target.value)} />
             </div>
             <div>
-              <p className="small mb-1">Dirección</p>
-              <input className="input" value={config.invoice.company.address} onChange={(e) => updateInvoiceField('company', 'address', e.target.value)} />
+              <label className="small mb-1" htmlFor="cc-direccion">Dirección</label>
+              <input id="cc-direccion" className="input" value={config.invoice.company.address} onChange={(e) => updateInvoiceField('company', 'address', e.target.value)} />
             </div>
             <div>
-              <p className="small mb-1">Teléfono</p>
-              <input className="input" value={config.invoice.company.phone} onChange={(e) => updateInvoiceField('company', 'phone', e.target.value)} />
+              <label className="small mb-1" htmlFor="cc-telefono">Teléfono</label>
+              <input id="cc-telefono" className="input" value={config.invoice.company.phone} onChange={(e) => updateInvoiceField('company', 'phone', e.target.value)} />
             </div>
             <div>
-              <p className="small mb-1">Email</p>
-              <input className="input" type="email" value={config.invoice.company.email} onChange={(e) => updateInvoiceField('company', 'email', e.target.value)} />
+              <label className="small mb-1" htmlFor="cc-email">Email</label>
+              <input id="cc-email" className="input" type="email" value={config.invoice.company.email} onChange={(e) => updateInvoiceField('company', 'email', e.target.value)} />
             </div>
             <div>
-              <p className="small mb-1">Sitio web (opcional)</p>
-              <input className="input" value={config.invoice.company.website} onChange={(e) => updateInvoiceField('company', 'website', e.target.value)} />
+              <label className="small mb-1" htmlFor="cc-website">Sitio web (opcional)</label>
+              <input id="cc-website" className="input" value={config.invoice.company.website} onChange={(e) => updateInvoiceField('company', 'website', e.target.value)} />
             </div>
             <p className="small" style={{ color: '#b69462', padding: '8px 0', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <Building2 size={14} /> Logo: configura tu logo en <strong>Perfil</strong>.
@@ -88,26 +90,28 @@ export function CuentaCobroPage() {
       <div className="card">
         <div className="flex-between mb-2">
           <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><User size={18} color="#b69462" /> Representante Legal</h3>
-          <div
+          <button
+            type="button"
+            aria-label="Activar representante legal"
             className={`checkbox ${config.invoice.representative.enabled ? 'checked' : ''}`}
             onClick={() => toggleInvoiceSection('representative')}
-            style={{ width: 'auto', padding: '8px 12px', margin: 0 }}
-          />
+            style={{ width: 'auto', padding: '8px 12px', margin: 0, background: 'none', border: 'none', cursor: 'pointer' }}
+          ></button>
         </div>
 
         {config.invoice.representative.enabled ? (
           <div style={{ display: 'grid', gap: 12 }}>
             <div>
-              <p className="small mb-1">Nombre completo</p>
-              <input className="input" value={config.invoice.representative.name} onChange={(e) => updateInvoiceField('representative', 'name', e.target.value)} />
+              <label className="small mb-1" htmlFor="cc-rep-nombre">Nombre completo</label>
+              <input id="cc-rep-nombre" className="input" value={config.invoice.representative.name} onChange={(e) => updateInvoiceField('representative', 'name', e.target.value)} />
             </div>
             <div>
-              <p className="small mb-1">Cargo</p>
-              <input className="input" value={config.invoice.representative.position} onChange={(e) => updateInvoiceField('representative', 'position', e.target.value)} />
+              <label className="small mb-1" htmlFor="cc-rep-cargo">Cargo</label>
+              <input id="cc-rep-cargo" className="input" value={config.invoice.representative.position} onChange={(e) => updateInvoiceField('representative', 'position', e.target.value)} />
             </div>
             <div>
-              <p className="small mb-1">Documento de identidad</p>
-              <input className="input" value={config.invoice.representative.document} onChange={(e) => updateInvoiceField('representative', 'document', e.target.value)} />
+              <label className="small mb-1" htmlFor="cc-rep-documento">Documento de identidad</label>
+              <input id="cc-rep-documento" className="input" value={config.invoice.representative.document} onChange={(e) => updateInvoiceField('representative', 'document', e.target.value)} />
             </div>
             <p className="small" style={{ color: '#b69462', padding: '8px 0', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <Signature size={14} /> Firma digital: configura tu firma en <strong>Perfil</strong>.
@@ -122,33 +126,35 @@ export function CuentaCobroPage() {
       <div className="card">
         <div className="flex-between mb-2">
           <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><Landmark size={18} color="#b69462" /> Datos Bancarios</h3>
-          <div
+          <button
+            type="button"
+            aria-label="Activar datos bancarios"
             className={`checkbox ${config.invoice.banking.enabled ? 'checked' : ''}`}
             onClick={() => toggleInvoiceSection('banking')}
-            style={{ width: 'auto', padding: '8px 12px', margin: 0 }}
-          />
+            style={{ width: 'auto', padding: '8px 12px', margin: 0, background: 'none', border: 'none', cursor: 'pointer' }}
+          ></button>
         </div>
 
         {config.invoice.banking.enabled ? (
           <div style={{ display: 'grid', gap: 12 }}>
             <div>
-              <p className="small mb-1">Banco</p>
-              <input className="input" value={config.invoice.banking.bank} onChange={(e) => updateInvoiceField('banking', 'bank', e.target.value)} />
+              <label className="small mb-1" htmlFor="cc-banco">Banco</label>
+              <input id="cc-banco" className="input" value={config.invoice.banking.bank} onChange={(e) => updateInvoiceField('banking', 'bank', e.target.value)} />
             </div>
             <div>
-              <p className="small mb-1">Tipo de cuenta</p>
-              <select className="select" value={config.invoice.banking.accountType} onChange={(e) => updateInvoiceField('banking', 'accountType', e.target.value)}>
+              <label className="small mb-1" htmlFor="cc-tipo-cuenta">Tipo de cuenta</label>
+              <select id="cc-tipo-cuenta" className="select" value={config.invoice.banking.accountType} onChange={(e) => updateInvoiceField('banking', 'accountType', e.target.value)}>
                 <option value="Ahorros">Ahorros</option>
                 <option value="Corriente">Corriente</option>
               </select>
             </div>
             <div>
-              <p className="small mb-1">Número de cuenta</p>
-              <input className="input" value={config.invoice.banking.accountNumber} onChange={(e) => updateInvoiceField('banking', 'accountNumber', e.target.value)} />
+              <label className="small mb-1" htmlFor="cc-cuenta-numero">Número de cuenta</label>
+              <input id="cc-cuenta-numero" className="input" value={config.invoice.banking.accountNumber} onChange={(e) => updateInvoiceField('banking', 'accountNumber', e.target.value)} />
             </div>
             <div>
-              <p className="small mb-1">Titular de la cuenta</p>
-              <input className="input" value={config.invoice.banking.accountHolder} onChange={(e) => updateInvoiceField('banking', 'accountHolder', e.target.value)} />
+              <label className="small mb-1" htmlFor="cc-cuenta-titular">Titular de la cuenta</label>
+              <input id="cc-cuenta-titular" className="input" value={config.invoice.banking.accountHolder} onChange={(e) => updateInvoiceField('banking', 'accountHolder', e.target.value)} />
             </div>
           </div>
         ) : (
@@ -161,8 +167,9 @@ export function CuentaCobroPage() {
         <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><FileText size={18} color="#b69462" /> Configuración del Documento</h3>
         <div style={{ display: 'grid', gap: 12 }}>
           <div>
-            <p className="small mb-1">Número consecutivo actual</p>
+            <label className="small mb-1" htmlFor="cc-consecutivo">Número consecutivo actual</label>
             <input
+              id="cc-consecutivo"
               className="input"
               type="text"
               inputMode="numeric"
@@ -180,12 +187,12 @@ export function CuentaCobroPage() {
             <p className="small mt-1" style={{ color: '#999' }}>Se incrementa automáticamente con cada cuenta de cobro</p>
           </div>
           <div>
-            <p className="small mb-1">Términos y condiciones</p>
-            <textarea className="input" rows={3} value={config.invoice.document.terms} onChange={(e) => updateInvoiceField('document', 'terms', e.target.value)} />
+            <label className="small mb-1" htmlFor="cc-terminos">Términos y condiciones</label>
+            <textarea id="cc-terminos" className="input" rows={3} value={config.invoice.document.terms} onChange={(e) => updateInvoiceField('document', 'terms', e.target.value)} />
           </div>
           <div>
-            <p className="small mb-1">Nota al pie (opcional)</p>
-            <input className="input" value={config.invoice.document.footerNote} onChange={(e) => updateInvoiceField('document', 'footerNote', e.target.value)} />
+            <label className="small mb-1" htmlFor="cc-nota-pie">Nota al pie (opcional)</label>
+            <input id="cc-nota-pie" className="input" value={config.invoice.document.footerNote} onChange={(e) => updateInvoiceField('document', 'footerNote', e.target.value)} />
           </div>
         </div>
       </div>

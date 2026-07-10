@@ -69,32 +69,8 @@ export function OnboardingTour({ onComplete }: { onComplete: () => void }) {
   const step = tourSteps[currentStep];
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.85)',
-        backdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: 16,
-      }}
-    >
-      <div
-        style={{
-          background: '#0f0f0f',
-          border: '1px solid rgba(182,148,98,0.2)',
-          borderRadius: 20,
-          padding: '32px 28px',
-          maxWidth: 440,
-          width: '100%',
-          textAlign: 'center',
-          position: 'relative',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
-        }}
-      >
+    <div className="modal-overlay" style={{ zIndex: 9999 }}>
+      <div className="modal modal-tour-intro">
         {/* Progress dots */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 20 }}>
           {tourSteps.map((_, i) => (
@@ -140,18 +116,18 @@ export function OnboardingTour({ onComplete }: { onComplete: () => void }) {
         {/* Buttons */}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           {!isFirst && (
-            <button className="btn btn-secondary" onClick={prev} style={{ flex: 1 }}>
+            <button type="button" className="btn btn-secondary" onClick={prev} style={{ flex: 1 }}>
               ← Anterior
             </button>
           )}
-          <button className="btn" onClick={next} style={{ flex: 1 }}>
+          <button type="button" className="btn" onClick={next} style={{ flex: 1 }}>
             {isLast ? '¡Comenzar!' : 'Siguiente →'}
           </button>
         </div>
 
         {/* Skip */}
         {!isLast && (
-          <button
+          <button type="button"
             onClick={onComplete}
             style={{
               marginTop: 16,

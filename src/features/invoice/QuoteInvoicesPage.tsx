@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../../shared/services/store';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { safeParseQuoteData } from '../../shared/utils/parseQuoteData';
+import { useEscapeKey } from '../../shared/hooks/useEscapeKey';
 import type { InvoiceRecord, Quote } from '../../shared/types';
 import { PaymentReceipt } from './PaymentReceipt';
 import { Receipt, ArrowLeft, Plus, Eye, Check, DollarSign, FileText } from 'lucide-react';
@@ -30,10 +31,13 @@ export function QuoteInvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [quotePayments, setQuotePayments] = useState<any[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentForm, setPaymentForm] = useState({ installmentIndex: 0, method: 'manual', notes: '', date: '' });
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRecord | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptInvoice, setReceiptInvoice] = useState<InvoiceRecord | null>(null);
+  const [paymentForm, setPaymentForm] = useState({ installmentIndex: 0, method: 'manual', notes: '', date: '' });
+
+  useEscapeKey(() => setShowPaymentModal(false), showPaymentModal);
+  useEscapeKey(() => setShowReceiptModal(false), showReceiptModal);
 
   // Load quote and its invoices
   useEffect(() => {
@@ -245,7 +249,7 @@ export function QuoteInvoicesPage() {
       <main>
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
           <p className="small">Cotización no encontrada</p>
-          <button className="btn mt-2" onClick={() => navigate('/history')}>
+          <button type="button" className="btn mt-2" onClick={() => navigate('/history')}>
             Volver al Historial
           </button>
         </div>
@@ -262,7 +266,7 @@ export function QuoteInvoicesPage() {
     <main>
       <div className="flex-between" style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}><Receipt size={22} color="#b69462" /> Cuentas de Cobro</h1>
-        <button className="btn btn-small btn-secondary" onClick={() => navigate('/history')} style={{ gap: 6 }}>
+        <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate('/history')} style={{ gap: 6 }}>
           <ArrowLeft size={15} /> Volver al Historial
         </button>
       </div>
@@ -289,7 +293,7 @@ export function QuoteInvoicesPage() {
 
       {/* Generate button */}
       {missingInvoices > 0 && (
-        <button className="btn mb-2" onClick={handleGenerateInvoice} style={{ width: '100%', gap: 8 }}>
+        <button type="button" className="btn mb-2" onClick={handleGenerateInvoice} style={{ width: '100%', gap: 8 }}>
           <Plus size={16} /> Generar cuenta de cobro ({missingInvoices} pendiente{missingInvoices !== 1 ? 's' : ''})
         </button>
       )}
@@ -356,14 +360,14 @@ export function QuoteInvoicesPage() {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                  <button
+                  <button type="button"
                     className="btn btn-small btn-secondary"
                     onClick={() => handleViewInvoice(invoice)}
                     style={{ gap: 6 }}
                   >
                     <Eye size={15} /> Ver
                   </button>
-                  <button
+                  <button type="button"
                     className="btn btn-small btn-secondary"
                     onClick={() => handleOpenPayment(invoice)}
                     disabled={currentStatus === 'paid'}
@@ -371,7 +375,7 @@ export function QuoteInvoicesPage() {
                   >
                     {currentStatus === 'paid' ? <><Check size={15} /> Pagada</> : <><DollarSign size={15} /> Agregar pago</>}
                   </button>
-                  <button
+                  <button type="button"
                     className="btn btn-small"
                     onClick={() => handleOpenReceipt(invoice)}
                     disabled={currentStatus !== 'paid'}
@@ -388,10 +392,7 @@ export function QuoteInvoicesPage() {
 
       {/* Payment Modal */}
       {showPaymentModal && selectedInvoice && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowPaymentModal(false); }}
-        >
+        <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 480, width: '100%' }}>
             <h3 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}><DollarSign size={18} color="#b69462" /> Registrar Pago</h3>
             <p className="small mb-2" style={{ color: '#999' }}>
@@ -405,8 +406,9 @@ export function QuoteInvoicesPage() {
 
             <div style={{ display: 'grid', gap: 12 }}>
               <div>
-                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Fecha de pago</label>
+                <label htmlFor="paymentDate" className="small" style={{ display: 'block', marginBottom: 4 }}>Fecha de pago</label>
                 <input
+                  id="paymentDate"
                   type="date"
                   className="input"
                   value={paymentForm.date}
@@ -415,8 +417,9 @@ export function QuoteInvoicesPage() {
               </div>
 
               <div>
-                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Método</label>
+                <label htmlFor="paymentMethod" className="small" style={{ display: 'block', marginBottom: 4 }}>Método</label>
                 <select
+                  id="paymentMethod"
                   className="input"
                   value={paymentForm.method}
                   onChange={(e) => setPaymentForm({ ...paymentForm, method: e.target.value })}
@@ -428,8 +431,9 @@ export function QuoteInvoicesPage() {
               </div>
 
               <div>
-                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Notas</label>
+                <label htmlFor="paymentNotes" className="small" style={{ display: 'block', marginBottom: 4 }}>Notas</label>
                 <textarea
+                  id="paymentNotes"
                   className="input"
                   rows={2}
                   value={paymentForm.notes}
@@ -439,10 +443,10 @@ export function QuoteInvoicesPage() {
               </div>
 
               <div className="flex-between mt-1">
-                <button className="btn btn-small btn-secondary" onClick={() => setShowPaymentModal(false)}>
+                <button type="button" className="btn btn-small btn-secondary" onClick={() => setShowPaymentModal(false)}>
                   Cancelar
                 </button>
-                <button className="btn btn-small" onClick={handleSavePayment}>
+                <button type="button" className="btn btn-small" onClick={handleSavePayment}>
                   Guardar Pago
                 </button>
               </div>
@@ -453,10 +457,7 @@ export function QuoteInvoicesPage() {
 
       {/* Receipt Modal */}
       {showReceiptModal && receiptInvoice && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowReceiptModal(false); }}
-        >
+        <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 640, width: '100%', padding: 24 }}>
             <PaymentReceipt
               invoice={receiptInvoice}
@@ -465,7 +466,7 @@ export function QuoteInvoicesPage() {
               totalPaid={receiptInvoice.totalAmount}
             />
             <div style={{ textAlign: 'center', marginTop: 16 }}>
-              <button className="btn btn-small btn-secondary" onClick={() => setShowReceiptModal(false)}>
+              <button type="button" className="btn btn-small btn-secondary" onClick={() => setShowReceiptModal(false)}>
                 Cerrar
               </button>
             </div>

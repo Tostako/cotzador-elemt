@@ -19,7 +19,7 @@ export function Layout({ children }: LayoutProps) {
     if (isAuthenticated) {
       // Small delay to ensure auth state + localStorage are fully propagated
       const timer = setTimeout(() => {
-        const stored = localStorage.getItem('element_user');
+        const stored = localStorage.getItem('element_user:v1');
         if (stored) {
           loadFromBackend();
         }

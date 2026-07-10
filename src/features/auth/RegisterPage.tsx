@@ -62,7 +62,7 @@ export function RegisterPage() {
         // Save temp token to localStorage so api() can read it for selectShop
         const tempUser = apiService.buildUserFromToken(token);
         if (tempUser) {
-          localStorage.setItem('element_user', JSON.stringify(tempUser));
+          localStorage.setItem('element_user:v1', JSON.stringify(tempUser));
         }
         selectRes = await apiService.selectShop({ shop_slug: SHOP_SLUG });
         const newToken = selectRes.token || (selectRes.data && selectRes.data.token);
@@ -126,30 +126,13 @@ export function RegisterPage() {
       <Toaster position="top-center" theme="dark" />
       <div className="animated-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       {/* Background effects */}
-      <div style={{
-        position: 'fixed',
-        top: '10%',
-        left: '5%',
-        width: '400px',
-        height: '400px',
-        background: 'radial-gradient(circle, rgba(182,148,98,0.08) 0%, transparent 70%)',
-        borderRadius: '50%',
-        pointerEvents: 'none',
-      }} />
-      <div style={{
-        position: 'fixed',
-        bottom: '10%',
-        right: '5%',
-        width: '300px',
-        height: '300px',
-        background: 'radial-gradient(circle, rgba(182,148,98,0.06) 0%, transparent 70%)',
-        borderRadius: '50%',
-        pointerEvents: 'none',
-      }} />
+      <div className="auth-blob auth-blob--tl" />
+      <div className="auth-blob auth-blob--br" />
 
       <div style={{ maxWidth: 480, width: '100%' }}>
         {/* Back to login */}
         <button
+          type="button"
           className="btn btn-ghost btn-small"
           style={{ marginBottom: 32, gap: 6 }}
           onClick={() => navigate('/login')}
@@ -179,8 +162,9 @@ export function RegisterPage() {
 
           <div style={{ display: 'grid', gap: 16 }}>
             <div>
-              <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Nombre completo</label>
+              <label htmlFor="reg-name" className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Nombre completo</label>
               <input
+                id="reg-name"
                 className="input"
                 placeholder="Ej: Juan Pérez"
                 value={name}
@@ -188,8 +172,9 @@ export function RegisterPage() {
               />
             </div>
             <div>
-              <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Correo electrónico</label>
+              <label htmlFor="reg-email" className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Correo electrónico</label>
               <input
+                id="reg-email"
                 className="input"
                 type="email"
                 placeholder="Ej: juan@email.com"
@@ -198,8 +183,9 @@ export function RegisterPage() {
               />
             </div>
             <div>
-              <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Teléfono <span style={{ opacity: 0.5 }}>(opcional)</span></label>
+              <label htmlFor="reg-phone" className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Teléfono <span style={{ opacity: 0.5 }}>(opcional)</span></label>
               <input
+                id="reg-phone"
                 className="input"
                 type="tel"
                 placeholder="Ej: +57 300 123 4567"
@@ -209,8 +195,9 @@ export function RegisterPage() {
               />
             </div>
             <div>
-              <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Profesión <span style={{ opacity: 0.5 }}>(opcional)</span></label>
+              <label htmlFor="reg-profession" className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Profesión <span style={{ opacity: 0.5 }}>(opcional)</span></label>
               <input
+                id="reg-profession"
                 className="input"
                 placeholder="Ej: Arquitecto, Ingeniero, Maestro de Obra..."
                 value={profession}
@@ -218,9 +205,10 @@ export function RegisterPage() {
               />
             </div>
             <div>
-              <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Contraseña</label>
+              <label htmlFor="reg-password" className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Contraseña</label>
               <div style={{ position: 'relative' }}>
                 <input
+                  id="reg-password"
                   className="input"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Mínimo 6 caracteres"
@@ -230,28 +218,18 @@ export function RegisterPage() {
                 />
                 <button
                   type="button"
+                  className="input-eye-btn"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: 12,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: '#999',
-                    cursor: 'pointer',
-                    fontSize: 18,
-                    padding: 0,
-                  }}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
             <div>
-              <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Confirmar contraseña</label>
+              <label htmlFor="reg-confirm" className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Confirmar contraseña</label>
               <div style={{ position: 'relative' }}>
                 <input
+                  id="reg-confirm"
                   className="input"
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="Repite tu contraseña"
@@ -262,25 +240,15 @@ export function RegisterPage() {
                 />
                 <button
                   type="button"
+                  className="input-eye-btn"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: 12,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: '#999',
-                    cursor: 'pointer',
-                    fontSize: 18,
-                    padding: 0,
-                  }}
                 >
                   {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
             <button
+              type="button"
               className="btn"
               onClick={handleRegister}
               disabled={isLoading}
@@ -307,9 +275,9 @@ export function RegisterPage() {
           <div style={{ marginTop: 24, textAlign: 'center' }}>
             <p className="small" style={{ fontSize: 12 }}>
               ¿Ya tienes cuenta?{' '}
-              <span style={{ color: '#b69462', cursor: 'pointer', fontWeight: 600 }} onClick={() => navigate('/login')}>
+              <button type="button" className="link-btn" onClick={() => navigate('/login')}>
                 Inicia sesión
-              </span>
+              </button>
             </p>
           </div>
         </div>

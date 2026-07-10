@@ -33,6 +33,25 @@ export function InvoicePage() {
   useEffect(() => {
     if (!quoteId) return;
 
+    const loadQuoteFromBackend = async (id: number | string) => {
+      try {
+        const { apiService, extractData } = await import('../../shared/services/api');
+        const res = await apiService.getQuote(id);
+        const quote = extractData(res);
+        if (quote) {
+          const data = safeParseQuoteData(quote.data);
+          if (data) {
+            setDisplayFormData(data);
+            const count = (data.invoiceCount || 0) + 1;
+            setInvoiceNumber(String(count).padStart(4, '0'));
+            setInvoiceDate(new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }));
+          }
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+
     const quote = getQuoteById(quoteId);
     if (!quote) {
       loadQuoteFromBackend(quoteId);
@@ -56,6 +75,8 @@ export function InvoicePage() {
         targetIdx = parseInt(installmentIndexParam, 10) || 0;
       } else {
         // Find first installment without an invoice
+        const selectedPlan = paymentPlans.find((p) => String(p.id) === String(data.paymentPlanId));
+        const planPayments = selectedPlan ? selectedPlan.installments : config.paymentPlan.payments;
         for (let i = 0; i < planPayments.length; i++) {
           if (!existingInvoices.some((inv: InvoiceRecord) => inv.installmentIndex === i)) {
             targetIdx = i;
@@ -82,26 +103,7 @@ export function InvoicePage() {
       setInvoiceNumber(String((data.invoiceCount || 0) + 1).padStart(4, '0'));
       setInvoiceDate(new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }));
     }
-  }, [quoteId, getQuoteById, isGenerateMode, invoiceId, installmentIndexParam]);
-
-  const loadQuoteFromBackend = async (id: number | string) => {
-    try {
-      const { apiService, extractData } = await import('../../shared/services/api');
-      const res = await apiService.getQuote(id);
-      const quote = extractData(res);
-      if (quote) {
-        const data = safeParseQuoteData(quote.data);
-        if (data) {
-          setDisplayFormData(data);
-          const count = (data.invoiceCount || 0) + 1;
-          setInvoiceNumber(String(count).padStart(4, '0'));
-          setInvoiceDate(new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }));
-        }
-      }
-    } catch {
-      // Silently fail
-    }
-  };
+  }, [quoteId, getQuoteById, isGenerateMode, invoiceId, installmentIndexParam, paymentPlans, config.paymentPlan.payments]);
 
   // Load payment plans if empty
   useEffect(() => {
@@ -235,7 +237,7 @@ export function InvoicePage() {
   return (
     <main>
       <div className="no-print" style={{ marginBottom: 20, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button
+        <button type="button"
           className="btn btn-small btn-secondary"
           onClick={() => navigate(`/quotes/${quoteId}/invoices`)}
           style={{ flex: '1 1 auto', minWidth: 140, gap: 6 }}
@@ -243,7 +245,7 @@ export function InvoicePage() {
           <ArrowLeft size={15} /> Volver a Cuentas de Cobro
         </button>
 
-        <button className="btn btn-small" onClick={handlePrint} style={{ flex: '1 1 auto', minWidth: 140, gap: 6 }}>
+        <button type="button" className="btn btn-small" onClick={handlePrint} style={{ flex: '1 1 auto', minWidth: 140, gap: 6 }}>
           <Printer size={15} /> Imprimir / PDF
         </button>
       </div>
@@ -291,7 +293,7 @@ export function InvoicePage() {
         >
           <div>
             {inv.company.enabled && inv.company.logo && (
-              <img src={inv.company.logo} style={{ maxWidth: 160, maxHeight: 80, marginBottom: 8, display: 'block' }} />
+              <img src={inv.company.logo} alt="Logo empresa" style={{ maxWidth: 160, maxHeight: 80, marginBottom: 8, display: 'block' }} />
             )}
             {inv.company.enabled && (
               <>
@@ -343,16 +345,16 @@ export function InvoicePage() {
         >
           <thead>
             <tr>
-              <th style={{ background: '#f5f5f5', padding: '8px 6px', textAlign: 'left', fontWeight: 'bold', border: '1px solid #ddd', fontSize: 11, lineHeight: 1.2, width: '40%' }}>
+              <th className="invoice-th" style={{ textAlign: 'left', width: '40%' }}>
                 Descripción
               </th>
-              <th style={{ background: '#f5f5f5', padding: '8px 6px', textAlign: 'center', fontWeight: 'bold', border: '1px solid #ddd', fontSize: 11, lineHeight: 1.2, width: '20%' }}>
+              <th className="invoice-th" style={{ textAlign: 'center', width: '20%' }}>
                 Cantidad
               </th>
-              <th style={{ background: '#f5f5f5', padding: '8px 6px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #ddd', fontSize: 11, lineHeight: 1.2, width: '20%' }}>
+              <th className="invoice-th" style={{ textAlign: 'right', width: '20%' }}>
                 Valor Unit.
               </th>
-              <th style={{ background: '#f5f5f5', padding: '8px 6px', textAlign: 'right', fontWeight: 'bold', border: '1px solid #ddd', fontSize: 11, lineHeight: 1.2, width: '20%' }}>
+              <th className="invoice-th" style={{ textAlign: 'right', width: '20%' }}>
                 Valor Total
               </th>
             </tr>
@@ -402,18 +404,7 @@ export function InvoicePage() {
         </table>
 
         {/* Total */}
-        <div
-          style={{
-            textAlign: 'right',
-            fontSize: 16,
-            fontWeight: 'bold',
-            margin: '8px 0',
-            padding: 10,
-            background: '#f5f5f5',
-            borderRadius: 6,
-            pageBreakInside: 'avoid',
-          }}
-        >
+        <div className="invoice-total-box">
           {targetInstallment ? (
             <>
               <div style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>
@@ -444,7 +435,8 @@ export function InvoicePage() {
                 </tr>
               </thead>
               <tbody>
-                {planPayments.map((payment, i) => {
+                {planPayments.map((payment) => {
+                  const i = planPayments.indexOf(payment);
                   const amount = roundTo50(totalPrice * payment.percentage / 100);
                   const paid = isPaid(i);
                   const isCurrent = i === targetInstallmentIndex;
@@ -519,16 +511,8 @@ export function InvoicePage() {
                 <div style={{ height: 20 }} />
                 <img
                   src={inv.representative.signature}
-                  style={{
-                    maxWidth: 220,
-                    maxHeight: 80,
-                    marginBottom: -10,
-                    display: 'block',
-                    marginLeft: 'auto',
-                    marginRight: 'auto',
-                    position: 'relative',
-                    zIndex: 1,
-                  }}
+                  alt="Firma digital"
+                  className="signature-img-print"
                 />
                 <div style={{ borderTop: '2px solid #333', width: 260, margin: '0 auto 8px' }} />
               </>
@@ -550,7 +534,7 @@ export function InvoicePage() {
       {/* Generate mode: Finalize button */}
       {isGenerateMode && (
         <div className="no-print" style={{ marginTop: 20 }}>
-          <button className="btn" onClick={handleFinalize} style={{ width: '100%', padding: '12px 32px', fontSize: 16, gap: 8 }}>
+          <button type="button" className="btn" onClick={handleFinalize} style={{ width: '100%', padding: '12px 32px', fontSize: 16, gap: 8 }}>
             <Check size={17} /> Finalizar y Guardar
           </button>
         </div>

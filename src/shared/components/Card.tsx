@@ -6,13 +6,9 @@ interface CardProps {
   onClick?: () => void;
 }
 
-export function Card({ children, className = '', onClick }: CardProps) {
+export function Card({ children, className = '' }: CardProps) {
   return (
-    <div
-      className={`card ${className}`}
-      onClick={onClick}
-      style={onClick ? { cursor: 'pointer' } : undefined}
-    >
+    <div className={`card ${className}`}>
       {children}
     </div>
   );

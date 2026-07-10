@@ -41,7 +41,7 @@ export function LoginPage() {
         // Save temp token to localStorage so api() can read it for selectShop
         const tempUser = apiService.buildUserFromToken(token);
         if (tempUser) {
-          localStorage.setItem('element_user', JSON.stringify(tempUser));
+          localStorage.setItem('element_user:v1', JSON.stringify(tempUser));
         }
         selectRes = await apiService.selectShop({ shop_slug: SHOP_SLUG });
         const newToken = selectRes.token || (selectRes.data && selectRes.data.token);
@@ -101,30 +101,13 @@ export function LoginPage() {
       <Toaster position="top-center" theme="dark" />
       <div className="animated-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       {/* Background effects */}
-      <div style={{
-        position: 'fixed',
-        top: '10%',
-        left: '5%',
-        width: '400px',
-        height: '400px',
-        background: 'radial-gradient(circle, rgba(182,148,98,0.08) 0%, transparent 70%)',
-        borderRadius: '50%',
-        pointerEvents: 'none',
-      }} />
-      <div style={{
-        position: 'fixed',
-        bottom: '10%',
-        right: '5%',
-        width: '300px',
-        height: '300px',
-        background: 'radial-gradient(circle, rgba(182,148,98,0.06) 0%, transparent 70%)',
-        borderRadius: '50%',
-        pointerEvents: 'none',
-      }} />
+      <div className="auth-blob auth-blob--tl" />
+      <div className="auth-blob auth-blob--br" />
 
       <div style={{ maxWidth: 480, width: '100%' }}>
         {/* Back to landing */}
         <button
+          type="button"
           className="btn btn-ghost btn-small"
           style={{ marginBottom: 32, gap: 6 }}
           onClick={() => navigate('/')}
@@ -154,8 +137,9 @@ export function LoginPage() {
 
           <div style={{ display: 'grid', gap: 16 }}>
             <div>
-              <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Correo electrónico</label>
+              <label htmlFor="login-email" className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Correo electrónico</label>
               <input
+                id="login-email"
                 className="input"
                 type="email"
                 placeholder="tu@email.com"
@@ -165,9 +149,10 @@ export function LoginPage() {
               />
             </div>
             <div>
-              <label className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Contraseña</label>
+              <label htmlFor="login-password" className="small" style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Contraseña</label>
               <div style={{ position: 'relative' }}>
                 <input
+                  id="login-password"
                   className="input"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Ingresa tu contraseña"
@@ -178,25 +163,15 @@ export function LoginPage() {
                 />
                 <button
                   type="button"
+                  className="input-eye-btn"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: 12,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: '#999',
-                    cursor: 'pointer',
-                    fontSize: 18,
-                    padding: 0,
-                  }}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
             <button
+              type="button"
               className="btn"
               onClick={handleLogin}
               disabled={isLoading}
@@ -222,15 +197,15 @@ export function LoginPage() {
 
           <div style={{ marginTop: 24, textAlign: 'center' }}>
             <p className="small" style={{ fontSize: 12, marginBottom: 8 }}>
-              <span style={{ color: '#b69462', cursor: 'pointer', fontWeight: 600 }} onClick={() => navigate('/forgot-password')}>
+              <button type="button" className="link-btn" onClick={() => navigate('/forgot-password')}>
                 ¿Olvidaste tu contraseña?
-              </span>
+              </button>
             </p>
             <p className="small" style={{ fontSize: 12 }}>
               ¿No tienes cuenta?{' '}
-              <span style={{ color: '#b69462', cursor: 'pointer', fontWeight: 600 }} onClick={() => navigate('/register')}>
+              <button type="button" className="link-btn" onClick={() => navigate('/register')}>
                 Regístrate
-              </span>
+              </button>
             </p>
           </div>
         </div>

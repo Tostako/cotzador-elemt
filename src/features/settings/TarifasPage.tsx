@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../shared/services/store';
 import { showNotification } from '../../shared/hooks/useNotifications';
+import { useEscapeKey } from '../../shared/hooks/useEscapeKey';
 import { TourBanner } from '../../shared/components/TourBanner';
 import { isTourActiveForRoute } from '../../shared/utils/tour';
 import { BackButton } from '../../shared/components/BackButton';
@@ -15,6 +16,9 @@ export function TarifasPage() {
   const [showServiceForm, setShowServiceForm] = useState(false);
   const [newService, setNewService] = useState({ name: '', price: '', unit: '/m²' });
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+
+  useEscapeKey(() => setEditingService(null), editingService !== null);
+  useEscapeKey(() => setDeleteConfirm(null), deleteConfirm !== null);
 
   const handleSaveService = () => {
     if (!newService.name.trim() || !newService.price) {
@@ -50,7 +54,7 @@ export function TarifasPage() {
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}><Wallet size={28} color="#b69462" /> Tarifas</h1>
       <p className="small">Configurar precios de servicios</p>
 
-      <button className="btn mt-2 mb-2" onClick={() => setShowServiceForm(!showServiceForm)}>
+      <button type="button" className="btn mt-2 mb-2" onClick={() => setShowServiceForm(!showServiceForm)}>
         {showServiceForm ? '× Cancelar' : '+ Nuevo Servicio'}
       </button>
 
@@ -59,8 +63,9 @@ export function TarifasPage() {
           <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600 }}>Nuevo Servicio</h3>
           <div style={{ display: 'grid', gap: 12 }}>
             <div>
-              <p className="small mb-1">Nombre del servicio</p>
+              <label className="small mb-1" htmlFor="tarifa-nombre">Nombre del servicio</label>
               <input
+                id="tarifa-nombre"
                 className="input"
                 placeholder="Ej: Estudio geotécnico"
                 value={newService.name}
@@ -80,8 +85,9 @@ export function TarifasPage() {
               </select>
             </div>
             <div>
-              <p className="small mb-1">Valor</p>
+              <label className="small mb-1" htmlFor="tarifa-valor">Valor</label>
               <input
+                id="tarifa-valor"
                 className="input"
                 type="number"
                 placeholder="Ej: 8500000"
@@ -90,8 +96,8 @@ export function TarifasPage() {
               />
             </div>
             <div className="grid-2">
-              <button className="btn btn-secondary" onClick={() => setShowServiceForm(false)}>Cancelar</button>
-              <button className="btn" onClick={handleSaveService}>Guardar</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowServiceForm(false)}>Cancelar</button>
+              <button type="button" className="btn" onClick={handleSaveService}>Guardar</button>
             </div>
           </div>
         </div>
@@ -104,7 +110,7 @@ export function TarifasPage() {
             <div className="flex-between mb-2">
               <span style={{ fontWeight: 600, fontSize: 16 }}>{config.services[id].name}</span>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button
+                <button type="button"
                   className="btn-small btn-secondary"
                   onClick={() => {
                     setEditingService({ id, ...config.services[id] });
@@ -114,7 +120,7 @@ export function TarifasPage() {
                 >
                   <Pencil size={14} /> Editar
                 </button>
-                <button className="btn-small btn-danger" onClick={() => handleDeleteService(id)}>
+                <button type="button" className="btn-small btn-danger" onClick={() => handleDeleteService(id)}>
                   <Trash2 size={15} />
                 </button>
               </div>
@@ -131,19 +137,17 @@ export function TarifasPage() {
 
       {/* Service Edit Modal */}
       {editingService && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => { if (e.target === e.currentTarget) setEditingService(null); }}
-        >
+        <div className="modal-overlay">
           <div className="modal">
             <h3 style={{ marginBottom: 8 }}>Editar Precio</h3>
             <p className="small mb-2" style={{ color: '#b69462', fontWeight: 600 }}>{editingService.name}</p>
             <p className="small mb-2">Unidad: {editingService.unit}</p>
             <div style={{ marginBottom: 24 }}>
-              <p className="small mb-1">Nuevo precio</p>
+              <label className="small mb-1" htmlFor="tarifa-nuevo-precio">Nuevo precio</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ color: '#b69462', fontSize: 14, fontWeight: 600 }}>$</span>
                 <input
+                  id="tarifa-nuevo-precio"
                   className="input"
                   type="number"
                   autoFocus
@@ -163,8 +167,8 @@ export function TarifasPage() {
               </div>
             </div>
             <div className="grid-2">
-              <button className="btn btn-secondary" onClick={() => setEditingService(null)}>Cancelar</button>
-              <button
+              <button type="button" className="btn btn-secondary" onClick={() => setEditingService(null)}>Cancelar</button>
+              <button type="button"
                 className="btn"
                 onClick={() => {
                   const val = parseInt(editPriceValue);
@@ -186,10 +190,7 @@ export function TarifasPage() {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => { if (e.target === e.currentTarget) setDeleteConfirm(null); }}
-        >
+        <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 400 }}>
             <h3 style={{ marginBottom: 8 }}>¿Eliminar servicio?</h3>
             <p className="small mb-2" style={{ color: '#999' }}>
@@ -199,10 +200,10 @@ export function TarifasPage() {
               Esta acción no se puede deshacer.
             </p>
             <div className="grid-2" style={{ marginTop: 24 }}>
-              <button className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>
+              <button type="button" className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>
                 Cancelar
               </button>
-              <button className="btn btn-danger" onClick={confirmDelete} style={{ gap: 6 }}>
+              <button type="button" className="btn btn-danger" onClick={confirmDelete} style={{ gap: 6 }}>
                 <Trash2 size={16} /> Eliminar
               </button>
             </div>

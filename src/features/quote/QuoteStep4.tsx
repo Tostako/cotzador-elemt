@@ -39,9 +39,11 @@ export function QuoteStep4() {
     <>
       <div className="card mt-2">
         <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Paquete Técnico Completo</h3>
-        <div
+        <button
+          type="button"
           className={`service-item ${formData.hasCompletePackage ? 'selected' : ''}`}
           onClick={toggleCompletePackage}
+          style={{ background: 'transparent', border: 'none', font: 'inherit', color: 'inherit', textAlign: 'left', width: '100%' }}
         >
           <div>
             <div style={{ fontWeight: 600 }}>{config.completePackage.name}</div>
@@ -50,7 +52,7 @@ export function QuoteStep4() {
               {config.completePackage.unit}
             </div>
           </div>
-        </div>
+        </button>
       </div>
 
       {!formData.hasCompletePackage && (
@@ -59,10 +61,12 @@ export function QuoteStep4() {
             <div className="card">
               <h3 className="mb-2" style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Sub-Paquetes</h3>
               {Object.keys(config.subPackages).map((id) => (
-                <div
+                <button
+                  type="button"
                   key={id}
                   className={`service-item ${formData.selectedSubPackages.includes(id) ? 'selected' : ''}`}
                   onClick={() => toggleSubPackage(id)}
+                  style={{ background: 'transparent', border: 'none', font: 'inherit', color: 'inherit', textAlign: 'left', width: '100%' }}
                 >
                   <div>
                     <div style={{ fontWeight: 600 }}>{config.subPackages[id].name}</div>
@@ -71,7 +75,7 @@ export function QuoteStep4() {
                       {config.subPackages[id].unit}
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -83,10 +87,12 @@ export function QuoteStep4() {
                 return null;
               }
               return (
-                <div
+                <button
+                  type="button"
                   key={id}
                   className={`service-item ${formData.selectedServices.includes(id) ? 'selected' : ''}`}
                   onClick={() => toggleService(id)}
+                  style={{ background: 'transparent', border: 'none', font: 'inherit', color: 'inherit', textAlign: 'left', width: '100%' }}
                 >
                   <div>
                     <div style={{ fontWeight: 600 }}>{config.services[id].name}</div>
@@ -95,7 +101,7 @@ export function QuoteStep4() {
                       {config.services[id].unit}
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

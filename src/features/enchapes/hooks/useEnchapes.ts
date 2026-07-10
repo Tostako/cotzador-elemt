@@ -60,6 +60,9 @@ function toSnakeProject(p: EnchapeProject) {
         ajuste_desperdicio: e.ajusteDesperdicio,
         orientacion_manual: e.orientacionManual,
         filtro_tipo_acabado: e.filtroTipoAcabado,
+        nodos: e.nodos,
+        muros: e.muros,
+        puntos: e.puntos,
       })),
       conexiones: n.conexiones.map((c) => ({ id: c.id, a: c.a, b: c.b })),
     })),
@@ -96,6 +99,72 @@ function toSnakeProject(p: EnchapeProject) {
       fecha: s.fecha,
     })),
   }
+}
+
+// Inverso de toSnakeProject: convierte el tile_project del backend a EnchapeProject.
+function fromSnakeProject(d: any): EnchapeProject {
+  const rid = (p: string) => p + '_' + Math.random().toString(36).slice(2, 8)
+  return {
+    id: d?.id ?? rid('proj'),
+    nombre: d?.nombre ?? '',
+    propietario: d?.propietario ?? '',
+    ubicacion: d?.ubicacion ?? '',
+    niveles: (Array.isArray(d?.niveles) ? d.niveles : []).map((n: any) => ({
+      id: n?.id ?? rid('niv'),
+      nombre: n?.nombre ?? 'Nivel 1',
+      espacios: (Array.isArray(n?.espacios) ? n.espacios : []).map((e: any) => ({
+        id: e?.id ?? rid('esp'),
+        nombre: e?.nombre ?? 'Espacio',
+        tipo: e?.tipo === 'pared' ? 'pared' : 'piso',
+        segmentos: (Array.isArray(e?.segmentos) && e.segmentos.length ? e.segmentos : [{ largo: 0, ancho: 0 }]).map((s: any) => ({ largo: Number(s?.largo) || 0, ancho: Number(s?.ancho) || 0 })),
+        x: Number(e?.x) || 0,
+        y: Number(e?.y) || 0,
+        materialId: e?.material_id ?? undefined,
+        patronId: e?.patron_id ?? undefined,
+        ajusteDesperdicio: Number(e?.ajuste_desperdicio) || 0,
+        orientacionManual: e?.orientacion_manual ?? null,
+        filtroTipoAcabado: e?.filtro_tipo_acabado ?? null,
+        nodos: Array.isArray(e?.nodos) ? e.nodos.map((p: any) => ({ id: String(p?.id ?? rid('n')), x: Number(p?.x) || 0, y: Number(p?.y) || 0 })) : undefined,
+        muros: Array.isArray(e?.muros) ? e.muros.map((m: any) => ({ a: String(m?.a), b: String(m?.b), abertura: !!(m?.abertura ?? m?.apertura ?? m?.opening) })) : undefined,
+        puntos: Array.isArray(e?.puntos) ? e.puntos.map((p: any) => ({ x: Number(p?.x) || 0, y: Number(p?.y) || 0 })) : undefined,
+      })),
+      conexiones: (Array.isArray(n?.conexiones) ? n.conexiones : []).map((c: any) => ({ id: c?.id ?? rid('cx'), a: c?.a, b: c?.b })),
+    })),
+    materiales: (Array.isArray(d?.materiales) ? d.materiales : []).map((m: any) => ({
+      id: m?.id ?? rid('mat'),
+      nombre: m?.nombre ?? '',
+      tipoAcabado: m?.tipo_acabado ?? 'Cerámica',
+      formatoLargo: m?.formato_largo,
+      formatoAncho: m?.formato_ancho,
+      formatoGrosor: m?.formato_grosor,
+      color: m?.color,
+      marca: m?.marca,
+      categoria: m?.categoria ?? 'Ambos',
+      m2caja: m?.m2_caja,
+      pesoCaja: m?.peso_caja,
+      modoPrecio: m?.modo_precio ?? 'm2',
+      precioM2: m?.precio_m2,
+      precioCaja: m?.precio_caja,
+      umbralSobranteCm: m?.umbral_sobrante_cm ?? null,
+    })),
+    bancoSobrantes: (Array.isArray(d?.banco_sobrantes) ? d.banco_sobrantes : []).map((s: any) => ({
+      id: s?.id ?? rid('sob'),
+      materialId: s?.material_id,
+      ancho: Number(s?.ancho) || 0,
+      alto: Number(s?.alto) || 0,
+      cantidad: Number(s?.cantidad) || 0,
+      origenNivelId: s?.origen_nivel_id,
+      origenSpaceId: s?.origen_space_id,
+      patronId: s?.patron_id,
+      direccion: s?.direccion,
+      totalCortes: s?.total_cortes,
+      tramoIndex: s?.tramo_index,
+      origen: s?.origen,
+      fecha: s?.fecha,
+    })),
+    createdAt: d?.created_at,
+    updatedAt: d?.updated_at,
+  } as EnchapeProject
 }
 
 export type EnchapesView = 'wizard' | 'catalogo' | 'visual'
@@ -175,6 +244,7 @@ export interface UseEnchapesReturn {
   // Actions
   saveProject: () => void
   saveToBackend: () => Promise<void>
+  loadProject: (id: string) => Promise<void>
   isSaving: boolean
   resetProject: () => void
 }
@@ -628,6 +698,24 @@ export function useEnchapes(): UseEnchapesReturn {
     showNotification('Correcto', 'success', 'Se reinició el proyecto de enchapes.')
   }, [])
 
+  // Carga un proyecto de enchapes existente (p. ej. derivado de un plano) por id.
+  const loadProject = useCallback(async (id: string) => {
+    try {
+      const res = await apiService.getTileProject(id)
+      const data = res && typeof res === 'object' && 'data' in res ? (res as any).data : res
+      if (!data) return
+      const p = fromSnakeProject(data)
+      setProyecto(p)
+      setNivelActivoId(p.niveles[0]?.id ?? null)
+      setVisNivelId(p.niveles[0]?.id ?? null)
+      setFase(1)
+      setVista('wizard')
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(p))
+    } catch (err: any) {
+      showNotification('Error', 'error', err?.message || 'No se pudo cargar el proyecto de enchapes.')
+    }
+  }, [])
+
   return {
     proyecto,
     updateProyecto,
@@ -684,6 +772,7 @@ export function useEnchapes(): UseEnchapesReturn {
     espacioCompleto,
     saveProject,
     saveToBackend,
+    loadProject,
     isSaving,
     resetProject,
   }

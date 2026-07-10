@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface ModalProps {
   title: string;
@@ -8,8 +9,9 @@ interface ModalProps {
 }
 
 export function Modal({ title, message, children, onClose }: ModalProps) {
+  useEscapeKey(onClose);
   return (
-    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="modal-overlay">
       <div className="modal">
         <h3 style={{ marginBottom: 12, color: '#ffffff' }}>{title}</h3>
         <p className="small mb-2" style={{ color: '#999999', lineHeight: 1.5 }}>{message}</p>
