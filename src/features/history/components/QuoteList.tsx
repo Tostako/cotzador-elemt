@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { safeParseQuoteData } from '../../../shared/utils/parseQuoteData';
 import type { Quote } from '../../../shared/types';
 
@@ -23,26 +24,30 @@ const statusLabels: Record<string, string> = {
   sent: 'Enviada',
 };
 
-export function QuoteList({ quotes, expandedParents, onToggleParent, onDelete, onSelectQuote }: QuoteListProps) {
-  const parentQuotes: Quote[] = [];
-  const childQuotes: Quote[] = [];
-  quotes.forEach((q) => {
-    const d = safeParseQuoteData(q.data);
-    if (d?.parentQuoteId) {
-      childQuotes.push(q);
-    } else {
-      parentQuotes.push(q);
-    }
-  });
+export const QuoteList = memo(function QuoteList({ quotes, expandedParents, onToggleParent, onDelete, onSelectQuote }: QuoteListProps) {
+  // Se calcula una sola vez por cambio de `quotes` (antes se re-parseaba en cada render).
+  const { parentQuotes, childrenByParent } = useMemo(() => {
+    const parents: Quote[] = [];
+    const byParent = new Map<string, Quote[]>();
+    quotes.forEach((q) => {
+      const d = safeParseQuoteData(q.data);
+      if (d?.parentQuoteId) {
+        const pid = String(d.parentQuoteId);
+        const arr = byParent.get(pid);
+        if (arr) arr.push(q);
+        else byParent.set(pid, [q]);
+      } else {
+        parents.push(q);
+      }
+    });
+    return { parentQuotes: parents, childrenByParent: byParent };
+  }, [quotes]);
 
   return (
     <>
       {parentQuotes.map((parent) => {
         const status = parent.status === 'paid' || parent.status === 'completed' ? 'completed' : 'draft';
-        const children = childQuotes.filter((c) => {
-          const d = safeParseQuoteData(c.data);
-          return String(d?.parentQuoteId) === String(parent.id);
-        });
+        const children = childrenByParent.get(String(parent.id)) || [];
         const hasChildren = children.length > 0;
         const isExpanded = expandedParents.has(parent.id);
 
@@ -139,4 +144,4 @@ export function QuoteList({ quotes, expandedParents, onToggleParent, onDelete, o
       })}
     </>
   );
-}
+});

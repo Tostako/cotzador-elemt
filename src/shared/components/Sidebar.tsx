@@ -98,7 +98,8 @@ const groups: NavGroup[] = [
 export function Sidebar({ open, onClose }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useStore();
+  const user = useStore((s) => s.user);
+  const logout = useStore((s) => s.logout);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Grupos abiertos: por defecto se abre el que contiene la ruta actual (y Herramientas).

@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/* Spinner de carga (rutas diferidas) — mismo look que el splash del index.html */
+.app-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(182, 148, 98, 0.22);
+  border-top-color: #b69462;
+  animation: appSpin 0.8s linear infinite;
+}
+@keyframes appSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @theme {
   --color-bg: #0a0a0a;
   --color-bg-dark: #050508;

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../../shared/services/store';
+import { useShallow } from 'zustand/react/shallow';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { TourBanner } from '../../shared/components/TourBanner';
 import { isTourActiveForRoute } from '../../shared/utils/tour';
@@ -7,7 +8,9 @@ import { BackButton } from '../../shared/components/BackButton';
 import { User, Save, Building2, Signature, Upload, Trash2 } from 'lucide-react';
 
 export function PerfilPage() {
-  const { user, config, updateConfig, login } = useStore();
+  const { user, config, updateConfig, login } = useStore(
+    useShallow((s) => ({ user: s.user, config: s.config, updateConfig: s.updateConfig, login: s.login }))
+  );
 
   const showTour = isTourActiveForRoute('/perfil');
 

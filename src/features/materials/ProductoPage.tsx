@@ -1,17 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { useEscapeKey } from '../../shared/hooks/useEscapeKey';
-import type { QuoteCatalogProduct, QuoteCatalogPrice } from '../../shared/types';
+import { apiService } from '../../shared/services/api';
 import { ArrowLeft, DollarSign, Award, ShoppingCart, Trash2 } from 'lucide-react';
+import { useCatalogProduct, useAddPrice, useDeletePrice } from '../../shared/queries/catalog';
 
 export function ProductoPage() {
   const navigate = useNavigate();
   const { productId } = useParams();
+  const { data: product, isLoading } = useCatalogProduct(productId);
+  const addPrice = useAddPrice(productId || '');
+  const deletePriceM = useDeletePrice(productId || '');
+  const prices = ([...((product?.prices as any[]) || [])]).sort((a, b) => a.price - b.price);
 
-  const [product, setProduct] = useState<QuoteCatalogProduct | null>(null);
-  const [prices, setPrices] = useState<QuoteCatalogPrice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [showPriceForm, setShowPriceForm] = useState(false);
   const [newPrice, setNewPrice] = useState({ hardware_store: '', brand: '', price: '', notes: '' });
   const [quantity, setQuantity] = useState(1);
@@ -19,84 +21,50 @@ export function ProductoPage() {
 
   useEscapeKey(() => setDeletePriceConfirm(null), deletePriceConfirm !== null);
 
-  const loadProduct = useCallback(async () => {
-    if (!productId) return;
-    try {
-      const { apiService, extractData } = await import('../../shared/services/api');
-      const res = await apiService.getCatalogProduct(productId);
-      const data = extractData(res);
-      if (data) {
-        setProduct(data);
-        const priceList = data.prices || [];
-        setPrices(priceList.sort((a: QuoteCatalogPrice, b: QuoteCatalogPrice) => a.price - b.price));
-      }
-    } catch (err: any) {
-      showNotification('Error', 'error', err.message || 'Error al cargar producto');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [productId]);
-
-  useEffect(() => {
-    loadProduct();
-  }, [loadProduct]);
-
-  const handleAddPrice = async () => {
+  const handleAddPrice = () => {
     if (!newPrice.hardware_store.trim() || !newPrice.brand.trim() || !newPrice.price) {
       showNotification('Atención', 'warning', 'Ferretería, marca y precio son obligatorios.');
       return;
     }
-    try {
-      const { apiService } = await import('../../shared/services/api');
-      await apiService.addCatalogPrice(productId!, {
+    addPrice.mutate(
+      {
         hardware_store: newPrice.hardware_store.trim(),
         brand: newPrice.brand.trim(),
         price: parseFloat(newPrice.price),
         notes: newPrice.notes.trim() || undefined,
-      });
-      showNotification('Correcto', 'success', 'Precio agregado correctamente.');
-      setNewPrice({ hardware_store: '', brand: '', price: '', notes: '' });
-      setShowPriceForm(false);
-      loadProduct();
-    } catch (err: any) {
-      showNotification('Error', 'error', err.message || 'Error al agregar precio.');
-    }
+      },
+      {
+        onSuccess: () => {
+          showNotification('Correcto', 'success', 'Precio agregado correctamente.');
+          setNewPrice({ hardware_store: '', brand: '', price: '', notes: '' });
+          setShowPriceForm(false);
+        },
+        onError: (err: any) => showNotification('Error', 'error', err?.message || 'Error al agregar precio.'),
+      }
+    );
   };
 
-  const handleDeletePrice = async (priceId: string) => {
-    setDeletePriceConfirm(priceId);
-  };
+  const handleDeletePrice = (priceId: string) => setDeletePriceConfirm(priceId);
 
-  const confirmDeletePrice = async () => {
+  const confirmDeletePrice = () => {
     if (!deletePriceConfirm) return;
-    try {
-      const { apiService } = await import('../../shared/services/api');
-      await apiService.deleteCatalogPrice(productId!, deletePriceConfirm);
-      showNotification('Correcto', 'success', 'Precio eliminado correctamente.');
-      loadProduct();
-    } catch (err: any) {
-      showNotification('Error', 'error', err.message || 'Error al eliminar.');
-    }
+    deletePriceM.mutate(deletePriceConfirm, {
+      onSuccess: () => showNotification('Correcto', 'success', 'Precio eliminado correctamente.'),
+      onError: (err: any) => showNotification('Error', 'error', err?.message || 'Error al eliminar.'),
+    });
     setDeletePriceConfirm(null);
   };
 
-  const handleOrder = async (price: QuoteCatalogPrice) => {
+  const handleOrder = async (price: any) => {
     try {
-      const { apiService } = await import('../../shared/services/api');
       await apiService.createCatalogOrder({
         notes: `Pedido de ${product?.name}`,
-        items: [
-          {
-            product_id: productId,
-            price_id: price.id,
-            quantity: quantity,
-          },
-        ],
+        items: [{ product_id: productId, price_id: price.id, quantity }],
       });
       showNotification('Correcto', 'success', 'Producto agregado a pedidos correctamente.');
       navigate('/materiales/pedidos');
     } catch (err: any) {
-      showNotification('Error', 'error', err.message || 'Error al crear pedido.');
+      showNotification('Error', 'error', err?.message || 'Error al crear pedido.');
     }
   };
 
@@ -144,7 +112,7 @@ export function ProductoPage() {
                   </div>
                   <div className="grid-2">
                     <button type="button" className="btn btn-secondary" onClick={() => setShowPriceForm(false)}>Cancelar</button>
-                    <button type="button" className="btn" onClick={handleAddPrice}>Agregar</button>
+                    <button type="button" className="btn" onClick={handleAddPrice} disabled={addPrice.isPending}>{addPrice.isPending ? 'Agregando…' : 'Agregar'}</button>
                   </div>
                 </div>
               </div>
@@ -154,7 +122,7 @@ export function ProductoPage() {
               <p className="small" style={{ color: '#999' }}>No hay precios registrados.</p>
             ) : (
               <div style={{ display: 'grid', gap: 8 }}>
-                {prices.map((price, index) => (
+                {prices.map((price: any, index: number) => (
                   <div
                     key={price.id}
                     className="card"

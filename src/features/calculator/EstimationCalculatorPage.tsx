@@ -1,5 +1,6 @@
 import { useReducer } from 'react';
 import { useStore } from '../../shared/services/store';
+import { useShallow } from 'zustand/react/shallow';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { useEscapeKey } from '../../shared/hooks/useEscapeKey';
 import { calculateArea } from '../../shared/services/calculator';
@@ -525,7 +526,9 @@ function QuoteSelectModal({
 }
 
 export function EstimationCalculatorPage() {
-  const { config, quotes, user } = useStore();
+  const { config, quotes, user } = useStore(
+    useShallow((s) => ({ config: s.config, quotes: s.quotes, user: s.user }))
+  );
 
   const [state, dispatch] = useReducer(reducer, initialState);
 

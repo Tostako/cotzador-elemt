@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../shared/services/store';
+import { useShallow } from 'zustand/react/shallow';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { safeParseQuoteData } from '../../shared/utils/parseQuoteData';
 import type { Quote } from '../../shared/types';
@@ -13,7 +14,17 @@ import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 
 export function HistoryPage() {
   const navigate = useNavigate();
-  const { quotes, paymentPlans, loadPaymentPlans, deleteQuote, setFormData, setQuoteStep, setEditingQuoteId } = useStore();
+  const { quotes, paymentPlans, loadPaymentPlans, deleteQuote, setFormData, setQuoteStep, setEditingQuoteId } = useStore(
+    useShallow((s) => ({
+      quotes: s.quotes,
+      paymentPlans: s.paymentPlans,
+      loadPaymentPlans: s.loadPaymentPlans,
+      deleteQuote: s.deleteQuote,
+      setFormData: s.setFormData,
+      setQuoteStep: s.setQuoteStep,
+      setEditingQuoteId: s.setEditingQuoteId,
+    }))
+  );
 
   useEffect(() => {
     if (paymentPlans.length === 0) {
@@ -30,11 +41,11 @@ export function HistoryPage() {
   const [showSummary, setShowSummary] = useState(false);
   const [expandedParents, setExpandedParents] = useState<Set<number | string>>(new Set());
 
-  const handleDelete = (id: number | string, e: React.MouseEvent) => {
+  const handleDelete = useCallback((id: number | string, e: React.MouseEvent) => {
     e.stopPropagation();
     setQuoteToDelete(id);
     setShowDeleteConfirm(true);
-  };
+  }, []);
 
   const confirmDelete = () => {
     if (quoteToDelete) {
@@ -94,7 +105,7 @@ export function HistoryPage() {
     navigate('/quote');
   };
 
-  const toggleParent = (id: number | string) => {
+  const toggleParent = useCallback((id: number | string) => {
     setExpandedParents((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -104,7 +115,7 @@ export function HistoryPage() {
       }
       return next;
     });
-  };
+  }, []);
 
   const handleView = (quote: Quote) => {
     const data = safeParseQuoteData(quote.data);

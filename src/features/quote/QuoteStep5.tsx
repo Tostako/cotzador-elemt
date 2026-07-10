@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../../shared/services/store';
+import { useShallow } from 'zustand/react/shallow';
 import type { AreaResult } from '../../shared/types';
 import { CreditCard, TriangleAlert, Check, Settings, ClipboardCheck } from 'lucide-react';
 
@@ -23,7 +24,16 @@ function RadioIndicator({ checked }: { checked: boolean }) {
 }
 
 export function QuoteStep5({ area, price }: QuoteStep5Props) {
-  const { formData, config, setFormData, paymentPlans, loadPaymentPlans, editingQuoteId } = useStore();
+  const { formData, config, setFormData, paymentPlans, loadPaymentPlans, editingQuoteId } = useStore(
+    useShallow((s) => ({
+      formData: s.formData,
+      config: s.config,
+      setFormData: s.setFormData,
+      paymentPlans: s.paymentPlans,
+      loadPaymentPlans: s.loadPaymentPlans,
+      editingQuoteId: s.editingQuoteId,
+    }))
+  );
   const [showForm, setShowForm] = useState(false);
   const [newService, setNewService] = useState({ name: '', price: '' });
   const [hasPayments, setHasPayments] = useState(false);

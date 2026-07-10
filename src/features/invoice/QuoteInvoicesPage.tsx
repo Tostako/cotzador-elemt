@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../../shared/services/store';
+import { useShallow } from 'zustand/react/shallow';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { safeParseQuoteData } from '../../shared/utils/parseQuoteData';
 import { useEscapeKey } from '../../shared/hooks/useEscapeKey';
@@ -25,7 +26,17 @@ export function QuoteInvoicesPage() {
   const navigate = useNavigate();
   const { quoteId } = useParams();
 
-  const { quotes, getQuoteById, config, setFormData, updateQuote, paymentPlans, loadPaymentPlans } = useStore();
+  const { quotes, getQuoteById, config, setFormData, updateQuote, paymentPlans, loadPaymentPlans } = useStore(
+    useShallow((s) => ({
+      quotes: s.quotes,
+      getQuoteById: s.getQuoteById,
+      config: s.config,
+      setFormData: s.setFormData,
+      updateQuote: s.updateQuote,
+      paymentPlans: s.paymentPlans,
+      loadPaymentPlans: s.loadPaymentPlans,
+    }))
+  );
 
   const [quote, setQuote] = useState<Quote | null>(null);
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);

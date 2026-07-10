@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../../shared/services/store';
+import { useShallow } from 'zustand/react/shallow';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { useEscapeKey } from '../../shared/hooks/useEscapeKey';
 import { TourBanner } from '../../shared/components/TourBanner';
@@ -20,7 +21,19 @@ export function PagosPage() {
     createPaymentPlan,
     updatePaymentPlan,
     deletePaymentPlan,
-  } = useStore();
+  } = useStore(
+    useShallow((s) => ({
+      config: s.config,
+      savePayment: s.savePayment,
+      deletePayment: s.deletePayment,
+      updateConfig: s.updateConfig,
+      paymentPlans: s.paymentPlans,
+      loadPaymentPlans: s.loadPaymentPlans,
+      createPaymentPlan: s.createPaymentPlan,
+      updatePaymentPlan: s.updatePaymentPlan,
+      deletePaymentPlan: s.deletePaymentPlan,
+    }))
+  );
   const showTour = isTourActiveForRoute('/pagos');
 
   const [showPaymentForm, setShowPaymentForm] = useState(false);

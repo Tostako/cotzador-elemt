@@ -11,7 +11,8 @@ import logoSinBaner from '../../assets/LOGO SIN BANER/ELEMENThaus - Transparent 
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { quotes, user } = useStore();
+  const quotes = useStore((s) => s.quotes);
+  const user = useStore((s) => s.user);
   const [showWelcome, setShowWelcome] = useState(() => {
     const hasSeenTour = localStorage.getItem('element_tour_seen');
     const isTourActive = localStorage.getItem('element_tour_active') === 'true';

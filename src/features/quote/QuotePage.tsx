@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../shared/services/store';
+import { useShallow } from 'zustand/react/shallow';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { QuoteStep1 } from './QuoteStep1';
 import { QuoteStep2 } from './QuoteStep2';
@@ -11,7 +12,19 @@ import { ArrowLeft, ArrowRight, X, RefreshCw, Save } from 'lucide-react';
 
 export function QuotePage() {
   const navigate = useNavigate();
-  const { formData, config, quoteStep, setQuoteStep, resetForm, addQuote, updateQuote, editingQuoteId, setEditingQuoteId } = useStore();
+  const { formData, config, quoteStep, setQuoteStep, resetForm, addQuote, updateQuote, editingQuoteId, setEditingQuoteId } = useStore(
+    useShallow((s) => ({
+      formData: s.formData,
+      config: s.config,
+      quoteStep: s.quoteStep,
+      setQuoteStep: s.setQuoteStep,
+      resetForm: s.resetForm,
+      addQuote: s.addQuote,
+      updateQuote: s.updateQuote,
+      editingQuoteId: s.editingQuoteId,
+      setEditingQuoteId: s.setEditingQuoteId,
+    }))
+  );
 
   const isEditing = editingQuoteId !== null;
   const area = calculateArea(formData);

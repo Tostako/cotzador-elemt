@@ -20,7 +20,9 @@ const navLinks: { to: string; label: string; match: (p: string) => boolean }[] =
 export function TopNav({ onMenuClick }: TopNavProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useStore();
+  // Selectores puntuales: el navbar (siempre montado) ya no se re-renderiza ante cualquier cambio del store.
+  const user = useStore((s) => s.user);
+  const logout = useStore((s) => s.logout);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 

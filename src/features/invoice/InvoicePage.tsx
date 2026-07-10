@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useStore } from '../../shared/services/store';
+import { useShallow } from 'zustand/react/shallow';
 
 import { safeParseQuoteData } from '../../shared/utils/parseQuoteData';
 import { calculateArea, calculatePrice, roundTo50 } from '../../shared/services/calculator';
@@ -15,7 +16,16 @@ export function InvoicePage() {
   const invoiceId = searchParams.get('invoiceId');
   const installmentIndexParam = searchParams.get('installmentIndex');
 
-  const { formData: currentFormData, config, getQuoteById, setFormData, paymentPlans, updateQuote } = useStore();
+  const { formData: currentFormData, config, getQuoteById, setFormData, paymentPlans, updateQuote } = useStore(
+    useShallow((s) => ({
+      formData: s.formData,
+      config: s.config,
+      getQuoteById: s.getQuoteById,
+      setFormData: s.setFormData,
+      paymentPlans: s.paymentPlans,
+      updateQuote: s.updateQuote,
+    }))
+  );
 
   const [quotePayments, setQuotePayments] = useState<any[]>([]);
   const [displayFormData, setDisplayFormData] = useState<QuoteFormData | null>(null);

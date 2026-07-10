@@ -1,136 +1,74 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { LandingPage } from '../features/landing/LandingPage';
-import { LoginPage } from '../features/auth/LoginPage';
-import { RegisterPage } from '../features/auth/RegisterPage';
-import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
-import { DashboardPage } from '../features/dashboard/DashboardPage';
-import { QuotePage } from '../features/quote/QuotePage';
-import { HistoryPage } from '../features/history/HistoryPage';
-import { InvoicePage } from '../features/invoice/InvoicePage';
-import { TarifasPage } from '../features/settings/TarifasPage';
-import { PagosPage } from '../features/settings/PagosPage';
-import { CuentaCobroPage } from '../features/settings/CuentaCobroPage';
-import { EstimacionModule } from '../features/settings/EstimacionModule';
-import { PerfilPage } from '../features/settings/PerfilPage';
-import { MaterialesPage } from '../features/materials/MaterialesPage';
-import { CategoriaPage } from '../features/materials/CategoriaPage';
-import { ProductoPage } from '../features/materials/ProductoPage';
-import { PedidosPage } from '../features/materials/PedidosPage';
-import { QuoteInvoicesPage } from '../features/invoice/QuoteInvoicesPage';
-import { EnchapesPage } from '../features/enchapes/EnchapesPage';
-import { PlanosPage } from '../features/planos/PlanosPage';
-import { PlanoEditorPage } from '../features/planos/PlanoEditorPage';
-import { BarrederasPage } from '../features/barrederas/BarrederasPage';
-// import { EstimationCalculatorPage } from '../features/calculator/EstimationCalculatorPage';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { Layout } from './Layout';
 import { useStore } from '../shared/services/store';
+
+// Carga diferida por ruta: el bundle inicial se reduce y las dependencias pesadas
+// (p. ej. Konva en Planos/Barrederas) solo se descargan al entrar a esas rutas.
+const LandingPage = lazy(() => import('../features/landing/LandingPage').then((m) => ({ default: m.LandingPage })));
+const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('../features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })));
+const ForgotPasswordPage = lazy(() => import('../features/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
+const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })));
+const QuotePage = lazy(() => import('../features/quote/QuotePage').then((m) => ({ default: m.QuotePage })));
+const HistoryPage = lazy(() => import('../features/history/HistoryPage').then((m) => ({ default: m.HistoryPage })));
+const InvoicePage = lazy(() => import('../features/invoice/InvoicePage').then((m) => ({ default: m.InvoicePage })));
+const TarifasPage = lazy(() => import('../features/settings/TarifasPage').then((m) => ({ default: m.TarifasPage })));
+const PagosPage = lazy(() => import('../features/settings/PagosPage').then((m) => ({ default: m.PagosPage })));
+const CuentaCobroPage = lazy(() => import('../features/settings/CuentaCobroPage').then((m) => ({ default: m.CuentaCobroPage })));
+const EstimacionModule = lazy(() => import('../features/settings/EstimacionModule').then((m) => ({ default: m.EstimacionModule })));
+const PerfilPage = lazy(() => import('../features/settings/PerfilPage').then((m) => ({ default: m.PerfilPage })));
+const MaterialesPage = lazy(() => import('../features/materials/MaterialesPage').then((m) => ({ default: m.MaterialesPage })));
+const CategoriaPage = lazy(() => import('../features/materials/CategoriaPage').then((m) => ({ default: m.CategoriaPage })));
+const ProductoPage = lazy(() => import('../features/materials/ProductoPage').then((m) => ({ default: m.ProductoPage })));
+const PedidosPage = lazy(() => import('../features/materials/PedidosPage').then((m) => ({ default: m.PedidosPage })));
+const QuoteInvoicesPage = lazy(() => import('../features/invoice/QuoteInvoicesPage').then((m) => ({ default: m.QuoteInvoicesPage })));
+const EnchapesPage = lazy(() => import('../features/enchapes/EnchapesPage').then((m) => ({ default: m.EnchapesPage })));
+const PlanosPage = lazy(() => import('../features/planos/PlanosPage').then((m) => ({ default: m.PlanosPage })));
+const PlanoEditorPage = lazy(() => import('../features/planos/PlanoEditorPage').then((m) => ({ default: m.PlanoEditorPage })));
+const BarrederasPage = lazy(() => import('../features/barrederas/BarrederasPage').then((m) => ({ default: m.BarrederasPage })));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
+const Fallback = (
+  <div style={{ minHeight: '70vh', display: 'grid', placeItems: 'center' }}>
+    <div className="app-spinner" />
+  </div>
+);
+const lz = (node: ReactNode) => <Suspense fallback={Fallback}>{node}</Suspense>;
+const prot = (node: ReactNode) => (
+  <ProtectedRoute>
+    <Layout>{lz(node)}</Layout>
+  </ProtectedRoute>
+);
+
 export const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <LandingPage />,
-  },
-  {
-    path: '/login',
-    element: <LoginPage />,
-  },
-  {
-    path: '/register',
-    element: <RegisterPage />,
-  },
-  {
-    path: '/forgot-password',
-    element: <ForgotPasswordPage />,
-  },
-  {
-    path: '/dashboard',
-    element: <ProtectedRoute><Layout><DashboardPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/quote',
-    element: <ProtectedRoute><Layout><QuotePage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/history',
-    element: <ProtectedRoute><Layout><HistoryPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/invoice/:quoteId',
-    element: <ProtectedRoute><Layout><InvoicePage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/quotes/:quoteId/invoices',
-    element: <ProtectedRoute><Layout><QuoteInvoicesPage /></Layout></ProtectedRoute>,
-  },
-  // Config items now have their own routes
-  {
-    path: '/tarifas',
-    element: <ProtectedRoute><Layout><TarifasPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/pagos',
-    element: <ProtectedRoute><Layout><PagosPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/cuenta-cobro',
-    element: <ProtectedRoute><Layout><CuentaCobroPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/estimacion',
-    element: <ProtectedRoute><Layout><EstimacionModule /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/calculadoras/enchapes',
-    element: <ProtectedRoute><Layout><EnchapesPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/calculadoras/barrederas',
-    element: <ProtectedRoute><Layout><BarrederasPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/calculadoras/barrederas/:planId',
-    element: <ProtectedRoute><Layout><BarrederasPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/planos',
-    element: <ProtectedRoute><Layout><PlanosPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/planos/nuevo',
-    element: <ProtectedRoute><Layout><PlanoEditorPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/planos/:id',
-    element: <ProtectedRoute><Layout><PlanoEditorPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/perfil',
-    element: <ProtectedRoute><Layout><PerfilPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/materiales',
-    element: <ProtectedRoute><Layout><MaterialesPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/materiales/:categoryId',
-    element: <ProtectedRoute><Layout><CategoriaPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/materiales/productos/:productId',
-    element: <ProtectedRoute><Layout><ProductoPage /></Layout></ProtectedRoute>,
-  },
-  {
-    path: '/materiales/pedidos',
-    element: <ProtectedRoute><Layout><PedidosPage /></Layout></ProtectedRoute>,
-  },
-  // Redirect old /settings to /tarifas
-  {
-    path: '/settings',
-    element: <Navigate to="/tarifas" replace />,
-  },
+  { path: '/', element: lz(<LandingPage />) },
+  { path: '/login', element: lz(<LoginPage />) },
+  { path: '/register', element: lz(<RegisterPage />) },
+  { path: '/forgot-password', element: lz(<ForgotPasswordPage />) },
+  { path: '/dashboard', element: prot(<DashboardPage />) },
+  { path: '/quote', element: prot(<QuotePage />) },
+  { path: '/history', element: prot(<HistoryPage />) },
+  { path: '/invoice/:quoteId', element: prot(<InvoicePage />) },
+  { path: '/quotes/:quoteId/invoices', element: prot(<QuoteInvoicesPage />) },
+  { path: '/tarifas', element: prot(<TarifasPage />) },
+  { path: '/pagos', element: prot(<PagosPage />) },
+  { path: '/cuenta-cobro', element: prot(<CuentaCobroPage />) },
+  { path: '/estimacion', element: prot(<EstimacionModule />) },
+  { path: '/calculadoras/enchapes', element: prot(<EnchapesPage />) },
+  { path: '/calculadoras/barrederas', element: prot(<BarrederasPage />) },
+  { path: '/calculadoras/barrederas/:planId', element: prot(<BarrederasPage />) },
+  { path: '/planos', element: prot(<PlanosPage />) },
+  { path: '/planos/nuevo', element: prot(<PlanoEditorPage />) },
+  { path: '/planos/:id', element: prot(<PlanoEditorPage />) },
+  { path: '/perfil', element: prot(<PerfilPage />) },
+  { path: '/materiales', element: prot(<MaterialesPage />) },
+  { path: '/materiales/:categoryId', element: prot(<CategoriaPage />) },
+  { path: '/materiales/productos/:productId', element: prot(<ProductoPage />) },
+  { path: '/materiales/pedidos', element: prot(<PedidosPage />) },
+  { path: '/settings', element: <Navigate to="/tarifas" replace /> },
 ]);

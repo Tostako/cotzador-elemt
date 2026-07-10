@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../../shared/services/store';
+import { useShallow } from 'zustand/react/shallow';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { useEscapeKey } from '../../shared/hooks/useEscapeKey';
 import { TourBanner } from '../../shared/components/TourBanner';
@@ -8,7 +9,9 @@ import { BackButton } from '../../shared/components/BackButton';
 import { Wallet, Pencil, Trash2 } from 'lucide-react';
 
 export function TarifasPage() {
-  const { config, saveService, deleteService } = useStore();
+  const { config, saveService, deleteService } = useStore(
+    useShallow((s) => ({ config: s.config, saveService: s.saveService, deleteService: s.deleteService }))
+  );
   const showTour = isTourActiveForRoute('/tarifas');
 
   const [editingService, setEditingService] = useState<{ id: string; name: string; price: number; unit: string } | null>(null);

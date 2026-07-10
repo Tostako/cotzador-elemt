@@ -10,6 +10,19 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    target: 'es2020',
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        // Vendors pesados en chunks aparte (mejor caché y menos bloqueo del hilo en móvil).
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          konva: ['konva', 'react-konva'],
+        },
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: './src/__tests__/setup.ts',

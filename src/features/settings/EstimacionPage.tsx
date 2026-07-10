@@ -6,7 +6,8 @@ import { isTourActiveForRoute } from '../../shared/utils/tour';
 import type { CustomEstimation } from '../../shared/types';
 
 export function EstimacionPage() {
-  const { config, updateConfig } = useStore();
+  const config = useStore((s) => s.config);
+  const updateConfig = useStore((s) => s.updateConfig);
   const showTour = isTourActiveForRoute('/estimacion');
   const [showForm, setShowForm] = useState(false);
   const [newEstimation, setNewEstimation] = useState({ name: '', price: '' });

@@ -3,7 +3,8 @@ import { useStore } from '../../shared/services/store';
 import { calculateArea } from '../../shared/services/calculator';
 
 export function QuoteStep3() {
-  const { formData, setFormData } = useStore();
+  const formData = useStore((s) => s.formData);
+  const setFormData = useStore((s) => s.setFormData);
   const area = calculateArea(formData);
   const [rawOverhang, setRawOverhang] = useState(String(formData.overhangSize));
 

@@ -1,8 +1,11 @@
 import { useStore } from '../../shared/services/store';
+import { useShallow } from 'zustand/react/shallow';
 import { calculateArea, calculatePrice } from '../../shared/services/calculator';
 
 export function QuoteStep4() {
-  const { formData, config, setFormData } = useStore();
+  const { formData, config, setFormData } = useStore(
+    useShallow((s) => ({ formData: s.formData, config: s.config, setFormData: s.setFormData }))
+  );
   const area = calculateArea(formData);
   const price = calculatePrice(formData, config);
 

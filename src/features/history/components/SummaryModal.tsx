@@ -1,4 +1,5 @@
 import { useStore } from '../../../shared/services/store';
+import { useShallow } from 'zustand/react/shallow';
 import { calculateArea, calculatePrice } from '../../../shared/services/calculator';
 import { FileText } from 'lucide-react';
 import { useEscapeKey } from '../../../shared/hooks/useEscapeKey';
@@ -9,7 +10,9 @@ interface SummaryModalProps {
 
 export function SummaryModal({ onClose }: SummaryModalProps) {
   useEscapeKey(onClose);
-  const { formData, config, paymentPlans } = useStore();
+  const { formData, config, paymentPlans } = useStore(
+    useShallow((s) => ({ formData: s.formData, config: s.config, paymentPlans: s.paymentPlans }))
+  );
 
   const selectedPlan = formData.paymentPlanId !== undefined
     ? paymentPlans.find((p) => String(p.id) === String(formData.paymentPlanId))

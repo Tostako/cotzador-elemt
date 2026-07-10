@@ -1,74 +1,43 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { showNotification } from '../../shared/hooks/useNotifications';
-import type { QuoteCatalogProduct, QuoteCatalogCategory } from '../../shared/types';
 import { ArrowLeft, Trash2 } from 'lucide-react';
+import { useCatalogCategories, useCatalogProducts, useCreateProduct, useDeleteProduct } from '../../shared/queries/catalog';
 
 export function CategoriaPage() {
   const navigate = useNavigate();
   const { categoryId } = useParams();
-
-  const [category, setCategory] = useState<QuoteCatalogCategory | null>(null);
-  const [products, setProducts] = useState<QuoteCatalogProduct[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: categories = [] } = useCatalogCategories();
+  const { data: products = [], isLoading } = useCatalogProducts(categoryId);
+  const createProd = useCreateProduct();
+  const deleteProd = useDeleteProduct();
+  const category = categories.find((c: any) => c.id === categoryId) || null;
   const [showForm, setShowForm] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: '', description: '' });
 
-  const loadCategoryAndProducts = useCallback(async () => {
-    if (!categoryId) return;
-    try {
-      const { apiService, extractData } = await import('../../shared/services/api');
-      const [catRes, prodRes] = await Promise.all([
-        apiService.getCatalogCategories().catch(() => null),
-        apiService.getCatalogProducts(categoryId).catch(() => null),
-      ]);
-      const cats = extractData(catRes);
-      const prods = extractData(prodRes);
-      if (Array.isArray(cats)) {
-        setCategory(cats.find((c: QuoteCatalogCategory) => c.id === categoryId) || null);
-      }
-      setProducts(Array.isArray(prods) ? prods : []);
-    } catch (err: any) {
-      showNotification('Error', 'error', err.message || 'Error al cargar');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [categoryId]);
-
-  useEffect(() => {
-    loadCategoryAndProducts();
-  }, [loadCategoryAndProducts]);
-
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!newProduct.name.trim()) {
       showNotification('Atención', 'warning', 'El nombre es obligatorio.');
       return;
     }
-    try {
-      const { apiService } = await import('../../shared/services/api');
-      await apiService.createCatalogProduct({
-        category_id: categoryId,
-        name: newProduct.name.trim(),
-        description: newProduct.description.trim() || undefined,
-      });
-      showNotification('Correcto', 'success', 'Producto creado correctamente.');
-      setNewProduct({ name: '', description: '' });
-      setShowForm(false);
-      loadCategoryAndProducts();
-    } catch (err: any) {
-      showNotification('Error', 'error', err.message || 'Error al crear');
-    }
+    createProd.mutate(
+      { category_id: categoryId, name: newProduct.name.trim(), description: newProduct.description.trim() || undefined },
+      {
+        onSuccess: () => {
+          showNotification('Correcto', 'success', 'Producto creado correctamente.');
+          setNewProduct({ name: '', description: '' });
+          setShowForm(false);
+        },
+        onError: (err: any) => showNotification('Error', 'error', err?.message || 'Error al crear'),
+      }
+    );
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      const { apiService } = await import('../../shared/services/api');
-      await apiService.deleteCatalogProduct(id);
-      showNotification('Correcto', 'success', 'Producto eliminado correctamente.');
-      loadCategoryAndProducts();
-    } catch (err: any) {
-      showNotification('Error', 'error', err.message || 'Error al eliminar');
-    }
+  const handleDelete = (id: string) => {
+    deleteProd.mutate(id, {
+      onSuccess: () => showNotification('Correcto', 'success', 'Producto eliminado correctamente.'),
+      onError: (err: any) => showNotification('Error', 'error', err?.message || 'Error al eliminar'),
+    });
   };
 
   return (
@@ -100,7 +69,7 @@ export function CategoriaPage() {
             </div>
             <div className="grid-2">
               <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancelar</button>
-              <button type="button" className="btn" onClick={handleCreate}>Crear</button>
+              <button type="button" className="btn" onClick={handleCreate} disabled={createProd.isPending}>{createProd.isPending ? 'Creando…' : 'Crear'}</button>
             </div>
           </div>
         </div>
@@ -114,7 +83,7 @@ export function CategoriaPage() {
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
-          {products.map((prod) => (
+          {products.map((prod: any) => (
             <div
               key={prod.id}
               className="card"

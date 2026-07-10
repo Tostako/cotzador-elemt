@@ -1,6 +1,20 @@
 import { create } from 'zustand';
 import type { AppConfig, Quote, QuoteFormData, User, SavedPaymentPlan } from '../types';
 
+// Guardado de config con debounce: evita pegarle al backend en cada tecla.
+let _saveConfigTimer: ReturnType<typeof setTimeout> | null = null;
+function debouncedSaveConfig(getConfig: () => AppConfig, wait = 600) {
+  if (_saveConfigTimer) clearTimeout(_saveConfigTimer);
+  _saveConfigTimer = setTimeout(() => {
+    _saveConfigTimer = null;
+    import('./api').then(({ apiService, toSaaSConfig }) => {
+      apiService.saveMyConfig(toSaaSConfig(getConfig())).catch((err: any) => {
+        console.error('[STORE] Error saving config:', err?.message || err);
+      });
+    });
+  }, wait);
+}
+
 export interface AppState {
   // Auth
   user: User | null;
@@ -271,16 +285,8 @@ export const useStore = create<AppState>((set, get) => ({
   config: demoConfig,
   updateConfig: (partial) => {
     set((state) => ({ config: { ...state.config, ...partial } }));
-    // Sync to SaaS — convert camelCase to snake_case before sending
-    try {
-      import('./api').then(({ apiService, toSaaSConfig }) => {
-        const current = get().config;
-        const saasPayload = toSaaSConfig(current);
-        apiService.saveMyConfig(saasPayload).catch((err: any) => {
-          console.error('[STORE] Error saving config:', err.message || err);
-        });
-      });
-    } catch {}
+    // Sync a SaaS con debounce (no en cada cambio de campo).
+    debouncedSaveConfig(() => get().config);
   },
   saveService: (id, service) => {
     set((state) => ({

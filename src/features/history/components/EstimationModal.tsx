@@ -12,7 +12,7 @@ interface EstimationModalProps {
 
 export function EstimationModal({ quote, estimationType, onClose, onChangeType }: EstimationModalProps) {
   useEscapeKey(onClose);
-  const { config } = useStore();
+  const config = useStore((s) => s.config);
 
   const getPricePerM2 = () => {
     let price = 0;

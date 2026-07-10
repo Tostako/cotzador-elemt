@@ -3,7 +3,8 @@ import { calculateArea } from '../../shared/services/calculator';
 import { Ruler, PencilRuler } from 'lucide-react';
 
 export function QuoteStep2() {
-  const { formData, setFormData } = useStore();
+  const formData = useStore((s) => s.formData);
+  const setFormData = useStore((s) => s.setFormData);
   const area = calculateArea(formData);
 
   const updateSide = (side: 'frontal' | 'posterior' | 'latIzq' | 'latDer', value: string) => {

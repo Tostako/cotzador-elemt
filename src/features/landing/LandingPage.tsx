@@ -165,6 +165,8 @@ export function LandingPage() {
   const [landingConfig, setLandingConfig] = useState<Record<string, any>>({});
   const [landingImages, setLandingImages] = useState<any[]>([]);
   const [ready, setReady] = useState(false);
+  // En móvil no montamos las secuencias por scroll (64 imágenes) para no saturar memoria/CPU.
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches);
 
   const progressRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -177,6 +179,13 @@ export function LandingPage() {
   useEffect(() => {
     const t = requestAnimationFrame(() => setReady(true));
     return () => cancelAnimationFrame(t);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const on = () => setIsMobile(mq.matches);
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
   }, []);
 
   // Barra de progreso + color de fondo (todo por refs, sin re-render por frame).
@@ -362,7 +371,23 @@ export function LandingPage() {
         )}
       </nav>
 
-      {/* PORTADA — secuencia de scroll con hero minimalista encima */}
+      {/* PORTADA — móvil: imagen estática; escritorio: secuencia por scroll */}
+      {isMobile ? (
+        <section id="hero" style={{ position: 'relative', minHeight: '100svh', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
+          <img src={portadaFrames[portadaFrames.length - 1] || logoGold} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} loading="eager" />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(7,7,7,0.55) 0%, rgba(7,7,7,0.92) 100%)' }} />
+          <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '0 22px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <img src={getImage('logo_main', logoGold)} alt="ELEMENThaus" style={{ width: 'clamp(130px, 42vw, 190px)', height: 'auto', filter: 'drop-shadow(0 0 30px rgba(182,148,98,0.4))' }} />
+            <span className="lp-eyebrow" style={{ marginTop: 22, fontSize: 12, letterSpacing: '0.3em' }}>Construcción · Arquitectura · Ingeniería</span>
+            <h1 className="lp-hero-title">Del plano a la cuenta de cobro</h1>
+            <p className="lp-hero-sub">{getConfig('hero', 'subtitle', 'La plataforma integral para tu estudio: diseña planos, calcula materiales, cotiza y cobra.')}</p>
+            <div className="lp-hero-cta">
+              <button type="button" className="btn" style={{ width: 'auto' }} onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}>{isAuthenticated ? 'Ir al Dashboard →' : 'Comenzar ahora →'}</button>
+              <button type="button" className="btn btn-ghost" style={{ width: 'auto' }} onClick={() => scrollTo('#proc')}>Conocer más</button>
+            </div>
+          </div>
+        </section>
+      ) : (
       <ScrollSequence id="hero" frames={portadaFrames} heightVh={480} dim={0.4} onProgress={heroProgress}>
         <div className="lp-mesh" style={{ width: 520, height: 520, top: '-8%', left: '-6%', background: 'radial-gradient(circle, rgba(182,148,98,0.22), transparent 60%)' }} />
         <div ref={heroOverlayRef} className="lp-hero-overlay">
@@ -379,6 +404,7 @@ export function LandingPage() {
         </div>
         <div className="lp-scroll-hint">Desliza para explorar ↓</div>
       </ScrollSequence>
+      )}
 
       {/* Lámina de contenido */}
       <div className="lp-content" ref={contentRef} style={{ backgroundColor: 'rgb(26, 23, 20)' }}>
@@ -435,7 +461,29 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* FUNCIONES — secuencia interior con funciones apareciendo encima */}
+        {/* FUNCIONES — móvil: lista estática; escritorio: secuencia interior */}
+        {isMobile ? (
+          <section id="features" style={{ padding: '80px 0' }}>
+            <div className="lp-wrap">
+              <span className="lp-eyebrow">Funciones</span>
+              <h2 className="lp-display" style={{ fontSize: 'clamp(2rem, 7vw, 2.6rem)', marginTop: 14, color: '#f4efe6' }}>Una plataforma para todo tu estudio</h2>
+              <div style={{ display: 'grid', gap: 12, marginTop: 26 }}>
+                {featuresSeq.map((f) => {
+                  const Icon = f.icon;
+                  return (
+                    <div key={f.title} className="card" style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                      <span className="lp-func-ic" style={{ width: 50, height: 50, marginBottom: 0, flexShrink: 0 }}><Icon size={22} strokeWidth={1.7} /></span>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 16, color: '#f4efe6' }}>{f.title}</div>
+                        <div className="small" style={{ color: '#9b9486', marginTop: 4 }}>{f.desc}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        ) : (
         <ScrollSequence id="features" frames={interiorFrames} heightVh={620} dim={0.62} onProgress={funcProgress}>
           <div className="lp-func-wrap">
             <span className="lp-eyebrow lp-func-eyebrow">Funciones</span>
@@ -464,6 +512,7 @@ export function LandingPage() {
             <div className="lp-func-count"><span ref={counterRef}>01</span> / {String(featuresSeq.length).padStart(2, '0')}</div>
           </div>
         </ScrollSequence>
+        )}
 
         {/* Servicios */}
         <section id="services" style={{ position: 'relative', padding: '96px 0' }}>

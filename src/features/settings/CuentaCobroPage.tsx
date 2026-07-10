@@ -5,7 +5,8 @@ import { BackButton } from '../../shared/components/BackButton';
 import { Receipt, Building2, User, Signature, Landmark, FileText } from 'lucide-react';
 
 export function CuentaCobroPage() {
-  const { config, updateConfig } = useStore();
+  const config = useStore((s) => s.config);
+  const updateConfig = useStore((s) => s.updateConfig);
   const showTour = isTourActiveForRoute('/cuenta-cobro');
 
   const updateInvoiceField = (section: 'company' | 'representative' | 'banking' | 'document', field: string, value: string | number) => {

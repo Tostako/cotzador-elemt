@@ -1,64 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { showNotification } from '../../shared/hooks/useNotifications';
-import type { QuoteCatalogCategory } from '../../shared/types';
 import { BackButton } from '../../shared/components/BackButton';
 import { Package, Trash2, FolderOpen, ArrowRight } from 'lucide-react';
+import { useCatalogCategories, useCreateCategory, useDeleteCategory } from '../../shared/queries/catalog';
 
 export function MaterialesPage() {
   const navigate = useNavigate();
-
-  const [categories, setCategories] = useState<QuoteCatalogCategory[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: categories = [], isLoading } = useCatalogCategories();
+  const createCat = useCreateCategory();
+  const deleteCat = useDeleteCategory();
   const [showForm, setShowForm] = useState(false);
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
 
-  useEffect(() => {
-    loadCategories();
-  }, []);
-
-  const loadCategories = async () => {
-    try {
-      const { apiService, extractData } = await import('../../shared/services/api');
-      const res = await apiService.getCatalogCategories();
-      const data = extractData(res);
-      setCategories(Array.isArray(data) ? data : []);
-    } catch (err: any) {
-      showNotification('Error', 'error', err.message || 'Error al cargar categorías');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!newCategory.name.trim()) {
       showNotification('Atención', 'warning', 'El nombre es obligatorio.');
       return;
     }
-    try {
-      const { apiService } = await import('../../shared/services/api');
-      await apiService.createCatalogCategory({
-        name: newCategory.name.trim(),
-        description: newCategory.description.trim() || undefined,
-      });
-      showNotification('Correcto', 'success', 'Categoría creada correctamente.');
-      setNewCategory({ name: '', description: '' });
-      setShowForm(false);
-      loadCategories();
-    } catch (err: any) {
-      showNotification('Error', 'error', err.message || 'Error al crear');
-    }
+    createCat.mutate(
+      { name: newCategory.name.trim(), description: newCategory.description.trim() || undefined },
+      {
+        onSuccess: () => {
+          showNotification('Correcto', 'success', 'Categoría creada correctamente.');
+          setNewCategory({ name: '', description: '' });
+          setShowForm(false);
+        },
+        onError: (err: any) => showNotification('Error', 'error', err?.message || 'Error al crear'),
+      }
+    );
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      const { apiService } = await import('../../shared/services/api');
-      await apiService.deleteCatalogCategory(id);
-      showNotification('Correcto', 'success', 'Categoría eliminada correctamente.');
-      loadCategories();
-    } catch (err: any) {
-      showNotification('Error', 'error', err.message || 'Error al eliminar');
-    }
+  const handleDelete = (id: string) => {
+    deleteCat.mutate(id, {
+      onSuccess: () => showNotification('Correcto', 'success', 'Categoría eliminada correctamente.'),
+      onError: (err: any) => showNotification('Error', 'error', err?.message || 'Error al eliminar'),
+    });
   };
 
   return (
@@ -85,7 +62,7 @@ export function MaterialesPage() {
             </div>
             <div className="grid-2">
               <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancelar</button>
-              <button type="button" className="btn" onClick={handleCreate}>Crear</button>
+              <button type="button" className="btn" onClick={handleCreate} disabled={createCat.isPending}>{createCat.isPending ? 'Creando…' : 'Crear'}</button>
             </div>
           </div>
         </div>
@@ -99,7 +76,7 @@ export function MaterialesPage() {
         </div>
       ) : (
         <div className="grid-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16 }}>
-          {categories.map((cat) => (
+          {categories.map((cat: any) => (
             <div
               key={cat.id}
               className="card"

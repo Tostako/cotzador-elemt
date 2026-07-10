@@ -1,7 +1,8 @@
 import { useStore } from '../../shared/services/store';
 
 export function QuoteStep1() {
-  const { formData, setFormData } = useStore();
+  const formData = useStore((s) => s.formData);
+  const setFormData = useStore((s) => s.setFormData);
 
   return (
     <div className="card mt-2" style={{ display: 'grid', gap: 16 }}>
