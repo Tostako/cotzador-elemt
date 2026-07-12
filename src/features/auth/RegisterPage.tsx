@@ -51,7 +51,7 @@ export function RegisterPage() {
         shop_slug: SHOP_SLUG,
         address: profession || undefined,
       });
-      let token = res.token || (res.data && res.data.token);
+      let token = res.token || res.access_token || (res.data && (res.data.token || res.data.access_token));
       if (!token) {
         throw new Error('El servidor no devolvió un token de sesión');
       }
@@ -65,7 +65,7 @@ export function RegisterPage() {
           localStorage.setItem('element_user:v1', JSON.stringify(tempUser));
         }
         selectRes = await apiService.selectShop({ shop_slug: SHOP_SLUG });
-        const newToken = selectRes.token || (selectRes.data && selectRes.data.token);
+        const newToken = selectRes.token || selectRes.access_token || (selectRes.data && (selectRes.data.token || selectRes.data.access_token));
           if (newToken) {
             token = newToken;
           }
