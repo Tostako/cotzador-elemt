@@ -16,9 +16,12 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Vendors pesados en chunks aparte (mejor caché y menos bloqueo del hilo en móvil).
-        manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
-          konva: ['konva', 'react-konva'],
+        // Forma de función (compatible con los tipos de vitest/config).
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('konva')) return 'konva'; // konva + react-konva
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return 'react';
+          return;
         },
       },
     },
