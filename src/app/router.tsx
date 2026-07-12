@@ -1,7 +1,8 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { Layout } from './Layout';
 import { useStore } from '../shared/services/store';
+import { isCurrentTokenExpired, handleAuthExpired } from '../shared/services/api';
 
 // Carga diferida por ruta: el bundle inicial se reduce y las dependencias pesadas
 // (p. ej. Konva en Planos/Barrederas) solo se descargan al entrar a esas rutas.
@@ -30,7 +31,16 @@ const BarrederasPage = lazy(() => import('../features/barrederas/BarrederasPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+  const logout = useStore((s) => s.logout);
+  const expired = isCurrentTokenExpired();
+  useEffect(() => {
+    if (expired) {
+      handleAuthExpired();
+      logout();
+    }
+  }, [expired, logout]);
+  if (!isAuthenticated || expired) return <Navigate to="/login" replace />;
+  return <>{children}</>;
 }
 
 const Fallback = (

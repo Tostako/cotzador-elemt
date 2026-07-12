@@ -14,6 +14,25 @@ function parseJwt(token: string): any {
   }
 }
 
+// ── Expiración de sesión ──────────────────────────────────
+function isTokenExpired(token: string | null | undefined): boolean {
+  if (!token) return false;
+  const p = parseJwt(token);
+  if (!p || typeof p.exp !== 'number') return false; // sin exp → no forzamos logout
+  return p.exp * 1000 <= Date.now();
+}
+
+/** ¿El token guardado está vencido? (chequeo proactivo en rutas protegidas) */
+export function isCurrentTokenExpired(): boolean {
+  return isTokenExpired(getToken());
+}
+
+/** Limpia la sesión local y avisa a la app para sacar al usuario a login. */
+export function handleAuthExpired(): void {
+  try { localStorage.removeItem('element_user:v1'); } catch { /* ignore */ }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('auth:expired'));
+}
+
 // Extract data from backend responses (they wrap in { data: ... })
 export function extractData(response: any): any {
   if (response && typeof response === 'object' && 'data' in response) {
@@ -136,6 +155,13 @@ function buildUserFromToken(token: string) {
 async function api(path: string, options: RequestInit = {}) {
   const token = getToken();
 
+  const isAuthRoute = path.startsWith('/auth/') || path.startsWith('/public/');
+  // Token vencido → no gastamos la petición: limpiamos y sacamos al usuario.
+  if (token && !isAuthRoute && isTokenExpired(token)) {
+    handleAuthExpired();
+    throw new Error('Tu sesión expiró. Inicia sesión de nuevo.');
+  }
+
   // Add shop_slug as query param if not already present and not a public route
   // Auth routes ALSO need shop_slug so the backend can identify the shop
   let finalPath = path;
@@ -164,6 +190,10 @@ async function api(path: string, options: RequestInit = {}) {
     });
 
     if (!response.ok) {
+      // 401 en ruta autenticada = token inválido/vencido → sacar al usuario.
+      if (response.status === 401 && !isAuthRoute) {
+        handleAuthExpired();
+      }
       const error = await response.json().catch(() => ({ error: `Error HTTP ${response.status}` }));
       console.error('[API ERROR]', response.status, error);
       throw new Error(error.error || error.message || `Error HTTP ${response.status}`);
