@@ -22,6 +22,8 @@ export interface AppState {
   login: (user: User) => void;
   logout: () => void;
   loadFromBackend: () => Promise<void>;
+  // true una vez que loadFromBackend terminó (éxito o error) al menos una vez tras el login.
+  hasLoadedInitialData: boolean;
 
   // Config
   config: AppConfig;
@@ -174,15 +176,16 @@ let isLoadingFromBackend = false;
 export const useStore = create<AppState>((set, get) => ({
   user: getStoredUser(),
   isAuthenticated: !!getStoredUser(),
+  hasLoadedInitialData: false,
   login: (user) => {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
-    set({ user, isAuthenticated: true });
+    set({ user, isAuthenticated: true, hasLoadedInitialData: false });
   },
   logout: () => {
     // Revoca el refresh token en el server (best-effort; no bloquea el logout local).
     import('./api').then(({ apiService }) => apiService.sessionLogout().catch(() => {})).catch(() => {});
     localStorage.removeItem(USER_KEY);
-    set({ user: null, isAuthenticated: false, quotes: [], config: demoConfig });
+    set({ user: null, isAuthenticated: false, quotes: [], config: demoConfig, hasLoadedInitialData: false });
   },
   loadFromBackend: async () => {
     if (isLoadingFromBackend) {
@@ -281,6 +284,7 @@ export const useStore = create<AppState>((set, get) => ({
       console.error('[STORE] Error loading from backend:', e.message || e);
     } finally {
       isLoadingFromBackend = false;
+      set({ hasLoadedInitialData: true });
     }
   },
 
