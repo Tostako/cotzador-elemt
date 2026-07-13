@@ -60,8 +60,9 @@ export function Layout({ children }: LayoutProps) {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="wrap">
         {showContent ? children : (
-          <div style={{ minHeight: '70vh', display: 'grid', placeItems: 'center' }}>
+          <div style={{ minHeight: '70vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
             <div className="app-spinner" />
+            <p className="small" style={{ color: '#999' }}>Cargando tus datos…</p>
           </div>
         )}
       </div>
