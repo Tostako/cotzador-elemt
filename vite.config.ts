@@ -16,9 +16,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Vendors pesados en chunks aparte (mejor caché y menos bloqueo del hilo en móvil).
-        manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
-          konva: ['konva', 'react-konva'],
+        // Vite 8 usa Rolldown por debajo: manualChunks solo acepta forma de función.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('konva')) return 'konva';
+          if (id.includes('react-router-dom') || id.includes('/react/') || id.includes('/react-dom/')) return 'react';
         },
       },
     },
