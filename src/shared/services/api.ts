@@ -214,6 +214,11 @@ async function api(path: string, options: RequestInit = {}) {
   const baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
   const url = `${baseUrl}${finalPath}`;
 
+  // En móvil, una red lenta/inestable puede dejar el fetch colgado indefinidamente.
+  // Con timeout, la petición falla con un mensaje claro en vez de bloquear la UI.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20_000);
+
   const doFetch = (authToken: string | null) => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -221,7 +226,7 @@ async function api(path: string, options: RequestInit = {}) {
       ...((options.headers as Record<string, string>) || {}),
     };
     if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-    return fetch(url, { ...options, headers, credentials: 'include' });
+    return fetch(url, { ...options, headers, credentials: 'include', signal: controller.signal });
   };
 
   try {
@@ -248,10 +253,15 @@ async function api(path: string, options: RequestInit = {}) {
     if (response.status === 204) return null; // sin contenido (p. ej. logout)
     return await response.json();
   } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw new Error('El servidor tardó demasiado en responder. Intenta de nuevo.');
+    }
     if (err.name === 'TypeError' || err.message?.includes('Failed to fetch')) {
       throw new Error('No se pudo conectar con el servidor. Verifica tu conexión.');
     }
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
