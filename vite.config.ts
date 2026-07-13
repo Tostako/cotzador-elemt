@@ -19,8 +19,9 @@ export default defineConfig({
         // Vite 8 usa Rolldown por debajo: manualChunks solo acepta forma de función.
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
-          if (id.includes('konva')) return 'konva';
-          if (id.includes('react-router-dom') || id.includes('/react/') || id.includes('/react-dom/')) return 'react';
+          if (id.includes('konva')) return 'konva'; // konva + react-konva
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return 'react';
+          return;
         },
       },
     },

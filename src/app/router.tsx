@@ -30,6 +30,8 @@ const BarrederasPage = lazy(() => import('../features/barrederas/BarrederasPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
+  // El access vencido no saca al usuario: api() intenta refrescar; solo si el refresh
+  // falla se dispara 'auth:expired' (lo maneja Layout).
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }
 

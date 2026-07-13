@@ -14,6 +14,25 @@ function parseJwt(token: string): any {
   }
 }
 
+// ── Expiración de sesión ──────────────────────────────────
+function isTokenExpired(token: string | null | undefined): boolean {
+  if (!token) return false;
+  const p = parseJwt(token);
+  if (!p || typeof p.exp !== 'number') return false; // sin exp → no forzamos logout
+  return p.exp * 1000 <= Date.now();
+}
+
+/** ¿El token guardado está vencido? (chequeo proactivo en rutas protegidas) */
+export function isCurrentTokenExpired(): boolean {
+  return isTokenExpired(getToken());
+}
+
+/** Limpia la sesión local y avisa a la app para sacar al usuario a login. */
+export function handleAuthExpired(): void {
+  try { localStorage.removeItem('element_user:v1'); } catch { /* ignore */ }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('auth:expired'));
+}
+
 // Extract data from backend responses (they wrap in { data: ... })
 export function extractData(response: any): any {
   if (response && typeof response === 'object' && 'data' in response) {
@@ -133,41 +152,97 @@ function buildUserFromToken(token: string) {
   };
 }
 
-async function api(path: string, options: RequestInit = {}) {
-  const token = getToken();
+// Guarda el nuevo access token dentro del objeto de usuario en localStorage.
+function saveAccessToken(token: string): void {
+  try {
+    const raw = localStorage.getItem('element_user:v1');
+    const obj = raw ? JSON.parse(raw) : {};
+    obj.token = token;
+    localStorage.setItem('element_user:v1', JSON.stringify(obj));
+  } catch { /* ignore */ }
+}
 
-  // Add shop_slug as query param if not already present and not a public route
-  // Auth routes ALSO need shop_slug so the backend can identify the shop
+// Refresco single-flight: varias peticiones que caen a 401 a la vez comparten un solo /refresh.
+// El refresh token vive en una cookie httpOnly → se envía solo con credentials: 'include'.
+let _refreshPromise: Promise<string | null> | null = null;
+function refreshAccessToken(): Promise<string | null> {
+  if (_refreshPromise) return _refreshPromise;
+  _refreshPromise = (async () => {
+    try {
+      const baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+      const res = await fetch(`${baseUrl}/auth/customer/refresh?shop_slug=${SHOP_SLUG}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-Shop-Slug': SHOP_SLUG },
+        body: '{}',
+      });
+      if (!res.ok) return null;
+      const data = await res.json().catch(() => null);
+      const payload = data?.data ?? data;
+      const newAccess: string | undefined = payload?.access_token ?? payload?.token;
+      if (!newAccess) return null;
+      saveAccessToken(newAccess);
+      return newAccess;
+    } catch {
+      return null;
+    } finally {
+      _refreshPromise = null;
+    }
+  })();
+  return _refreshPromise;
+}
+
+async function api(path: string, options: RequestInit = {}) {
+  const isAuthRoute = path.startsWith('/auth/') || path.startsWith('/public/');
+  let token = getToken();
+
+  // Access vencido → intentamos refrescar ANTES de gastar la petición.
+  if (token && !isAuthRoute && isTokenExpired(token)) {
+    token = await refreshAccessToken();
+    if (!token) {
+      handleAuthExpired();
+      throw new Error('Tu sesión expiró. Inicia sesión de nuevo.');
+    }
+  }
+
+  // shop_slug en la query (auth y demás; las públicas ya lo llevan en el path)
   let finalPath = path;
   if (!path.includes('shop_slug') && !path.startsWith('/public/')) {
     const separator = path.includes('?') ? '&' : '?';
     finalPath = `${path}${separator}shop_slug=${SHOP_SLUG}`;
   }
-
   const baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
   const url = `${baseUrl}${finalPath}`;
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'X-Shop-Slug': SHOP_SLUG,
-    ...((options.headers as Record<string, string>) || {}),
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
 
   // En móvil, una red lenta/inestable puede dejar el fetch colgado indefinidamente.
   // Con timeout, la petición falla con un mensaje claro en vez de bloquear la UI.
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 20_000);
 
+  const doFetch = (authToken: string | null) => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Shop-Slug': SHOP_SLUG,
+      ...((options.headers as Record<string, string>) || {}),
+    };
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+    return fetch(url, { ...options, headers, credentials: 'include', signal: controller.signal });
+  };
+
   try {
-    const response = await fetch(url, {
-      ...options,
-      headers,
-      signal: controller.signal,
-    });
+    let response = await doFetch(token);
+
+    // 401 en ruta autenticada → un intento de refresh + reintento de la misma petición.
+    if (response.status === 401 && !isAuthRoute) {
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        response = await doFetch(newToken);
+      }
+      if (response.status === 401) {
+        // El refresh también falló (cookie vencida/revocada) → sacar al usuario.
+        handleAuthExpired();
+      }
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: `Error HTTP ${response.status}` }));
@@ -175,8 +250,8 @@ async function api(path: string, options: RequestInit = {}) {
       throw new Error(error.error || error.message || `Error HTTP ${response.status}`);
     }
 
-    const data = await response.json();
-    return data;
+    if (response.status === 204) return null; // sin contenido (p. ej. logout)
+    return await response.json();
   } catch (err: any) {
     if (err.name === 'AbortError') {
       throw new Error('El servidor tardó demasiado en responder. Intenta de nuevo.');
@@ -202,6 +277,8 @@ export const apiService = {
     api('/auth/select-shop', { method: 'POST', body: JSON.stringify(data) }),
 
   me: () => api('/auth/me'),
+  // Revoca el refresh token en el server y limpia la cookie httpOnly.
+  sessionLogout: () => api('/auth/customer/logout', { method: 'POST', body: '{}' }),
   updateMe: (data: any) => api('/customers/me', { method: 'PATCH', body: JSON.stringify(data) }),
   resetPassword: (data: any) => api('/auth/customer/reset-password', { method: 'PATCH', body: JSON.stringify(data) }),
 

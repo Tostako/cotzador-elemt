@@ -179,6 +179,8 @@ export const useStore = create<AppState>((set, get) => ({
     set({ user, isAuthenticated: true });
   },
   logout: () => {
+    // Revoca el refresh token en el server (best-effort; no bloquea el logout local).
+    import('./api').then(({ apiService }) => apiService.sessionLogout().catch(() => {})).catch(() => {});
     localStorage.removeItem(USER_KEY);
     set({ user: null, isAuthenticated: false, quotes: [], config: demoConfig });
   },
