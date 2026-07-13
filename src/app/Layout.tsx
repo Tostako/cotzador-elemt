@@ -16,6 +16,7 @@ export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const loadFromBackend = useStore((s) => s.loadFromBackend);
+  const hasLoadedInitialData = useStore((s) => s.hasLoadedInitialData);
 
   // Sesión expirada (token vencido o 401 del backend) → sacar al usuario.
   useEffect(() => {
@@ -30,19 +31,27 @@ export function Layout({ children }: LayoutProps) {
     return () => window.removeEventListener('auth:expired', onExpired);
   }, [navigate]);
 
-  // Load quotes and config from SaaS on mount if already logged in
+  // Carga quotes/config desde el SaaS una sola vez por sesión (no en cada navegación:
+  // Layout se remonta en cada cambio de ruta protegida, así que sin el guard de
+  // hasLoadedInitialData se repetía la petición cada vez que el usuario navegaba).
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !hasLoadedInitialData) {
       // Small delay to ensure auth state + localStorage are fully propagated
       const timer = setTimeout(() => {
         const stored = localStorage.getItem('element_user:v1');
         if (stored) {
           loadFromBackend();
+        } else {
+          useStore.setState({ hasLoadedInitialData: true });
         }
       }, 200);
       return () => clearTimeout(timer);
     }
-  }, [isAuthenticated, loadFromBackend]);
+  }, [isAuthenticated, hasLoadedInitialData, loadFromBackend]);
+
+  // Mientras no haya terminado la primera carga, evitamos mostrar la página con
+  // datos vacíos/demo — eso es lo que se sentía como "hay que navegar para que cargue".
+  const showContent = !isAuthenticated || hasLoadedInitialData;
 
   return (
     <>
@@ -50,7 +59,12 @@ export function Layout({ children }: LayoutProps) {
       <TopNav onMenuClick={() => setSidebarOpen(true)} />
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="wrap">
-        {children}
+        {showContent ? children : (
+          <div style={{ minHeight: '70vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+            <div className="app-spinner" />
+            <p className="small" style={{ color: '#999' }}>Cargando tus datos…</p>
+          </div>
+        )}
       </div>
     </>
   );
