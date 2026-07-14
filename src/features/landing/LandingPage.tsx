@@ -188,6 +188,28 @@ export function LandingPage() {
     return () => mq.removeEventListener?.('change', on);
   }, []);
 
+  // Bloquea el scroll del body mientras el menú móvil está abierto.
+  // Sin esto, en Safari/Chrome de iOS el body sigue haciendo scroll detrás
+  // del overlay fixed y el menú "pierde" su fondo (bug clásico de iOS).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const scrollY = window.scrollY;
+    const { body } = document;
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.overflow = 'hidden';
+    return () => {
+      body.style.position = '';
+      body.style.top = '';
+      body.style.left = '';
+      body.style.right = '';
+      body.style.overflow = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, [menuOpen]);
+
   // Barra de progreso + color de fondo (todo por refs, sin re-render por frame).
   useEffect(() => {
     const reduce = reduceMotion();
@@ -321,7 +343,7 @@ export function LandingPage() {
 
       {/* Nav */}
       <nav className={`landing-nav ${scrolled ? 'scrolled' : ''}`}>
-        <div style={{ maxWidth: 1240, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="landing-nav-inner">
           <button type="button" onClick={() => scrollTo('#hero')} style={{ border: 'none', background: 'transparent', padding: 0 }}>
             <img src={getImage('logo_abbreviated', logoPrincipal)} alt="ELEMENThaus" style={{ height: 48, width: 'auto', display: 'block' }} />
           </button>

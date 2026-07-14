@@ -1061,6 +1061,14 @@ input[type="number"] {
   transition: all 0.35s ease;
 }
 
+.landing-nav-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 /* ===== RESPONSIVE NAV VISIBILITY (global) =====
    Estas reglas viven aquí (no dentro de un componente) para que la
    landing y el resto de la app compartan el mismo comportamiento y no
@@ -1076,6 +1084,49 @@ input[type="number"] {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Escritorio: navbar tipo isla flotante con efecto "liquid glass" negro;
+   al hacer scroll se expande a una barra completa (ancho total). */
+@media (min-width: 861px) {
+  .landing-nav,
+  .landing-nav.scrolled {
+    padding: 16px 22px 0;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: none;
+  }
+
+  .landing-nav-inner {
+    padding: 13px 28px;
+    border-radius: 999px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.08)),
+      rgba(12, 11, 10, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(22px) saturate(170%);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    transition: max-width 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+      padding 0.5s cubic-bezier(0.16, 1, 0.3, 1), background 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease;
+  }
+
+  .landing-nav.scrolled {
+    padding: 0;
+  }
+
+  .landing-nav.scrolled .landing-nav-inner {
+    max-width: 100%;
+    border-radius: 0;
+    padding: 16px 40px;
+    background: rgba(9, 8, 7, 0.88);
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: none;
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
 }
 
 .landing-nav-link {
