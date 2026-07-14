@@ -1086,8 +1086,8 @@ input[type="number"] {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Escritorio: navbar tipo isla flotante con efecto "liquid glass" negro;
-   al hacer scroll se expande a una barra completa (ancho total). */
+/* Escritorio: navbar tipo isla flotante con efecto "liquid glass" negro,
+   fija así en toda la página (no se expande a barra completa al hacer scroll). */
 @media (min-width: 861px) {
   .landing-nav,
   .landing-nav.scrolled {
@@ -1108,24 +1108,14 @@ input[type="number"] {
     box-shadow: 0 12px 34px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(22px) saturate(170%);
     -webkit-backdrop-filter: blur(22px) saturate(170%);
-    transition: max-width 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-      padding 0.5s cubic-bezier(0.16, 1, 0.3, 1), background 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease;
-  }
-
-  .landing-nav.scrolled {
-    padding: 0;
+    transition: background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
   }
 
   .landing-nav.scrolled .landing-nav-inner {
-    max-width: 100%;
-    border-radius: 0;
-    padding: 16px 40px;
-    background: rgba(9, 8, 7, 0.88);
-    border: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: none;
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.08)),
+      rgba(8, 7, 6, 0.72);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 }
 
