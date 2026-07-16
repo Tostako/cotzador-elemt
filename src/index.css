@@ -1077,6 +1077,10 @@ input[type="number"] {
 @media (max-width: 860px) {
   .hide-mobile { display: none !important; }
   .show-mobile { display: flex !important; }
+  /* Editor de planos: colapsa el selector de piso/habitación en un desplegable
+     y oculta las tarjetas de métricas mientras está en pantalla completa. */
+  .plano-pisohab-collapsed { display: none !important; }
+  .plano-metrics-fs-hide { display: none !important; }
 }
 
 .landing-nav.scrolled {

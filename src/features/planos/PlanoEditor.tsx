@@ -42,6 +42,7 @@ export function PlanoEditor({ planId }: { planId?: string }) {
   const [saving, setSaving] = useState(false);
   const [derivando, setDerivando] = useState(false);
   const [showDatos, setShowDatos] = useState(false); // datos del plano colapsables
+  const [showPisoHab, setShowPisoHab] = useState(false); // desplegable de piso/habitación (móvil)
   const [selectedWallId, setSelectedWallId] = useState<string | null>(null); // muro seleccionado (menú contextual)
   const [wallEditOpen, setWallEditOpen] = useState(false); // panel "Editar muro" (distancia y columnas del muro seleccionado)
   const [wallEditDistance, setWallEditDistance] = useState('3');
@@ -496,7 +497,18 @@ export function PlanoEditor({ planId }: { planId?: string }) {
       >
       {/* Controles: piso · habitación · herramientas */}
       <div className="card" style={{ marginBottom: 12, display: 'grid', gap: 14 }}>
-        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+        {/* En móvil, piso/habitación quedan detrás de un desplegable para no ocupar toda la pantalla */}
+        <button
+          type="button"
+          className="show-mobile"
+          onClick={() => setShowPisoHab((v) => !v)}
+          style={{ alignItems: 'center', gap: 8, width: '100%', background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '8px 12px', color: '#f4efe6', cursor: 'pointer', font: 'inherit' }}
+        >
+          <span style={{ fontWeight: 700 }}>Piso y habitación</span>
+          <span className="small" style={{ color: '#8c8578' }}>{nivelActivo.nombre} · {espacioActivo.nombre}</span>
+          <span style={{ marginLeft: 'auto', color: '#8c8578' }}>{showPisoHab ? '▲' : '▼'}</span>
+        </button>
+        <div className={showPisoHab ? undefined : 'plano-pisohab-collapsed'} style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
           {/* Piso */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 240px' }}>
             <label className="small" style={{ fontWeight: 700 }}>Piso</label>
@@ -561,7 +573,7 @@ export function PlanoEditor({ planId }: { planId?: string }) {
           <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
             <button type="button" style={btn(movingNode)} onClick={() => { setPlacing(false); setMovingNode((v) => !v); }} title="Reubicar el punto seleccionado">✎ Mover</button>
             <button type="button" style={btn(false)} onClick={undo} title="Deshacer último muro">↶</button>
-            <button type="button" style={{ ...btn(false), color: '#ff6b6b', borderColor: 'rgba(255,107,107,0.3)' }} onClick={clearEspacio} title="Limpiar habitación">🗑️</button>
+            <button type="button" style={{ ...btn(false), color: '#ff6b6b', borderColor: 'rgba(255,107,107,0.3)', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={clearEspacio} title="Eliminar todo el proyecto">🗑️ Eliminar todo el proyecto</button>
             <button
               type="button"
               style={{ ...btn(isFullscreen), display: 'inline-flex', alignItems: 'center', gap: 6 }}
@@ -731,8 +743,11 @@ export function PlanoEditor({ planId }: { planId?: string }) {
         </Stage>
       </div>
 
-      {/* Métricas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginTop: 12 }}>
+      {/* Métricas: en móvil se ocultan mientras está en pantalla completa (no caben bien) */}
+      <div
+        className={isFullscreen ? 'plano-metrics-fs-hide' : undefined}
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginTop: 12 }}
+      >
         <div className="card" style={{ padding: 14 }}>
           <div className="small">Perímetro total ({espacioActivo.nombre})</div>
           <div style={{ fontWeight: 700, fontSize: 20, color: '#b69462' }}>{perimTotal.toFixed(2)} m</div>
