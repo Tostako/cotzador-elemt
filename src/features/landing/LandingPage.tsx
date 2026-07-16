@@ -287,6 +287,9 @@ export function LandingPage() {
     { icon: CreditCard, title: 'Planes de pago', desc: 'Cuotas configurables, abonos y estado de pago por cada cobro.' },
     { icon: Wallet, title: 'Tarifas configurables', desc: 'Define precios de servicios y paquetes; el cotizador los aplica al instante.' },
   ];
+  // Se muestran de a 3 (tarjetas liquid glass) sobre la secuencia interior.
+  const featureGroups: Feature[][] = [];
+  for (let i = 0; i < featuresSeq.length; i += 3) featureGroups.push(featuresSeq.slice(i, i + 3));
 
   const services = [
     { n: '01', t: 'Diseño Arquitectónico', d: 'Planos arquitectónicos completos con normativa local.' },
@@ -318,9 +321,9 @@ export function LandingPage() {
     el.style.transform = `translateY(${p * -36}px)`;
   };
 
-  // Funciones: activa una función a la vez según el avance
+  // Funciones: activa un grupo de 3 tarjetas a la vez según el avance
   const funcProgress = (p: number) => {
-    const n = featuresSeq.length;
+    const n = featureGroups.length;
     const active = Math.min(n - 1, Math.floor(p * n));
     if (active === lastFuncActive.current) return;
     lastFuncActive.current = active;
@@ -410,7 +413,7 @@ export function LandingPage() {
           </div>
         </section>
       ) : (
-      <ScrollSequence id="hero" frames={portadaFrames} heightVh={480} dim={0.4} onProgress={heroProgress}>
+      <ScrollSequence id="hero" frames={portadaFrames} heightVh={480} dim={0.4} onProgress={heroProgress} priority>
         <div className="lp-mesh" style={{ width: 520, height: 520, top: '-8%', left: '-6%', background: 'radial-gradient(circle, rgba(182,148,98,0.22), transparent 60%)' }} />
         <div ref={heroOverlayRef} className="lp-hero-overlay">
           <img src={getImage('logo_main', logoGold)} alt="ELEMENThaus" style={{ width: 'clamp(130px, 16vw, 210px)', height: 'auto', filter: 'drop-shadow(0 0 30px rgba(182,148,98,0.4))' }} />
@@ -506,32 +509,36 @@ export function LandingPage() {
             </div>
           </section>
         ) : (
-        <ScrollSequence id="features" frames={interiorFrames} heightVh={620} dim={0.62} onProgress={funcProgress}>
+        <ScrollSequence id="features" frames={interiorFrames} heightVh={300} dim={0.5} onProgress={funcProgress}>
           <div className="lp-func-wrap">
             <span className="lp-eyebrow lp-func-eyebrow">Funciones</span>
             <div className="lp-func-stage">
-              {featuresSeq.map((f, i) => {
-                const Icon = f.icon;
-                return (
-                  <div
-                    key={f.title}
-                    ref={(el) => { funcRefs.current[i] = el; }}
-                    className="lp-func-item"
-                    style={{ opacity: i === 0 ? 1 : 0, transform: i === 0 ? 'translateY(0) scale(1)' : 'translateY(30px) scale(0.97)' }}
-                  >
-                    <span className="lp-func-ic"><Icon size={34} strokeWidth={1.6} /></span>
-                    <h3 className="lp-func-title">{f.title}</h3>
-                    <p className="lp-func-desc">{f.desc}</p>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="lp-func-dots">
-              {featuresSeq.map((f, i) => (
-                <span key={f.title} ref={(el) => { dotRefs.current[i] = el; }} className="lp-func-dot" style={{ opacity: i === 0 ? 1 : 0.28 }} />
+              {featureGroups.map((group, gi) => (
+                <div
+                  key={gi}
+                  ref={(el) => { funcRefs.current[gi] = el; }}
+                  className="lp-func-group"
+                  style={{ opacity: gi === 0 ? 1 : 0, transform: gi === 0 ? 'translateY(0) scale(1)' : 'translateY(30px) scale(0.97)' }}
+                >
+                  {group.map((f) => {
+                    const Icon = f.icon;
+                    return (
+                      <div key={f.title} className="lp-func-card">
+                        <span className="lp-func-ic"><Icon size={26} strokeWidth={1.6} /></span>
+                        <h3 className="lp-func-title">{f.title}</h3>
+                        <p className="lp-func-desc">{f.desc}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               ))}
             </div>
-            <div className="lp-func-count"><span ref={counterRef}>01</span> / {String(featuresSeq.length).padStart(2, '0')}</div>
+            <div className="lp-func-dots">
+              {featureGroups.map((group, i) => (
+                <span key={group.map((f) => f.title).join('-')} ref={(el) => { dotRefs.current[i] = el; }} className="lp-func-dot" style={{ opacity: i === 0 ? 1 : 0.28 }} />
+              ))}
+            </div>
+            <div className="lp-func-count"><span ref={counterRef}>01</span> / {String(featureGroups.length).padStart(2, '0')}</div>
           </div>
         </ScrollSequence>
         )}
@@ -618,12 +625,21 @@ export function LandingPage() {
         .lp-scroll-hint{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:2;color:#b3ac9d;font-size:13px;letter-spacing:.08em;pointer-events:none;animation:lpHintBob 1.8s ease-in-out infinite;}
         @keyframes lpHintBob{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(7px);}}
         .lp-func-wrap{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px;pointer-events:none;}
-        .lp-func-eyebrow{position:absolute;top:14%;left:50%;transform:translateX(-50%);}
-        .lp-func-stage{position:relative;width:100%;max-width:660px;height:320px;}
-        .lp-func-item{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;transition:opacity .55s var(--ease-lp), transform .55s var(--ease-lp);will-change:opacity,transform;}
-        .lp-func-ic{display:inline-flex;align-items:center;justify-content:center;width:78px;height:78px;border-radius:20px;background:rgba(182,148,98,0.16);color:#d9b877;border:1px solid rgba(182,148,98,0.35);margin-bottom:22px;}
-        .lp-func-title{font-family:'Manrope',sans-serif;font-weight:800;font-size:clamp(1.7rem,4vw,2.9rem);color:#f7f2e8;letter-spacing:-0.01em;}
-        .lp-func-desc{color:#cabfa9;max-width:520px;margin:14px auto 0;font-size:clamp(1rem,2vw,1.2rem);line-height:1.6;}
+        .lp-func-eyebrow{position:absolute;top:11%;left:50%;transform:translateX(-50%);}
+        .lp-func-stage{position:relative;width:100%;max-width:1080px;height:300px;}
+        .lp-func-group{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;transition:opacity .55s var(--ease-lp), transform .55s var(--ease-lp);will-change:opacity,transform;}
+        .lp-func-card{
+          display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+          padding:30px 20px;border-radius:22px;
+          background:linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.02) 45%, rgba(0,0,0,0.12)), rgba(10,9,8,0.4);
+          border:1px solid rgba(255,255,255,0.12);
+          box-shadow:0 18px 44px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
+          backdrop-filter:blur(20px) saturate(160%);
+          -webkit-backdrop-filter:blur(20px) saturate(160%);
+        }
+        .lp-func-ic{display:inline-flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:16px;background:rgba(182,148,98,0.16);color:#d9b877;border:1px solid rgba(182,148,98,0.35);margin-bottom:16px;flex-shrink:0;}
+        .lp-func-title{font-family:'Manrope',sans-serif;font-weight:800;font-size:clamp(1.05rem,1.6vw,1.3rem);color:#f7f2e8;letter-spacing:-0.01em;}
+        .lp-func-desc{color:#cabfa9;margin:10px auto 0;font-size:14px;line-height:1.55;}
         .lp-func-dots{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);display:flex;gap:9px;}
         .lp-func-dot{width:7px;height:7px;border-radius:50%;background:#d9b877;transition:opacity .4s ease;}
         .lp-func-count{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);color:#8c8578;font-size:14px;letter-spacing:.12em;font-weight:600;}
