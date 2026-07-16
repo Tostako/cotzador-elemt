@@ -8,10 +8,10 @@ import casaRelleno1 from '../../assets/casa_relleno1.png';
 import { useStore } from '../../shared/services/store';
 import { ScrollSequence } from './ScrollSequence';
 
-// Secuencias de imágenes (ordenadas por nombre: frame_01..frame_64)
-const portadaMap = import.meta.glob('../../assets/secuencia_portada/*.jpg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+// Secuencias de imágenes (ordenadas por nombre: frame_01..frame_64), en WebP (más livianas que los .jpg originales)
+const portadaMap = import.meta.glob('../../assets/portada_webp/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const portadaFrames = Object.keys(portadaMap).sort().map((k) => portadaMap[k]);
-const interiorMap = import.meta.glob('../../assets/secuencia_Interior/*.jpg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const interiorMap = import.meta.glob('../../assets/interior_webp/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const interiorFrames = Object.keys(interiorMap).sort().map((k) => interiorMap[k]);
 
 const navLinks = [

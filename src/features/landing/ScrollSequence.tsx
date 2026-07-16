@@ -74,7 +74,7 @@ export function ScrollSequence({
     imagesRef.current = new Array(frames.length);
     lastFrame.current = -1;
     let loadCancelled = false;
-    const BATCH = priority ? 10 : 6;
+    const BATCH = 8;
     let next = 0;
     const loadBatch = () => {
       if (loadCancelled) return;
