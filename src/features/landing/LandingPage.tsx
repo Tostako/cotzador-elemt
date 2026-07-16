@@ -171,10 +171,7 @@ export function LandingPage() {
   const progressRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const heroOverlayRef = useRef<HTMLDivElement>(null);
-  const funcRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const dotRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  const counterRef = useRef<HTMLSpanElement>(null);
-  const lastFuncActive = useRef(-1);
+  const funcGridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const t = requestAnimationFrame(() => setReady(true));
@@ -287,9 +284,6 @@ export function LandingPage() {
     { icon: CreditCard, title: 'Planes de pago', desc: 'Cuotas configurables, abonos y estado de pago por cada cobro.' },
     { icon: Wallet, title: 'Tarifas configurables', desc: 'Define precios de servicios y paquetes; el cotizador los aplica al instante.' },
   ];
-  // Se muestran de a 3 (tarjetas liquid glass) sobre la secuencia interior.
-  const featureGroups: Feature[][] = [];
-  for (let i = 0; i < featuresSeq.length; i += 3) featureGroups.push(featuresSeq.slice(i, i + 3));
 
   const services = [
     { n: '01', t: 'Diseño Arquitectónico', d: 'Planos arquitectónicos completos con normativa local.' },
@@ -321,22 +315,35 @@ export function LandingPage() {
     el.style.transform = `translateY(${p * -36}px)`;
   };
 
-  // Funciones: activa un grupo de 3 tarjetas a la vez según el avance
+  // Funciones: aparecen todas juntas, se mantienen mientras corre la secuencia de fondo
+  // y se desvanecen hacia el final del scroll de esta sección (entra Servicios detrás).
   const funcProgress = (p: number) => {
-    const n = featureGroups.length;
-    const active = Math.min(n - 1, Math.floor(p * n));
-    if (active === lastFuncActive.current) return;
-    lastFuncActive.current = active;
-    funcRefs.current.forEach((el, i) => {
-      if (!el) return;
-      const on = i === active;
-      el.style.opacity = on ? '1' : '0';
-      el.style.transform = on ? 'translateY(0) scale(1)' : `translateY(${i < active ? -30 : 30}px) scale(0.97)`;
-    });
-    dotRefs.current.forEach((d, i) => {
-      if (d) d.style.opacity = i === active ? '1' : '0.28';
-    });
-    if (counterRef.current) counterRef.current.textContent = String(active + 1).padStart(2, '0');
+    const el = funcGridRef.current;
+    if (!el) return;
+    let opacity: number;
+    let translateY: number;
+    let scale: number;
+    if (p < 0.15) {
+      const t = p / 0.15;
+      opacity = t;
+      scale = 0.94 + 0.06 * t;
+      translateY = 18 * (1 - t);
+    } else if (p < 0.55) {
+      opacity = 1;
+      scale = 1;
+      translateY = 0;
+    } else if (p < 0.9) {
+      const t = (p - 0.55) / 0.35;
+      opacity = 1 - t;
+      scale = 1;
+      translateY = -26 * t;
+    } else {
+      opacity = 0;
+      scale = 1;
+      translateY = -26;
+    }
+    el.style.opacity = String(opacity);
+    el.style.transform = `translateY(${translateY}px) scale(${scale})`;
   };
 
   return (
@@ -509,67 +516,69 @@ export function LandingPage() {
             </div>
           </section>
         ) : (
-        <ScrollSequence id="features" frames={interiorFrames} heightVh={300} dim={0.5} onProgress={funcProgress}>
+        <ScrollSequence id="features" frames={interiorFrames} heightVh={400} dim={0.5} onProgress={funcProgress}>
           <div className="lp-func-wrap">
             <span className="lp-eyebrow lp-func-eyebrow">Funciones</span>
-            <div className="lp-func-stage">
-              {featureGroups.map((group, gi) => (
-                <div
-                  key={gi}
-                  ref={(el) => { funcRefs.current[gi] = el; }}
-                  className="lp-func-group"
-                  style={{ opacity: gi === 0 ? 1 : 0, transform: gi === 0 ? 'translateY(0) scale(1)' : 'translateY(30px) scale(0.97)' }}
-                >
-                  {group.map((f) => {
-                    const Icon = f.icon;
-                    return (
-                      <div key={f.title} className="lp-func-card">
-                        <span className="lp-func-ic"><Icon size={26} strokeWidth={1.6} /></span>
-                        <h3 className="lp-func-title">{f.title}</h3>
-                        <p className="lp-func-desc">{f.desc}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+            <div ref={funcGridRef} className="lp-func-allgrid" style={{ opacity: 0, transform: 'translateY(18px) scale(0.94)' }}>
+              {featuresSeq.map((f) => {
+                const Icon = f.icon;
+                return (
+                  <div key={f.title} className="lp-func-card">
+                    <span className="lp-func-ic"><Icon size={22} strokeWidth={1.6} /></span>
+                    <h3 className="lp-func-title">{f.title}</h3>
+                    <p className="lp-func-desc">{f.desc}</p>
+                  </div>
+                );
+              })}
             </div>
-            <div className="lp-func-dots">
-              {featureGroups.map((group, i) => (
-                <span key={group.map((f) => f.title).join('-')} ref={(el) => { dotRefs.current[i] = el; }} className="lp-func-dot" style={{ opacity: i === 0 ? 1 : 0.28 }} />
-              ))}
-            </div>
-            <div className="lp-func-count"><span ref={counterRef}>01</span> / {String(featureGroups.length).padStart(2, '0')}</div>
           </div>
         </ScrollSequence>
         )}
 
-        {/* Servicios */}
-        <section id="services" style={{ position: 'relative', padding: '96px 0' }}>
-          <div className="lp-wrap">
-            <Reveal>
-              <span className="lp-eyebrow">Servicios</span>
-              <h2 className="lp-display" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.6rem)', maxWidth: 780, marginTop: 18, color: '#f4efe6' }}>
-                {getConfig('services', 'title', 'Los servicios de tu estudio, en una plataforma')}
-              </h2>
-              <p style={{ color: '#9b9486', maxWidth: 620, marginTop: 14, fontSize: 16, lineHeight: 1.6 }}>
-                Cotiza y gestiona cualquiera de tus servicios de diseño y construcción. También puedes crear los tuyos
-                propios desde el panel de configuración.
-              </p>
-            </Reveal>
+        {/* Servicios — queda el último frame de la secuencia de Funciones de fondo;
+            la lista se recuesta a un lateral en vez de ocupar todo el ancho. */}
+        <section id="services" style={{ position: 'relative', padding: '120px 24px', overflow: 'hidden' }}>
+          {interiorFrames.length > 0 && (
+            <img
+              src={interiorFrames[interiorFrames.length - 1]}
+              alt=""
+              loading="lazy"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          )}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(90deg, rgba(5,5,6,0.05) 0%, rgba(5,5,6,0.55) 38%, rgba(5,5,6,0.94) 62%, rgba(5,5,6,0.98) 100%)',
+            }}
+          />
+          <div className="lp-wrap" style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ maxWidth: 480, width: '100%' }}>
+              <Reveal>
+                <span className="lp-eyebrow">Servicios</span>
+                <h2 className="lp-display" style={{ fontSize: 'clamp(1.9rem, 3.4vw, 2.6rem)', marginTop: 16, color: '#f4efe6' }}>
+                  {getConfig('services', 'title', 'Los servicios de tu estudio, en una plataforma')}
+                </h2>
+                <p style={{ color: '#c8c0b1', marginTop: 12, fontSize: 15, lineHeight: 1.6 }}>
+                  Cotiza y gestiona cualquiera de tus servicios de diseño y construcción. También puedes crear los tuyos
+                  propios desde el panel de configuración.
+                </p>
+              </Reveal>
 
-            <div style={{ marginTop: 42 }}>
-              {services.map((s) => (
-                <Reveal key={s.n} delay={services.indexOf(s) * 45} y={18}>
-                  <div className="lp-srow">
-                    <div className="lp-sn">{s.n}</div>
-                    <div className="lp-st">{s.t}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 26, justifyContent: 'flex-end' }}>
-                      <span className="lp-sd">{s.d}</span>
-                      <span className="lp-arrow">→</span>
+              <div style={{ marginTop: 30 }}>
+                {services.map((s) => (
+                  <Reveal key={s.n} delay={services.indexOf(s) * 40} y={14}>
+                    <div className="lp-srow-lateral">
+                      <div className="lp-sn-lateral">{s.n}</div>
+                      <div>
+                        <div className="lp-st-lateral">{s.t}</div>
+                        <div className="lp-sd-lateral">{s.d}</div>
+                      </div>
                     </div>
-                  </div>
-                </Reveal>
-              ))}
+                  </Reveal>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -625,25 +634,25 @@ export function LandingPage() {
         .lp-scroll-hint{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:2;color:#b3ac9d;font-size:13px;letter-spacing:.08em;pointer-events:none;animation:lpHintBob 1.8s ease-in-out infinite;}
         @keyframes lpHintBob{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(7px);}}
         .lp-func-wrap{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px;pointer-events:none;}
-        .lp-func-eyebrow{position:absolute;top:11%;left:50%;transform:translateX(-50%);}
-        .lp-func-stage{position:relative;width:100%;max-width:1080px;height:300px;}
-        .lp-func-group{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;transition:opacity .55s var(--ease-lp), transform .55s var(--ease-lp);will-change:opacity,transform;}
+        .lp-func-eyebrow{margin-bottom:22px;}
+        .lp-func-allgrid{position:relative;width:100%;max-width:1100px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;will-change:opacity,transform;}
         .lp-func-card{
           display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
-          padding:30px 20px;border-radius:22px;
+          padding:22px 18px;border-radius:20px;
           background:linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.02) 45%, rgba(0,0,0,0.12)), rgba(10,9,8,0.4);
           border:1px solid rgba(255,255,255,0.12);
-          box-shadow:0 18px 44px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
+          box-shadow:0 16px 38px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
           backdrop-filter:blur(20px) saturate(160%);
           -webkit-backdrop-filter:blur(20px) saturate(160%);
         }
-        .lp-func-ic{display:inline-flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:16px;background:rgba(182,148,98,0.16);color:#d9b877;border:1px solid rgba(182,148,98,0.35);margin-bottom:16px;flex-shrink:0;}
-        .lp-func-title{font-family:'Manrope',sans-serif;font-weight:800;font-size:clamp(1.05rem,1.6vw,1.3rem);color:#f7f2e8;letter-spacing:-0.01em;}
-        .lp-func-desc{color:#cabfa9;margin:10px auto 0;font-size:14px;line-height:1.55;}
-        .lp-func-dots{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);display:flex;gap:9px;}
-        .lp-func-dot{width:7px;height:7px;border-radius:50%;background:#d9b877;transition:opacity .4s ease;}
-        .lp-func-count{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);color:#8c8578;font-size:14px;letter-spacing:.12em;font-weight:600;}
-        .lp-func-count span{color:#d9b877;}
+        .lp-func-ic{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;background:rgba(182,148,98,0.16);color:#d9b877;border:1px solid rgba(182,148,98,0.35);margin-bottom:12px;flex-shrink:0;}
+        .lp-func-title{font-family:'Manrope',sans-serif;font-weight:800;font-size:clamp(0.95rem,1.3vw,1.05rem);color:#f7f2e8;letter-spacing:-0.01em;}
+        .lp-func-desc{color:#cabfa9;margin:8px auto 0;font-size:12.5px;line-height:1.5;}
+        .lp-srow-lateral{display:grid;grid-template-columns:34px 1fr;gap:3px 14px;padding:16px 4px;border-top:1px solid rgba(255,255,255,0.12);align-items:start;}
+        .lp-srow-lateral:last-child{border-bottom:1px solid rgba(255,255,255,0.12);}
+        .lp-sn-lateral{font-family:'Manrope',sans-serif;font-weight:700;color:#b69462;font-size:13px;padding-top:2px;}
+        .lp-st-lateral{font-family:'Manrope',sans-serif;font-weight:700;font-size:16px;color:#f4efe6;letter-spacing:-0.01em;}
+        .lp-sd-lateral{font-size:13px;color:#a59e90;margin-top:4px;line-height:1.5;}
       `}</style>
     </div>
   );
