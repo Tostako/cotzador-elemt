@@ -172,6 +172,8 @@ export function LandingPage() {
   const contentRef = useRef<HTMLDivElement>(null);
   const heroOverlayRef = useRef<HTMLDivElement>(null);
   const funcRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const funcEyebrowRef = useRef<HTMLSpanElement>(null);
+  const servicesGlassRef = useRef<HTMLDivElement>(null);
   const lastFuncActive = useRef(-2);
 
   useEffect(() => {
@@ -269,6 +271,18 @@ export function LandingPage() {
   };
   const scrollTo = (href: string) => {
     setMenuOpen(false);
+    // "Servicios" vive dentro del mismo scroll-jack de "Funciones" (aparece al
+    // final de esa secuencia), así que lo llevamos a ese punto del scroll en vez
+    // del inicio de la sección.
+    if (href === '#services') {
+      const el = document.querySelector('#features');
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const target = window.scrollY + rect.top + rect.height * 0.78;
+        window.scrollTo({ top: target, behavior: 'smooth' });
+      }
+      return;
+    }
     const el = document.querySelector(href);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
@@ -320,21 +334,33 @@ export function LandingPage() {
     el.style.transform = `translateY(${p * -36}px)`;
   };
 
-  // Funciones: los tríos ciclan uno tras otro durante la primera parte del scroll;
-  // al terminar (CARDS_END) se ocultan todos y solo sigue la secuencia de fondo,
-  // sin tarjetas, hasta el último frame — ahí entra Servicios.
-  const CARDS_END = 0.65;
+  // Funciones + Servicios comparten la misma sección con scroll-jack (un solo "features"):
+  // 1) 0 → CARDS_END: los tríos ciclan uno tras otro.
+  // 2) CARDS_END → SERVICES_START: todos los tríos desaparecen, solo sigue la secuencia
+  //    de fondo (sin tarjetas encima) hasta acercarse al último frame.
+  // 3) SERVICES_START → 1: aparece el panel de Servicios (liquid glass) sobre ese fondo,
+  //    en la misma sección — no hay que cambiar de sección para verlo.
+  const CARDS_END = 0.5;
+  const SERVICES_START = 0.72;
   const funcProgress = (p: number) => {
     const n = featureGroups.length;
     const active = p >= CARDS_END ? -1 : Math.min(n - 1, Math.floor((p / CARDS_END) * n));
-    if (active === lastFuncActive.current) return;
-    lastFuncActive.current = active;
-    funcRefs.current.forEach((el, i) => {
-      if (!el) return;
-      const on = i === active;
-      el.style.opacity = on ? '1' : '0';
-      el.style.transform = on ? 'translateY(0) scale(1)' : `translateY(${i < active || active === -1 ? -30 : 30}px) scale(0.97)`;
-    });
+    if (active !== lastFuncActive.current) {
+      lastFuncActive.current = active;
+      funcRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const on = i === active;
+        el.style.opacity = on ? '1' : '0';
+        el.style.transform = on ? 'translateY(0) scale(1)' : `translateY(${i < active || active === -1 ? -30 : 30}px) scale(0.97)`;
+      });
+    }
+
+    const t = p < SERVICES_START ? 0 : Math.min(1, (p - SERVICES_START) / (1 - SERVICES_START));
+    if (funcEyebrowRef.current) funcEyebrowRef.current.style.opacity = String(1 - t);
+    if (servicesGlassRef.current) {
+      servicesGlassRef.current.style.opacity = String(t);
+      servicesGlassRef.current.style.transform = `translate(-50%, -50%) translateY(${26 * (1 - t)}px)`;
+    }
   };
 
   return (
@@ -507,9 +533,9 @@ export function LandingPage() {
             </div>
           </section>
         ) : (
-        <ScrollSequence id="features" frames={interiorFrames} heightVh={480} dim={0.5} onProgress={funcProgress}>
+        <ScrollSequence id="features" frames={interiorFrames} heightVh={520} dim={0.5} onProgress={funcProgress}>
           <div className="lp-func-wrap">
-            <span className="lp-eyebrow lp-func-eyebrow">Funciones</span>
+            <span ref={funcEyebrowRef} className="lp-eyebrow lp-func-eyebrow">Funciones</span>
             <div className="lp-func-stage">
               {featureGroups.map((group, gi) => (
                 <div
@@ -531,42 +557,45 @@ export function LandingPage() {
                 </div>
               ))}
             </div>
+
+            {/* Servicios: aparece al final del mismo scroll-jack, como panel liquid glass */}
+            <div ref={servicesGlassRef} id="services" className="lp-services-glass" style={{ opacity: 0, transform: 'translate(-50%, -50%) translateY(26px)' }}>
+              <span className="lp-eyebrow" style={{ display: 'block' }}>Servicios</span>
+              <h3 className="lp-display" style={{ fontSize: 'clamp(1.4rem, 2vw, 1.8rem)', marginTop: 10, color: '#f4efe6' }}>
+                {getConfig('services', 'title', 'Los servicios de tu estudio, en una plataforma')}
+              </h3>
+              <div className="lp-services-list">
+                {services.map((s) => (
+                  <div key={s.n} className="lp-srow-lateral">
+                    <div className="lp-sn-lateral">{s.n}</div>
+                    <div>
+                      <div className="lp-st-lateral">{s.t}</div>
+                      <div className="lp-sd-lateral">{s.d}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </ScrollSequence>
         )}
 
-        {/* Servicios — queda el último frame de la secuencia de Funciones de fondo;
-            la lista se recuesta a un lateral en vez de ocupar todo el ancho. */}
-        <section id="services" style={{ position: 'relative', padding: '120px 24px', overflow: 'hidden' }}>
-          {interiorFrames.length > 0 && (
-            <img
-              src={interiorFrames[interiorFrames.length - 1]}
-              alt=""
-              loading="lazy"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          )}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(90deg, rgba(5,5,6,0.05) 0%, rgba(5,5,6,0.55) 38%, rgba(5,5,6,0.94) 62%, rgba(5,5,6,0.98) 100%)',
-            }}
-          />
-          <div className="lp-wrap" style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end' }}>
-            <div style={{ maxWidth: 480, width: '100%' }}>
+        {/* Servicios en móvil: no hay scroll-jack (se desactiva por rendimiento), así que
+            queda como sección estática normal en vez del panel liquid glass de escritorio. */}
+        {isMobile && (
+          <section id="services" style={{ padding: '80px 0' }}>
+            <div className="lp-wrap">
               <Reveal>
                 <span className="lp-eyebrow">Servicios</span>
-                <h2 className="lp-display" style={{ fontSize: 'clamp(1.9rem, 3.4vw, 2.6rem)', marginTop: 16, color: '#f4efe6' }}>
+                <h2 className="lp-display" style={{ fontSize: 'clamp(2rem, 7vw, 2.6rem)', marginTop: 14, color: '#f4efe6' }}>
                   {getConfig('services', 'title', 'Los servicios de tu estudio, en una plataforma')}
                 </h2>
-                <p style={{ color: '#c8c0b1', marginTop: 12, fontSize: 15, lineHeight: 1.6 }}>
+                <p style={{ color: '#9b9486', marginTop: 14, fontSize: 15, lineHeight: 1.6 }}>
                   Cotiza y gestiona cualquiera de tus servicios de diseño y construcción. También puedes crear los tuyos
                   propios desde el panel de configuración.
                 </p>
               </Reveal>
-
-              <div style={{ marginTop: 30 }}>
+              <div style={{ marginTop: 26 }}>
                 {services.map((s) => (
                   <Reveal key={s.n} delay={services.indexOf(s) * 40} y={14}>
                     <div className="lp-srow-lateral">
@@ -580,8 +609,8 @@ export function LandingPage() {
                 ))}
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* CTA */}
         <section id="cta" style={{ position: 'relative', padding: '80px 24px 110px' }}>
@@ -649,6 +678,18 @@ export function LandingPage() {
         .lp-func-ic{display:inline-flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:16px;background:rgba(182,148,98,0.16);color:#d9b877;border:1px solid rgba(182,148,98,0.35);margin-bottom:16px;flex-shrink:0;}
         .lp-func-title{font-family:'Manrope',sans-serif;font-weight:800;font-size:clamp(1.05rem,1.6vw,1.3rem);color:#f7f2e8;letter-spacing:-0.01em;}
         .lp-func-desc{color:#cabfa9;margin:10px auto 0;font-size:14px;line-height:1.55;}
+        .lp-services-glass{
+          position:absolute;top:50%;left:50%;
+          width:min(560px, 90vw);max-height:80vh;overflow-y:auto;
+          padding:32px 34px;border-radius:26px;
+          background:linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02) 45%, rgba(0,0,0,0.14)), rgba(10,9,8,0.5);
+          border:1px solid rgba(255,255,255,0.14);
+          box-shadow:0 22px 54px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.09);
+          backdrop-filter:blur(26px) saturate(160%);
+          -webkit-backdrop-filter:blur(26px) saturate(160%);
+          transition:opacity .5s var(--ease-lp), transform .5s var(--ease-lp);
+        }
+        .lp-services-list{margin-top:20px;}
         .lp-srow-lateral{display:grid;grid-template-columns:34px 1fr;gap:3px 14px;padding:16px 4px;border-top:1px solid rgba(255,255,255,0.12);align-items:start;}
         .lp-srow-lateral:last-child{border-bottom:1px solid rgba(255,255,255,0.12);}
         .lp-sn-lateral{font-family:'Manrope',sans-serif;font-weight:700;color:#b69462;font-size:13px;padding-top:2px;}
