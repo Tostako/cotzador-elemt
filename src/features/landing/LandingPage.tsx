@@ -171,7 +171,8 @@ export function LandingPage() {
   const progressRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const heroOverlayRef = useRef<HTMLDivElement>(null);
-  const funcGridRef = useRef<HTMLDivElement>(null);
+  const funcRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const lastFuncActive = useRef(-2);
 
   useEffect(() => {
     const t = requestAnimationFrame(() => setReady(true));
@@ -284,6 +285,10 @@ export function LandingPage() {
     { icon: CreditCard, title: 'Planes de pago', desc: 'Cuotas configurables, abonos y estado de pago por cada cobro.' },
     { icon: Wallet, title: 'Tarifas configurables', desc: 'Define precios de servicios y paquetes; el cotizador los aplica al instante.' },
   ];
+  // Se muestran de a 3 (tríos), ciclando uno tras otro; al terminar los tríos
+  // sigue solo la secuencia de fondo (sin tarjetas) hasta el último frame.
+  const featureGroups: Feature[][] = [];
+  for (let i = 0; i < featuresSeq.length; i += 3) featureGroups.push(featuresSeq.slice(i, i + 3));
 
   const services = [
     { n: '01', t: 'Diseño Arquitectónico', d: 'Planos arquitectónicos completos con normativa local.' },
@@ -315,35 +320,21 @@ export function LandingPage() {
     el.style.transform = `translateY(${p * -36}px)`;
   };
 
-  // Funciones: aparecen todas juntas, se mantienen mientras corre la secuencia de fondo
-  // y se desvanecen hacia el final del scroll de esta sección (entra Servicios detrás).
+  // Funciones: los tríos ciclan uno tras otro durante la primera parte del scroll;
+  // al terminar (CARDS_END) se ocultan todos y solo sigue la secuencia de fondo,
+  // sin tarjetas, hasta el último frame — ahí entra Servicios.
+  const CARDS_END = 0.65;
   const funcProgress = (p: number) => {
-    const el = funcGridRef.current;
-    if (!el) return;
-    let opacity: number;
-    let translateY: number;
-    let scale: number;
-    if (p < 0.15) {
-      const t = p / 0.15;
-      opacity = t;
-      scale = 0.94 + 0.06 * t;
-      translateY = 18 * (1 - t);
-    } else if (p < 0.55) {
-      opacity = 1;
-      scale = 1;
-      translateY = 0;
-    } else if (p < 0.9) {
-      const t = (p - 0.55) / 0.35;
-      opacity = 1 - t;
-      scale = 1;
-      translateY = -26 * t;
-    } else {
-      opacity = 0;
-      scale = 1;
-      translateY = -26;
-    }
-    el.style.opacity = String(opacity);
-    el.style.transform = `translateY(${translateY}px) scale(${scale})`;
+    const n = featureGroups.length;
+    const active = p >= CARDS_END ? -1 : Math.min(n - 1, Math.floor((p / CARDS_END) * n));
+    if (active === lastFuncActive.current) return;
+    lastFuncActive.current = active;
+    funcRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const on = i === active;
+      el.style.opacity = on ? '1' : '0';
+      el.style.transform = on ? 'translateY(0) scale(1)' : `translateY(${i < active || active === -1 ? -30 : 30}px) scale(0.97)`;
+    });
   };
 
   return (
@@ -516,20 +507,29 @@ export function LandingPage() {
             </div>
           </section>
         ) : (
-        <ScrollSequence id="features" frames={interiorFrames} heightVh={400} dim={0.5} onProgress={funcProgress}>
+        <ScrollSequence id="features" frames={interiorFrames} heightVh={480} dim={0.5} onProgress={funcProgress}>
           <div className="lp-func-wrap">
             <span className="lp-eyebrow lp-func-eyebrow">Funciones</span>
-            <div ref={funcGridRef} className="lp-func-allgrid" style={{ opacity: 0, transform: 'translateY(18px) scale(0.94)' }}>
-              {featuresSeq.map((f) => {
-                const Icon = f.icon;
-                return (
-                  <div key={f.title} className="lp-func-card">
-                    <span className="lp-func-ic"><Icon size={22} strokeWidth={1.6} /></span>
-                    <h3 className="lp-func-title">{f.title}</h3>
-                    <p className="lp-func-desc">{f.desc}</p>
-                  </div>
-                );
-              })}
+            <div className="lp-func-stage">
+              {featureGroups.map((group, gi) => (
+                <div
+                  key={gi}
+                  ref={(el) => { funcRefs.current[gi] = el; }}
+                  className="lp-func-group"
+                  style={{ opacity: gi === 0 ? 1 : 0, transform: gi === 0 ? 'translateY(0) scale(1)' : 'translateY(30px) scale(0.97)' }}
+                >
+                  {group.map((f) => {
+                    const Icon = f.icon;
+                    return (
+                      <div key={f.title} className="lp-func-card">
+                        <span className="lp-func-ic"><Icon size={26} strokeWidth={1.6} /></span>
+                        <h3 className="lp-func-title">{f.title}</h3>
+                        <p className="lp-func-desc">{f.desc}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
         </ScrollSequence>
@@ -634,20 +634,21 @@ export function LandingPage() {
         .lp-scroll-hint{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:2;color:#b3ac9d;font-size:13px;letter-spacing:.08em;pointer-events:none;animation:lpHintBob 1.8s ease-in-out infinite;}
         @keyframes lpHintBob{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(7px);}}
         .lp-func-wrap{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px;pointer-events:none;}
-        .lp-func-eyebrow{margin-bottom:22px;}
-        .lp-func-allgrid{position:relative;width:100%;max-width:1100px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;will-change:opacity,transform;}
+        .lp-func-eyebrow{position:absolute;top:11%;left:50%;transform:translateX(-50%);}
+        .lp-func-stage{position:relative;width:100%;max-width:1080px;height:300px;}
+        .lp-func-group{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;transition:opacity .55s var(--ease-lp), transform .55s var(--ease-lp);will-change:opacity,transform;}
         .lp-func-card{
           display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
-          padding:22px 18px;border-radius:20px;
+          padding:30px 20px;border-radius:22px;
           background:linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.02) 45%, rgba(0,0,0,0.12)), rgba(10,9,8,0.4);
           border:1px solid rgba(255,255,255,0.12);
-          box-shadow:0 16px 38px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
+          box-shadow:0 18px 44px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
           backdrop-filter:blur(20px) saturate(160%);
           -webkit-backdrop-filter:blur(20px) saturate(160%);
         }
-        .lp-func-ic{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;background:rgba(182,148,98,0.16);color:#d9b877;border:1px solid rgba(182,148,98,0.35);margin-bottom:12px;flex-shrink:0;}
-        .lp-func-title{font-family:'Manrope',sans-serif;font-weight:800;font-size:clamp(0.95rem,1.3vw,1.05rem);color:#f7f2e8;letter-spacing:-0.01em;}
-        .lp-func-desc{color:#cabfa9;margin:8px auto 0;font-size:12.5px;line-height:1.5;}
+        .lp-func-ic{display:inline-flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:16px;background:rgba(182,148,98,0.16);color:#d9b877;border:1px solid rgba(182,148,98,0.35);margin-bottom:16px;flex-shrink:0;}
+        .lp-func-title{font-family:'Manrope',sans-serif;font-weight:800;font-size:clamp(1.05rem,1.6vw,1.3rem);color:#f7f2e8;letter-spacing:-0.01em;}
+        .lp-func-desc{color:#cabfa9;margin:10px auto 0;font-size:14px;line-height:1.55;}
         .lp-srow-lateral{display:grid;grid-template-columns:34px 1fr;gap:3px 14px;padding:16px 4px;border-top:1px solid rgba(255,255,255,0.12);align-items:start;}
         .lp-srow-lateral:last-child{border-bottom:1px solid rgba(255,255,255,0.12);}
         .lp-sn-lateral{font-family:'Manrope',sans-serif;font-weight:700;color:#b69462;font-size:13px;padding-top:2px;}
