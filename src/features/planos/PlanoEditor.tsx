@@ -43,7 +43,8 @@ export function PlanoEditor({ planId }: { planId?: string }) {
   const [derivando, setDerivando] = useState(false);
   const [showDatos, setShowDatos] = useState(false); // datos del plano colapsables
   const [selectedWallId, setSelectedWallId] = useState<string | null>(null); // muro seleccionado (menú contextual)
-  const [wallEditOpen, setWallEditOpen] = useState(false); // panel "Editar muro" (columnas del muro seleccionado)
+  const [wallEditOpen, setWallEditOpen] = useState(false); // panel "Editar muro" (distancia y columnas del muro seleccionado)
+  const [wallEditDistance, setWallEditDistance] = useState('3');
   const [wallEditCount, setWallEditCount] = useState(1);
   const [wallEditAncho, setWallEditAncho] = useState(30);
   const [wallEditFondo, setWallEditFondo] = useState(15);
@@ -267,6 +268,20 @@ export function PlanoEditor({ planId }: { planId?: string }) {
   // Reubicar el nodo seleccionado a una posición (en metros)
   const moveNode = (nodeId: string, x: number, y: number) => {
     updateEspacio((e) => ({ ...e, nodes: e.nodes.map((n) => (n.id === nodeId ? { ...n, x, y } : n)) }));
+  };
+
+  // Cambia el largo del muro seleccionado moviendo su nodo "b" sobre la misma dirección
+  // (el nodo "a" queda fijo). Si ese nodo lo comparte otro muro, ese muro también se ajusta.
+  const applyWallDistance = (w: { a: string; b: string }, newLen: number) => {
+    if (!newLen || newLen <= 0) return;
+    const a = espacioActivo.nodes.find((n) => n.id === w.a);
+    const b = espacioActivo.nodes.find((n) => n.id === w.b);
+    if (!a || !b) return;
+    const curLen = Math.hypot(b.x - a.x, b.y - a.y);
+    if (curLen === 0) return;
+    const ux = (b.x - a.x) / curLen;
+    const uy = (b.y - a.y) / curLen;
+    moveNode(w.b, +(a.x + ux * newLen).toFixed(3), +(a.y + uy * newLen).toFixed(3));
   };
 
   // ── Niveles ──
@@ -593,6 +608,7 @@ export function PlanoEditor({ planId }: { planId?: string }) {
                   style={btn(wallEditOpen)}
                   onClick={() => {
                     if (!wallEditOpen) {
+                      setWallEditDistance(len.toFixed(2));
                       setWallEditCount(w.columnas?.length || colCount);
                       setWallEditAncho(w.columnas?.[0]?.ancho ?? colAncho);
                       setWallEditFondo(w.columnas?.[0]?.fondo ?? colFondo);
@@ -608,6 +624,11 @@ export function PlanoEditor({ planId }: { planId?: string }) {
             </div>
             {wallEditOpen && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <label className="small">Distancia</label>
+                <input className="input" type="number" min={0.1} step={0.1} value={wallEditDistance} onChange={(e) => setWallEditDistance(e.target.value)} style={{ width: 80 }} aria-label="Distancia del muro seleccionado (m)" />
+                <span className="small">m</span>
+                <button type="button" style={btn(false)} onClick={() => applyWallDistance(w, parseFloat(wallEditDistance))}>Aplicar distancia</button>
+                <div style={{ flexBasis: '100%', height: 0 }} />
                 <label className="small">N° columnas</label>
                 <input className="input" type="number" min={1} step={1} value={wallEditCount} onChange={(e) => setWallEditCount(Math.max(1, parseInt(e.target.value) || 1))} style={{ width: 60 }} aria-label="Número de columnas del muro seleccionado" />
                 <label className="small">Ancho</label>
