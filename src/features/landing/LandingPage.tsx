@@ -1,18 +1,25 @@
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useRef, useState, type ReactNode, type CSSProperties, type ComponentType } from 'react';
-import { PencilRuler, Receipt, CreditCard, Calculator, Package, Grid3x3, Wallet, X, DraftingCompass, Frame } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
+import { Calculator, X, DraftingCompass, Frame, Droplet, Zap, Camera, Video, FileCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import logoGold from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado Original 1.png';
 import logoWhite from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado White.png';
 import logoPrincipal from '../../assets/LogoPrincipal.png';
-import casaRelleno1 from '../../assets/casa_relleno1.png';
+import casaRelleno1 from '../../assets/casa_relleno1.webp';
 import { useStore } from '../../shared/services/store';
 import { ScrollSequence } from './ScrollSequence';
 
-// Secuencias de imágenes (ordenadas por nombre: frame_01..frame_64), en WebP (más livianas que los .jpg originales)
+// Secuencia de la portada (ordenada por nombre: frame_01..frame_64), en WebP.
 const portadaMap = import.meta.glob('../../assets/portada_webp/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const portadaFrames = Object.keys(portadaMap).sort().map((k) => portadaMap[k]);
-const interiorMap = import.meta.glob('../../assets/interior_webp/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
-const interiorFrames = Object.keys(interiorMap).sort().map((k) => interiorMap[k]);
+
+// Imágenes del carrusel de Funciones. Se importan una por una (y no con un glob)
+// porque los nombres no ordenan solos: "CARUSELL5" en mayúsculas quedaría primero.
+import carrusel1 from '../../assets/interior_webp/carrusell1.webp';
+import carrusel2 from '../../assets/interior_webp/carrusell2.webp';
+import carrusel3 from '../../assets/interior_webp/carrusell3.webp';
+import carrusel4 from '../../assets/interior_webp/carrusell4.webp';
+import carrusel5 from '../../assets/interior_webp/CARUSELL5.webp';
+const carruselImgs = [carrusel1, carrusel2, carrusel3, carrusel4, carrusel5];
 
 const navLinks = [
   { label: 'Inicio', href: '#hero' },
@@ -151,12 +158,6 @@ function MagneticButton({
   );
 }
 
-type Feature = {
-  icon: ComponentType<{ size?: number | string; strokeWidth?: number }>;
-  title: string;
-  desc: string;
-};
-
 export function LandingPage() {
   const navigate = useNavigate();
   const isAuthenticated = useStore((s) => s.isAuthenticated);
@@ -171,10 +172,7 @@ export function LandingPage() {
   const progressRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const heroOverlayRef = useRef<HTMLDivElement>(null);
-  const funcRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const funcEyebrowRef = useRef<HTMLSpanElement>(null);
-  const servicesGlassRef = useRef<HTMLDivElement>(null);
-  const lastFuncActive = useRef(-2);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const t = requestAnimationFrame(() => setReady(true));
@@ -271,48 +269,28 @@ export function LandingPage() {
   };
   const scrollTo = (href: string) => {
     setMenuOpen(false);
-    // "Servicios" vive dentro del mismo scroll-jack de "Funciones" (aparece al
-    // final de esa secuencia), así que lo llevamos a ese punto del scroll en vez
-    // del inicio de la sección.
-    if (href === '#services') {
-      const el = document.querySelector('#features');
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        const target = window.scrollY + rect.top + rect.height * 0.78;
-        window.scrollTo({ top: target, behavior: 'smooth' });
-      }
-      return;
-    }
     const el = document.querySelector(href);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Funciones que aparecen una a una sobre la secuencia interior
-  const featuresSeq: Feature[] = [
-    { icon: DraftingCompass, title: 'Planos de casa', desc: 'Dibuja la vivienda por niveles y habitaciones en un editor CAD; de ahí salen todos los cálculos.' },
-    { icon: PencilRuler, title: 'Cotización inteligente', desc: 'Asistente de 5 pasos con cálculo automático de área y precio en vivo.' },
-    { icon: Grid3x3, title: 'Enchapes', desc: 'Pisos y paredes por tramos, patrones de instalación, desperdicio y sobrantes.' },
-    { icon: Frame, title: 'Barrederas', desc: 'Cálculo por perímetro con columnas del plano y número de piezas por material.' },
-    { icon: Package, title: 'Catálogo de materiales', desc: 'Precios por ferretería, mejor precio y listas de pedidos.' },
-    { icon: Calculator, title: 'Estimación de obra', desc: 'Costo de construcción por m²: obra negra, gris y acabados.' },
-    { icon: Receipt, title: 'Cuentas de cobro', desc: 'Documentos formales con firma, numeración y registro de pagos.' },
-    { icon: CreditCard, title: 'Planes de pago', desc: 'Cuotas configurables, abonos y estado de pago por cada cobro.' },
-    { icon: Wallet, title: 'Tarifas configurables', desc: 'Define precios de servicios y paquetes; el cotizador los aplica al instante.' },
-  ];
-  // Se muestran de a 3 (tríos), ciclando uno tras otro; al terminar los tríos
-  // sigue solo la secuencia de fondo (sin tarjetas) hasta el último frame.
-  const featureGroups: Feature[][] = [];
-  for (let i = 0; i < featuresSeq.length; i += 3) featureGroups.push(featuresSeq.slice(i, i + 3));
+  // Las 5 funciones más importantes, cada una con su imagen del carrusel (en orden 1..5).
+  const featuresCarousel = [
+    { title: 'Planos de casa', desc: 'Dibuja la vivienda por niveles y habitaciones en un editor CAD; de ahí salen todos los cálculos.' },
+    { title: 'Cotización inteligente', desc: 'Asistente de 5 pasos con cálculo automático de área y precio en vivo.' },
+    { title: 'Enchapes y barrederas', desc: 'Pisos, paredes y perímetros por tramos, con desperdicio y número de piezas.' },
+    { title: 'Estimación de obra', desc: 'Costo de construcción por m²: obra negra, gris y acabados.' },
+    { title: 'Cuentas de cobro', desc: 'Documentos formales con firma, numeración, plan de pagos y registro de abonos.' },
+  ].map((f, i) => ({ ...f, img: carruselImgs[i] }));
 
   const services = [
-    { n: '01', t: 'Diseño Arquitectónico', d: 'Planos arquitectónicos completos con normativa local.' },
-    { n: '02', t: 'Diseño Estructural', d: 'Cálculo de estructuras, cimentación y mampostería.' },
-    { n: '03', t: 'Instalaciones Hidrosanitarias', d: 'Redes de agua, desagüe y sistemas sanitarios.' },
-    { n: '04', t: 'Diseño Eléctrico', d: 'Planos eléctricos, iluminación y tableros.' },
-    { n: '05', t: 'Renders 3D', d: 'Visualización fotorealista de tu proyecto.' },
-    { n: '06', t: 'Recorrido 3D', d: 'Tour virtual interactivo para tus clientes.' },
-    { n: '07', t: 'Presupuesto de obra', d: 'Desglose detallado de costos de construcción.' },
-    { n: '08', t: 'Licencias', d: 'Trámites de licencias de construcción.' },
+    { icon: DraftingCompass, t: 'Diseño Arquitectónico', d: 'Planos arquitectónicos completos con normativa local.' },
+    { icon: Frame, t: 'Diseño Estructural', d: 'Cálculo de estructuras, cimentación y mampostería.' },
+    { icon: Droplet, t: 'Instalaciones Hidrosanitarias', d: 'Redes de agua, desagüe y sistemas sanitarios.' },
+    { icon: Zap, t: 'Diseño Eléctrico', d: 'Planos eléctricos, iluminación y tableros.' },
+    { icon: Camera, t: 'Renders 3D', d: 'Visualización fotorealista de tu proyecto.' },
+    { icon: Video, t: 'Recorrido 3D', d: 'Tour virtual interactivo para tus clientes.' },
+    { icon: Calculator, t: 'Presupuesto de obra', d: 'Desglose detallado de costos de construcción.' },
+    { icon: FileCheck, t: 'Licencias', d: 'Trámites de licencias de construcción.' },
   ];
 
   const steps = [
@@ -334,33 +312,12 @@ export function LandingPage() {
     el.style.transform = `translateY(${p * -36}px)`;
   };
 
-  // Funciones + Servicios comparten la misma sección con scroll-jack (un solo "features"):
-  // 1) 0 → CARDS_END: los tríos ciclan uno tras otro.
-  // 2) CARDS_END → SERVICES_START: todos los tríos desaparecen, solo sigue la secuencia
-  //    de fondo (sin tarjetas encima) hasta acercarse al último frame.
-  // 3) SERVICES_START → 1: aparece el panel de Servicios (liquid glass) sobre ese fondo,
-  //    en la misma sección — no hay que cambiar de sección para verlo.
-  const CARDS_END = 0.5;
-  const SERVICES_START = 0.72;
-  const funcProgress = (p: number) => {
-    const n = featureGroups.length;
-    const active = p >= CARDS_END ? -1 : Math.min(n - 1, Math.floor((p / CARDS_END) * n));
-    if (active !== lastFuncActive.current) {
-      lastFuncActive.current = active;
-      funcRefs.current.forEach((el, i) => {
-        if (!el) return;
-        const on = i === active;
-        el.style.opacity = on ? '1' : '0';
-        el.style.transform = on ? 'translateY(0) scale(1)' : `translateY(${i < active || active === -1 ? -30 : 30}px) scale(0.97)`;
-      });
-    }
-
-    const t = p < SERVICES_START ? 0 : Math.min(1, (p - SERVICES_START) / (1 - SERVICES_START));
-    if (funcEyebrowRef.current) funcEyebrowRef.current.style.opacity = String(1 - t);
-    if (servicesGlassRef.current) {
-      servicesGlassRef.current.style.opacity = String(t);
-      servicesGlassRef.current.style.transform = `translate(-50%, -50%) translateY(${26 * (1 - t)}px)`;
-    }
+  const scrollCarousel = (dir: 1 | -1) => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const card = el.querySelector('.lp-carousel-card') as HTMLElement | null;
+    const amount = (card?.offsetWidth || 400) + 20;
+    el.scrollBy({ left: dir * amount, behavior: 'smooth' });
   };
 
   return (
@@ -458,8 +415,15 @@ export function LandingPage() {
       {/* Lámina de contenido */}
       <div className="lp-content" ref={contentRef} style={{ backgroundColor: 'rgb(26, 23, 20)' }}>
 
-        {/* Cómo funciona */}
-        <section id="proc" ref={proc.ref} style={{ position: 'relative', padding: '104px 0 88px' }}>
+        {/* Cómo funciona — en escritorio se monta (sticky) sobre el final de la portada,
+            con fondo negro liquid glass, como una lámina que se desliza encima (parallax). */}
+        <div id="proc" ref={proc.ref} style={isMobile ? undefined : { position: 'relative', zIndex: 6, minHeight: '260vh', marginTop: '-100vh' }}>
+        <section
+          className={isMobile ? undefined : 'lp-proc-stack'}
+          style={isMobile
+            ? { position: 'relative', padding: '104px 0 88px' }
+            : { position: 'sticky', top: 0, minHeight: '100vh', display: 'flex', alignItems: 'center', padding: '96px 0' }}
+        >
           <div className="lp-wrap">
             <Reveal>
               <span className="lp-eyebrow">Cómo funciona</span>
@@ -509,108 +473,67 @@ export function LandingPage() {
             </div>
           </div>
         </section>
+        </div>
 
-        {/* FUNCIONES — móvil: lista estática; escritorio: secuencia interior */}
-        {isMobile ? (
-          <section id="features" style={{ padding: '80px 0' }}>
-            <div className="lp-wrap">
+        {/* FUNCIONES — carrusel con las 5 funciones principales sobre frames de la secuencia interior */}
+        <section id="features" style={{ padding: '90px 0 70px' }}>
+          <div className="lp-wrap">
+            <Reveal>
               <span className="lp-eyebrow">Funciones</span>
-              <h2 className="lp-display" style={{ fontSize: 'clamp(2rem, 7vw, 2.6rem)', marginTop: 14, color: '#f4efe6' }}>Una plataforma para todo tu estudio</h2>
-              <div style={{ display: 'grid', gap: 12, marginTop: 26 }}>
-                {featuresSeq.map((f) => {
-                  const Icon = f.icon;
-                  return (
-                    <div key={f.title} className="card" style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                      <span className="lp-func-ic" style={{ width: 50, height: 50, marginBottom: 0, flexShrink: 0 }}><Icon size={22} strokeWidth={1.7} /></span>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 16, color: '#f4efe6' }}>{f.title}</div>
-                        <div className="small" style={{ color: '#9b9486', marginTop: 4 }}>{f.desc}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        ) : (
-        <ScrollSequence id="features" frames={interiorFrames} heightVh={520} dim={0.5} onProgress={funcProgress}>
-          <div className="lp-func-wrap">
-            <span ref={funcEyebrowRef} className="lp-eyebrow lp-func-eyebrow">Funciones</span>
-            <div className="lp-func-stage">
-              {featureGroups.map((group, gi) => (
-                <div
-                  key={gi}
-                  ref={(el) => { funcRefs.current[gi] = el; }}
-                  className="lp-func-group"
-                  style={{ opacity: gi === 0 ? 1 : 0, transform: gi === 0 ? 'translateY(0) scale(1)' : 'translateY(30px) scale(0.97)' }}
-                >
-                  {group.map((f) => {
-                    const Icon = f.icon;
-                    return (
-                      <div key={f.title} className="lp-func-card">
-                        <span className="lp-func-ic"><Icon size={26} strokeWidth={1.6} /></span>
-                        <h3 className="lp-func-title">{f.title}</h3>
-                        <p className="lp-func-desc">{f.desc}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-
-            {/* Servicios: aparece al final del mismo scroll-jack, como panel liquid glass */}
-            <div ref={servicesGlassRef} id="services" className="lp-services-glass" style={{ opacity: 0, transform: 'translate(-50%, -50%) translateY(26px)' }}>
-              <span className="lp-eyebrow" style={{ display: 'block' }}>Servicios</span>
-              <h3 className="lp-display" style={{ fontSize: 'clamp(1.4rem, 2vw, 1.8rem)', marginTop: 10, color: '#f4efe6' }}>
-                {getConfig('services', 'title', 'Los servicios de tu estudio, en una plataforma')}
-              </h3>
-              <div className="lp-services-list">
-                {services.map((s) => (
-                  <div key={s.n} className="lp-srow-lateral">
-                    <div className="lp-sn-lateral">{s.n}</div>
-                    <div>
-                      <div className="lp-st-lateral">{s.t}</div>
-                      <div className="lp-sd-lateral">{s.d}</div>
+              <h2 className="lp-display" style={{ fontSize: 'clamp(2.1rem, 5vw, 3.2rem)', marginTop: 16, color: '#f4efe6', maxWidth: 720 }}>
+                Todo lo que necesita tu estudio, en un solo lugar
+              </h2>
+            </Reveal>
+          </div>
+          <Reveal delay={100}>
+            <div className="lp-carousel-wrap">
+              <div className="lp-carousel" ref={carouselRef}>
+                {featuresCarousel.map((f) => (
+                  <div key={f.title} className="lp-carousel-card">
+                    <img src={f.img} alt="" loading="lazy" />
+                    <div className="lp-carousel-scrim" />
+                    <div className="lp-carousel-caption">
+                      <h3>{f.title}</h3>
+                      <p>{f.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
+              <button type="button" className="lp-carousel-nav lp-carousel-nav--prev" onClick={() => scrollCarousel(-1)} aria-label="Función anterior"><ChevronLeft size={20} /></button>
+              <button type="button" className="lp-carousel-nav lp-carousel-nav--next" onClick={() => scrollCarousel(1)} aria-label="Función siguiente"><ChevronRight size={20} /></button>
             </div>
-          </div>
-        </ScrollSequence>
-        )}
+          </Reveal>
+        </section>
 
-        {/* Servicios en móvil: no hay scroll-jack (se desactiva por rendimiento), así que
-            queda como sección estática normal en vez del panel liquid glass de escritorio. */}
-        {isMobile && (
-          <section id="services" style={{ padding: '80px 0' }}>
-            <div className="lp-wrap">
-              <Reveal>
-                <span className="lp-eyebrow">Servicios</span>
-                <h2 className="lp-display" style={{ fontSize: 'clamp(2rem, 7vw, 2.6rem)', marginTop: 14, color: '#f4efe6' }}>
-                  {getConfig('services', 'title', 'Los servicios de tu estudio, en una plataforma')}
-                </h2>
-                <p style={{ color: '#9b9486', marginTop: 14, fontSize: 15, lineHeight: 1.6 }}>
-                  Cotiza y gestiona cualquiera de tus servicios de diseño y construcción. También puedes crear los tuyos
-                  propios desde el panel de configuración.
-                </p>
-              </Reveal>
-              <div style={{ marginTop: 26 }}>
-                {services.map((s) => (
-                  <Reveal key={s.n} delay={services.indexOf(s) * 40} y={14}>
-                    <div className="lp-srow-lateral">
-                      <div className="lp-sn-lateral">{s.n}</div>
-                      <div>
-                        <div className="lp-st-lateral">{s.t}</div>
-                        <div className="lp-sd-lateral">{s.d}</div>
-                      </div>
+        {/* Servicios: sección grande, fondo negro, grilla de tarjetas */}
+        <section id="services" className="lp-services-section">
+          <div className="lp-wrap">
+            <Reveal>
+              <span className="lp-eyebrow">Servicios</span>
+              <h2 className="lp-display" style={{ fontSize: 'clamp(2.4rem, 6vw, 4rem)', marginTop: 16, color: '#f7f2e8', maxWidth: 800 }}>
+                {getConfig('services', 'title', 'Los servicios de tu estudio, en una plataforma')}
+              </h2>
+              <p style={{ color: '#9b9486', maxWidth: 600, marginTop: 16, fontSize: 17, lineHeight: 1.7 }}>
+                Cotiza y gestiona cualquiera de tus servicios de diseño y construcción. También puedes crear los tuyos
+                propios desde el panel de configuración.
+              </p>
+            </Reveal>
+            <div className="lp-services-grid">
+              {services.map((s, i) => {
+                const Icon = s.icon;
+                return (
+                  <Reveal key={s.t} delay={i * 50} y={20}>
+                    <div className="lp-service-card">
+                      <span className="lp-service-ic"><Icon size={26} strokeWidth={1.6} /></span>
+                      <h3>{s.t}</h3>
+                      <p>{s.d}</p>
                     </div>
                   </Reveal>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          </section>
-        )}
+          </div>
+        </section>
 
         {/* CTA */}
         <section id="cta" style={{ position: 'relative', padding: '80px 24px 110px' }}>
@@ -662,39 +585,56 @@ export function LandingPage() {
         .lp-hero-cta{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:34px;}
         .lp-scroll-hint{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:2;color:#b3ac9d;font-size:13px;letter-spacing:.08em;pointer-events:none;animation:lpHintBob 1.8s ease-in-out infinite;}
         @keyframes lpHintBob{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(7px);}}
-        .lp-func-wrap{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px;pointer-events:none;}
-        .lp-func-eyebrow{position:absolute;top:11%;left:50%;transform:translateX(-50%);}
-        .lp-func-stage{position:relative;width:100%;max-width:1080px;height:300px;}
-        .lp-func-group{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;transition:opacity .55s var(--ease-lp), transform .55s var(--ease-lp);will-change:opacity,transform;}
-        .lp-func-card{
-          display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
-          padding:30px 20px;border-radius:22px;
-          background:linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.02) 45%, rgba(0,0,0,0.12)), rgba(10,9,8,0.4);
-          border:1px solid rgba(255,255,255,0.12);
-          box-shadow:0 18px 44px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
-          backdrop-filter:blur(20px) saturate(160%);
-          -webkit-backdrop-filter:blur(20px) saturate(160%);
+        /* "Cómo funciona": en escritorio se pega (sticky) y se desliza sobre el final
+           de la portada, con fondo negro liquid glass — efecto parallax de láminas. */
+        .lp-proc-stack{
+          border-radius:44px 44px 0 0;
+          background:
+            radial-gradient(55% 45% at 25% 12%, rgba(182,148,98,0.10), transparent 60%),
+            linear-gradient(180deg, rgba(12,11,10,0.82) 0%, rgba(6,6,7,0.96) 45%, #050505 100%);
+          backdrop-filter:blur(34px) saturate(150%);
+          -webkit-backdrop-filter:blur(34px) saturate(150%);
+          box-shadow:0 -40px 90px rgba(0,0,0,0.6);
+          z-index:6;
         }
-        .lp-func-ic{display:inline-flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:16px;background:rgba(182,148,98,0.16);color:#d9b877;border:1px solid rgba(182,148,98,0.35);margin-bottom:16px;flex-shrink:0;}
-        .lp-func-title{font-family:'Manrope',sans-serif;font-weight:800;font-size:clamp(1.05rem,1.6vw,1.3rem);color:#f7f2e8;letter-spacing:-0.01em;}
-        .lp-func-desc{color:#cabfa9;margin:10px auto 0;font-size:14px;line-height:1.55;}
-        .lp-services-glass{
-          position:absolute;top:50%;left:50%;
-          width:min(560px, 90vw);max-height:80vh;overflow-y:auto;
-          padding:32px 34px;border-radius:26px;
-          background:linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02) 45%, rgba(0,0,0,0.14)), rgba(10,9,8,0.5);
-          border:1px solid rgba(255,255,255,0.14);
-          box-shadow:0 22px 54px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.09);
-          backdrop-filter:blur(26px) saturate(160%);
-          -webkit-backdrop-filter:blur(26px) saturate(160%);
-          transition:opacity .5s var(--ease-lp), transform .5s var(--ease-lp);
+        .lp-proc-stack > .lp-wrap{width:100%;}
+        .lp-carousel-wrap{position:relative;margin-top:52px;padding:0 24px;}
+        .lp-carousel{display:flex;gap:24px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 4px 24px;scrollbar-width:none;}
+        .lp-carousel::-webkit-scrollbar{display:none;}
+        /* Las imágenes del carrusel son horizontales (16:9 y 4:3), así que la tarjeta
+           también lo es: un recorte cuadrado les cortaría demasiado. */
+        .lp-carousel-card{
+          position:relative;flex:0 0 auto;width:min(760px, 88vw);aspect-ratio:16/10;
+          border-radius:32px;overflow:hidden;scroll-snap-align:start;background:#111;
         }
-        .lp-services-list{margin-top:20px;}
-        .lp-srow-lateral{display:grid;grid-template-columns:34px 1fr;gap:3px 14px;padding:16px 4px;border-top:1px solid rgba(255,255,255,0.12);align-items:start;}
-        .lp-srow-lateral:last-child{border-bottom:1px solid rgba(255,255,255,0.12);}
-        .lp-sn-lateral{font-family:'Manrope',sans-serif;font-weight:700;color:#b69462;font-size:13px;padding-top:2px;}
-        .lp-st-lateral{font-family:'Manrope',sans-serif;font-weight:700;font-size:16px;color:#f4efe6;letter-spacing:-0.01em;}
-        .lp-sd-lateral{font-size:13px;color:#a59e90;margin-top:4px;line-height:1.5;}
+        .lp-carousel-card img{width:100%;height:100%;object-fit:cover;display:block;}
+        .lp-carousel-scrim{position:absolute;inset:0;background:linear-gradient(180deg, transparent 45%, rgba(0,0,0,0.88) 100%);}
+        .lp-carousel-caption{position:absolute;left:0;right:0;bottom:0;padding:32px 34px;}
+        .lp-carousel-caption h3{font-family:'Manrope',sans-serif;font-weight:800;font-size:clamp(1.4rem,2vw,1.75rem);color:#f7f2e8;letter-spacing:-0.01em;}
+        .lp-carousel-caption p{color:#d8d2c4;margin:10px 0 0;font-size:15.5px;line-height:1.55;max-width:440px;}
+        .lp-carousel-nav{
+          position:absolute;top:50%;transform:translateY(-50%);z-index:2;
+          width:52px;height:52px;border-radius:50%;display:grid;place-items:center;
+          background:rgba(20,19,18,0.6);border:1px solid rgba(255,255,255,0.14);color:#f4efe6;cursor:pointer;
+          backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+          transition:background .2s ease;
+        }
+        .lp-carousel-nav:hover{background:rgba(182,148,98,0.28);}
+        .lp-carousel-nav--prev{left:6px;}
+        .lp-carousel-nav--next{right:6px;}
+        @media (max-width:860px){.lp-carousel-nav{display:none;}}
+        .lp-services-section{background:#050505;padding:120px 24px 130px;}
+        .lp-services-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));gap:22px;margin-top:48px;}
+        .lp-service-card{
+          padding:32px 26px;border-radius:24px;
+          background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01) 50%, rgba(0,0,0,0.1)), rgba(14,13,12,0.5);
+          border:1px solid rgba(255,255,255,0.08);
+          transition:transform .3s var(--ease-lp), border-color .3s ease;
+        }
+        .lp-service-card:hover{transform:translateY(-4px);border-color:rgba(182,148,98,0.3);}
+        .lp-service-ic{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:15px;background:rgba(182,148,98,0.14);color:#d9b877;border:1px solid rgba(182,148,98,0.3);margin-bottom:18px;}
+        .lp-service-card h3{font-family:'Manrope',sans-serif;font-weight:800;font-size:1.15rem;color:#f7f2e8;letter-spacing:-0.01em;}
+        .lp-service-card p{color:#a59e90;margin:10px 0 0;font-size:14px;line-height:1.6;}
       `}</style>
     </div>
   );
