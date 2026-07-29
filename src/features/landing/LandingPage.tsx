@@ -1,25 +1,18 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
-import { Calculator, X, DraftingCompass, Frame, Droplet, Zap, Camera, Video, FileCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calculator, X, DraftingCompass, Frame, Droplet, Zap, Camera, Video, FileCheck, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import logoGold from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado Original 1.png';
 import logoWhite from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado White.png';
 import logoPrincipal from '../../assets/LogoPrincipal.png';
 import casaRelleno1 from '../../assets/casa_relleno1.webp';
 import { useStore } from '../../shared/services/store';
 import { ScrollSequence } from './ScrollSequence';
+import { landingFeatures } from './featuresData';
 
 // Secuencia de la portada (ordenada por nombre: frame_01..frame_64), en WebP.
 const portadaMap = import.meta.glob('../../assets/portada_webp/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const portadaFrames = Object.keys(portadaMap).sort().map((k) => portadaMap[k]);
 
-// Imágenes del carrusel de Funciones. Se importan una por una (y no con un glob)
-// porque los nombres no ordenan solos: "CARUSELL5" en mayúsculas quedaría primero.
-import carrusel1 from '../../assets/interior_webp/carrusell1.webp';
-import carrusel2 from '../../assets/interior_webp/carrusell2.webp';
-import carrusel3 from '../../assets/interior_webp/carrusell3.webp';
-import carrusel4 from '../../assets/interior_webp/carrusell4.webp';
-import carrusel5 from '../../assets/interior_webp/CARUSELL5.webp';
-const carruselImgs = [carrusel1, carrusel2, carrusel3, carrusel4, carrusel5];
 
 const navLinks = [
   { label: 'Inicio', href: '#hero' },
@@ -160,6 +153,7 @@ function MagneticButton({
 
 export function LandingPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const [scrolled, setScrolled] = useState(() => window.scrollY > 40);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -173,6 +167,21 @@ export function LandingPage() {
   const contentRef = useRef<HTMLDivElement>(null);
   const heroOverlayRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  // Al llegar con hash (p. ej. volviendo desde /funciones/... a /#features),
+  // React Router no hace scroll solo. Se espera un instante porque el layout de
+  // la portada es muy alto y las posiciones no son definitivas al montar.
+  // Va 'instant' y no 'auto': 'auto' hereda el scroll-behavior:smooth global y
+  // animaría el recorrido entero de la portada antes de llegar a la sección.
+  useEffect(() => {
+    if (!location.hash) return;
+    const id = location.hash.slice(1);
+    const t = setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top, behavior: 'instant' });
+    }, 80);
+    return () => clearTimeout(t);
+  }, [location.hash]);
 
   useEffect(() => {
     const t = requestAnimationFrame(() => setReady(true));
@@ -273,14 +282,16 @@ export function LandingPage() {
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Las 5 funciones más importantes, cada una con su imagen del carrusel (en orden 1..5).
-  const featuresCarousel = [
-    { title: 'Planos de casa', desc: 'Dibuja la vivienda por niveles y habitaciones en un editor CAD; de ahí salen todos los cálculos.' },
-    { title: 'Cotización inteligente', desc: 'Asistente de 5 pasos con cálculo automático de área y precio en vivo.' },
-    { title: 'Enchapes y barrederas', desc: 'Pisos, paredes y perímetros por tramos, con desperdicio y número de piezas.' },
-    { title: 'Estimación de obra', desc: 'Costo de construcción por m²: obra negra, gris y acabados.' },
-    { title: 'Cuentas de cobro', desc: 'Documentos formales con firma, numeración, plan de pagos y registro de abonos.' },
-  ].map((f, i) => ({ ...f, img: carruselImgs[i] }));
+  // Abre el detalle de una función. Antes de navegar marca la imagen de la
+  // tarjeta con el mismo view-transition-name que usa la página de destino,
+  // para que una se transforme en la otra. Se limpian las demás primero: el
+  // nombre debe ser único o el navegador cancela la transición.
+  const openFeature = (slug: string, cardEl: HTMLElement) => {
+    document.querySelectorAll<HTMLElement>('.lp-carousel-card img').forEach((i) => { i.style.viewTransitionName = ''; });
+    const img = cardEl.querySelector('img');
+    if (img) img.style.viewTransitionName = 'feature-hero';
+    navigate(`/funciones/${slug}`, { viewTransition: true });
+  };
 
   const services = [
     { icon: DraftingCompass, t: 'Diseño Arquitectónico', d: 'Planos arquitectónicos completos con normativa local.' },
@@ -488,15 +499,22 @@ export function LandingPage() {
           <Reveal delay={100}>
             <div className="lp-carousel-wrap">
               <div className="lp-carousel" ref={carouselRef}>
-                {featuresCarousel.map((f) => (
-                  <div key={f.title} className="lp-carousel-card">
+                {landingFeatures.map((f) => (
+                  <button
+                    key={f.slug}
+                    type="button"
+                    className="lp-carousel-card"
+                    onClick={(e) => openFeature(f.slug, e.currentTarget)}
+                    aria-label={`Ver más sobre ${f.title}`}
+                  >
                     <img src={f.img} alt="" loading="lazy" />
                     <div className="lp-carousel-scrim" />
                     <div className="lp-carousel-caption">
                       <h3>{f.title}</h3>
                       <p>{f.desc}</p>
+                      <span className="lp-carousel-cta">Ver más <ArrowRight size={15} /></span>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
               <button type="button" className="lp-carousel-nav lp-carousel-nav--prev" onClick={() => scrollCarousel(-1)} aria-label="Función anterior"><ChevronLeft size={20} /></button>
@@ -563,16 +581,45 @@ export function LandingPage() {
         </section>
 
         {/* Footer */}
-        <footer style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '58px 24px 50px' }}>
-          <div className="lp-wrap" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <img src={logoWhite} alt="ELEMENThaus" style={{ height: 34, width: 'auto' }} />
-              <span style={{ fontSize: 13, color: '#7c7568' }}>© 2026 ELEMENT. Todos los derechos reservados.</span>
+        <footer className="lp-footer">
+          <div className="lp-wrap">
+            <div className="lp-foot-grid">
+              <div className="lp-foot-brand">
+                <img src={logoWhite} alt="ELEMENThaus" style={{ height: 38, width: 'auto' }} />
+                <p>
+                  La plataforma integral para estudios de arquitectura y construcción: del plano
+                  a la cuenta de cobro, sin hojas de cálculo.
+                </p>
+              </div>
+
+              <div className="lp-foot-col">
+                <h3>Funciones</h3>
+                {landingFeatures.map((f) => (
+                  <button key={f.slug} type="button" onClick={() => navigate(`/funciones/${f.slug}`, { viewTransition: true })}>
+                    {f.title}
+                  </button>
+                ))}
+              </div>
+
+              <div className="lp-foot-col">
+                <h3>Navegación</h3>
+                {navLinks.map((l) => (
+                  <button key={l.href} type="button" onClick={() => scrollTo(l.href)}>{l.label}</button>
+                ))}
+              </div>
+
+              <div className="lp-foot-col">
+                <h3>Cuenta</h3>
+                <button type="button" onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}>
+                  {isAuthenticated ? 'Ir al Dashboard' : 'Iniciar sesión'}
+                </button>
+                {!isAuthenticated && <button type="button" onClick={() => navigate('/register')}>Crear cuenta</button>}
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-              {navLinks.map((l) => (
-                <button key={l.href} type="button" className="landing-nav-link" onClick={() => scrollTo(l.href)} style={{ border: 'none', background: 'transparent', fontSize: 13 }}>{l.label}</button>
-              ))}
+
+            <div className="lp-foot-bottom">
+              <span>© 2026 ELEMENT. Todos los derechos reservados.</span>
+              <span>Construcción · Arquitectura · Ingeniería</span>
             </div>
           </div>
         </footer>
@@ -606,7 +653,19 @@ export function LandingPage() {
         .lp-carousel-card{
           position:relative;flex:0 0 auto;width:min(760px, 88vw);aspect-ratio:16/10;
           border-radius:32px;overflow:hidden;scroll-snap-align:start;background:#111;
+          padding:0;border:1px solid rgba(255,255,255,0.08);cursor:pointer;font:inherit;text-align:left;
+          transition:transform .35s var(--ease-lp), border-color .35s ease;
         }
+        .lp-carousel-card:hover{transform:translateY(-6px);border-color:rgba(182,148,98,0.4);}
+        .lp-carousel-card:focus-visible{outline:2px solid #b69462;outline-offset:3px;}
+        .lp-carousel-card img{transition:transform .5s var(--ease-lp);}
+        .lp-carousel-card:hover img{transform:scale(1.04);}
+        .lp-carousel-cta{
+          display:inline-flex;align-items:center;gap:7px;margin-top:16px;
+          padding:9px 18px;border-radius:999px;font-size:14px;font-weight:600;color:#0d0c0b;
+          background:#e9dcc2;transition:background .25s ease, gap .25s ease;
+        }
+        .lp-carousel-card:hover .lp-carousel-cta{background:#fff;gap:11px;}
         .lp-carousel-card img{width:100%;height:100%;object-fit:cover;display:block;}
         .lp-carousel-scrim{position:absolute;inset:0;background:linear-gradient(180deg, transparent 45%, rgba(0,0,0,0.88) 100%);}
         .lp-carousel-caption{position:absolute;left:0;right:0;bottom:0;padding:32px 34px;}
@@ -635,6 +694,31 @@ export function LandingPage() {
         .lp-service-ic{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:15px;background:rgba(182,148,98,0.14);color:#d9b877;border:1px solid rgba(182,148,98,0.3);margin-bottom:18px;}
         .lp-service-card h3{font-family:'Manrope',sans-serif;font-weight:800;font-size:1.15rem;color:#f7f2e8;letter-spacing:-0.01em;}
         .lp-service-card p{color:#a59e90;margin:10px 0 0;font-size:14px;line-height:1.6;}
+        .lp-footer{border-top:1px solid rgba(255,255,255,0.08);background:#050505;padding:70px 24px 40px;}
+        .lp-foot-grid{
+          display:grid;grid-template-columns:minmax(260px,1.5fr) repeat(3, minmax(140px,1fr));
+          gap:clamp(28px,4vw,52px);
+        }
+        .lp-foot-brand p{color:#7c7568;font-size:14px;line-height:1.65;margin:18px 0 0;max-width:330px;}
+        .lp-foot-col{display:flex;flex-direction:column;align-items:flex-start;gap:11px;}
+        .lp-foot-col h3{
+          font-family:'Manrope',sans-serif;font-weight:700;font-size:12px;letter-spacing:0.14em;
+          text-transform:uppercase;color:#b69462;margin:0 0 5px;
+        }
+        .lp-foot-col button{
+          background:none;border:none;padding:0;cursor:pointer;font:inherit;text-align:left;
+          color:#9b9486;font-size:14px;transition:color .2s ease;
+        }
+        .lp-foot-col button:hover{color:#f4efe6;}
+        .lp-foot-bottom{
+          display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;
+          margin-top:52px;padding-top:26px;border-top:1px solid rgba(255,255,255,0.07);
+          color:#5f594f;font-size:12.5px;
+        }
+        @media (max-width:820px){
+          .lp-foot-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+          .lp-foot-brand{grid-column:1 / -1;}
+        }
       `}</style>
     </div>
   );
