@@ -8,6 +8,7 @@ import casaRelleno1 from '../../assets/casa_relleno1.webp';
 import { useStore } from '../../shared/services/store';
 import { ScrollSequence } from './ScrollSequence';
 import { landingFeatures } from './featuresData';
+import { FacebookIcon, InstagramIcon, WhatsAppIcon } from '../../shared/components/SocialIcons';
 
 // Secuencia de la portada (ordenada por nombre: frame_01..frame_64), en WebP.
 const portadaMap = import.meta.glob('../../assets/portada_webp/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
@@ -282,14 +283,11 @@ export function LandingPage() {
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Abre el detalle de una función. Antes de navegar marca la imagen de la
-  // tarjeta con el mismo view-transition-name que usa la página de destino,
-  // para que una se transforme en la otra. Se limpian las demás primero: el
-  // nombre debe ser único o el navegador cancela la transición.
-  const openFeature = (slug: string, cardEl: HTMLElement) => {
-    document.querySelectorAll<HTMLElement>('.lp-carousel-card img').forEach((i) => { i.style.viewTransitionName = ''; });
-    const img = cardEl.querySelector('img');
-    if (img) img.style.viewTransitionName = 'feature-hero';
+  // Abre el detalle de una función con un fundido (cross-fade de página completa).
+  // Antes se compartía el view-transition-name de la imagen para que "volara" de
+  // la tarjeta a la página de detalle, pero se sentía como un salto brusco por el
+  // cambio de tamaño/posición; un fundido simple se percibe como una aparición.
+  const openFeature = (slug: string) => {
     navigate(`/funciones/${slug}`, { viewTransition: true });
   };
 
@@ -504,7 +502,7 @@ export function LandingPage() {
                     key={f.slug}
                     type="button"
                     className="lp-carousel-card"
-                    onClick={(e) => openFeature(f.slug, e.currentTarget)}
+                    onClick={() => openFeature(f.slug)}
                     aria-label={`Ver más sobre ${f.title}`}
                   >
                     <img src={f.img} alt="" loading="lazy" />
@@ -590,6 +588,12 @@ export function LandingPage() {
                   La plataforma integral para estudios de arquitectura y construcción: del plano
                   a la cuenta de cobro, sin hojas de cálculo.
                 </p>
+                <div className="lp-foot-social">
+                  <a href="https://web.facebook.com/ARQ.RECINTO?locale=es_LA" target="_blank" rel="noopener noreferrer" aria-label="Facebook de ELEMENThaus"><FacebookIcon /></a>
+                  <a href="https://www.instagram.com/element.haus/" target="_blank" rel="noopener noreferrer" aria-label="Instagram de ELEMENThaus"><InstagramIcon /></a>
+                  <a href="https://wa.me/573184575744" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp +57 318 4575744" title="+57 318 4575744"><WhatsAppIcon /></a>
+                  <a href="https://wa.me/573157541417" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp +57 315 7541417" title="+57 315 7541417"><WhatsAppIcon /></a>
+                </div>
               </div>
 
               <div className="lp-foot-col">
@@ -700,6 +704,13 @@ export function LandingPage() {
           gap:clamp(28px,4vw,52px);
         }
         .lp-foot-brand p{color:#7c7568;font-size:14px;line-height:1.65;margin:18px 0 0;max-width:330px;}
+        .lp-foot-social{display:flex;gap:10px;margin-top:20px;}
+        .lp-foot-social a{
+          display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;
+          border-radius:50%;color:#c8c0b1;border:1px solid rgba(255,255,255,0.12);
+          background:rgba(255,255,255,0.03);transition:color .2s ease, border-color .2s ease, background .2s ease, transform .2s ease;
+        }
+        .lp-foot-social a:hover{color:#0d0c0b;background:#e9dcc2;border-color:#e9dcc2;transform:translateY(-2px);}
         .lp-foot-col{display:flex;flex-direction:column;align-items:flex-start;gap:11px;}
         .lp-foot-col h3{
           font-family:'Manrope',sans-serif;font-weight:700;font-size:12px;letter-spacing:0.14em;

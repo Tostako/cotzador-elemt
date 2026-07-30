@@ -3,6 +3,7 @@ import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { ArrowLeft, Check } from 'lucide-react';
 import { useStore } from '../../shared/services/store';
 import { landingFeatures, getFeatureBySlug } from './featuresData';
+import { FacebookIcon, InstagramIcon, WhatsAppIcon } from '../../shared/components/SocialIcons';
 import logoWhite from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado White.png';
 
 /** Detalle de una función de la landing: título, explicación a fondo y la
@@ -85,6 +86,12 @@ export function FeatureDetailPage() {
       <footer className="fd-foot">
         <img src={logoWhite} alt="ELEMENThaus" style={{ height: 30, width: 'auto' }} />
         <span>© 2026 ELEMENT. Todos los derechos reservados.</span>
+        <div className="fd-foot-social">
+          <a href="https://web.facebook.com/ARQ.RECINTO?locale=es_LA" target="_blank" rel="noopener noreferrer" aria-label="Facebook de ELEMENThaus"><FacebookIcon size={16} /></a>
+          <a href="https://www.instagram.com/element.haus/" target="_blank" rel="noopener noreferrer" aria-label="Instagram de ELEMENThaus"><InstagramIcon size={16} /></a>
+          <a href="https://wa.me/573184575744" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp +57 318 4575744" title="+57 318 4575744"><WhatsAppIcon size={16} /></a>
+          <a href="https://wa.me/573157541417" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp +57 315 7541417" title="+57 315 7541417"><WhatsAppIcon size={16} /></a>
+        </div>
       </footer>
 
       <style>{`
@@ -110,7 +117,6 @@ export function FeatureDetailPage() {
         .fd-figure{
           margin:clamp(30px,5vw,48px) 0 0;border-radius:28px;overflow:hidden;background:#111;
           border:1px solid rgba(255,255,255,0.08);box-shadow:0 24px 60px rgba(0,0,0,0.5);
-          view-transition-name:feature-hero;
         }
         .fd-figure img{display:block;width:100%;height:auto;}
         .fd-body{
@@ -144,18 +150,26 @@ export function FeatureDetailPage() {
           font-family:'Manrope',sans-serif;font-weight:700;font-size:15px;color:#f4efe6;
         }
         .fd-foot{
-          display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
+          display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;
           border-top:1px solid rgba(255,255,255,0.08);padding:34px 24px 40px;color:#7c7568;font-size:13px;
         }
+        .fd-foot-social{display:flex;gap:9px;}
+        .fd-foot-social a{
+          display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;
+          border-radius:50%;color:#c8c0b1;border:1px solid rgba(255,255,255,0.12);
+          background:rgba(255,255,255,0.03);transition:color .2s ease, border-color .2s ease, background .2s ease;
+        }
+        .fd-foot-social a:hover{color:#0d0c0b;background:#e9dcc2;border-color:#e9dcc2;}
         @media (max-width:820px){
           .fd-body{grid-template-columns:1fr;}
           .fd-aside{position:static;}
         }
-        /* La imagen se transforma de la tarjeta del carrusel a la de detalle. */
-        ::view-transition-old(feature-hero),
-        ::view-transition-new(feature-hero){
-          animation-duration:.55s;
-          animation-timing-function:cubic-bezier(0.16,1,0.3,1);
+        /* Fundido de página completa: se siente como una aparición, no como un salto
+           (el morph de un elemento compartido cambiaba de tamaño/posición de golpe). */
+        ::view-transition-old(root),
+        ::view-transition-new(root){
+          animation-duration:.42s;
+          animation-timing-function:ease-out;
         }
         @media (prefers-reduced-motion: reduce){
           ::view-transition-group(*),
