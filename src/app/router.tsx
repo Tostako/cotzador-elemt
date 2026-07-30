@@ -6,6 +6,7 @@ import { useStore } from '../shared/services/store';
 // Carga diferida por ruta: el bundle inicial se reduce y las dependencias pesadas
 // (p. ej. Konva en Planos/Barrederas) solo se descargan al entrar a esas rutas.
 const LandingPage = lazy(() => import('../features/landing/LandingPage').then((m) => ({ default: m.LandingPage })));
+const FeatureDetailPage = lazy(() => import('../features/landing/FeatureDetailPage').then((m) => ({ default: m.FeatureDetailPage })));
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('../features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })));
 const ForgotPasswordPage = lazy(() => import('../features/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
@@ -49,6 +50,7 @@ const prot = (node: ReactNode) => (
 
 export const router = createBrowserRouter([
   { path: '/', element: lz(<LandingPage />) },
+  { path: '/funciones/:slug', element: lz(<FeatureDetailPage />) },
   { path: '/login', element: lz(<LoginPage />) },
   { path: '/register', element: lz(<RegisterPage />) },
   { path: '/forgot-password', element: lz(<ForgotPasswordPage />) },

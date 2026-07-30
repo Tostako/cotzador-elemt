@@ -8,7 +8,7 @@ import {
   SNAP_M, DIRV, ROOM_COLORS, uid, newEspacio, computeRing, shoelaceArea, wallLength, espacioArea,
 } from './planoGeometry';
 import { toBackendPlan, fromBackendPlan, type PlanoMeta } from './mapping';
-import { Grid3x3, Frame } from 'lucide-react';
+import { Grid3x3, Frame, Maximize, Minimize, LocateFixed } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────
 // Editor CAD 2D por nodos — Fase 3 (persistencia).
@@ -42,6 +42,14 @@ export function PlanoEditor({ planId }: { planId?: string }) {
   const [saving, setSaving] = useState(false);
   const [derivando, setDerivando] = useState(false);
   const [showDatos, setShowDatos] = useState(false); // datos del plano colapsables
+  const [showPisoHab, setShowPisoHab] = useState(false); // desplegable de piso/habitación (móvil)
+  const [selectedWallId, setSelectedWallId] = useState<string | null>(null); // muro seleccionado (menú contextual)
+  const [wallEditOpen, setWallEditOpen] = useState(false); // panel "Editar muro" (distancia y columnas del muro seleccionado)
+  const [wallEditDistance, setWallEditDistance] = useState('3');
+  const [wallEditCount, setWallEditCount] = useState(1);
+  const [wallEditAncho, setWallEditAncho] = useState(30);
+  const [wallEditFondo, setWallEditFondo] = useState(15);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Cargar plano existente
   useEffect(() => {
@@ -133,7 +141,29 @@ export function PlanoEditor({ planId }: { planId?: string }) {
   );
 
   const wrapRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<any>(null);
+  const fsRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: 560 });
+
+  // Pantalla completa: engloba herramientas + lienzo + métricas.
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(document.fullscreenElement === fsRef.current);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      fsRef.current?.requestFullscreen?.();
+    }
+  };
+
+  // Recentrar la vista (deshace el paneo manual del lienzo).
+  const recenterView = () => {
+    stageRef.current?.position({ x: 0, y: 0 });
+    stageRef.current?.batchDraw();
+  };
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -201,26 +231,58 @@ export function PlanoEditor({ planId }: { planId?: string }) {
     setSelectedNodeId(first.id);
   };
 
-  // Clic en un muro: con "Columna" activo pone/quita columnas; si no, alterna abertura.
+  // Alterna abertura del muro seleccionado (acción del menú contextual, no del clic directo).
   const toggleWallOpening = (id: string) => {
-    if (placing || movingNode) return;
-    if (colActiva) {
-      updateEspacio((e) => ({
-        ...e,
-        walls: e.walls.map((w) =>
-          w.id === id
-            ? { ...w, columnas: (w.columnas?.length || 0) > 0 ? [] : Array.from({ length: colCount }, () => ({ ancho: colAncho, fondo: colFondo })) }
-            : w
-        ),
-      }));
-      return;
-    }
     updateEspacio((e) => ({ ...e, walls: e.walls.map((w) => (w.id === id ? { ...w, opening: !w.opening } : w)) }));
+  };
+
+  // Aplica/quita columnas al muro seleccionado (panel "Editar muro").
+  const applyWallColumns = (id: string, count: number, ancho: number, fondo: number) => {
+    updateEspacio((e) => ({
+      ...e,
+      walls: e.walls.map((w) => (w.id === id ? { ...w, columnas: Array.from({ length: Math.max(1, count) }, () => ({ ancho, fondo })) } : w)),
+    }));
+  };
+  const clearWallColumns = (id: string) => {
+    updateEspacio((e) => ({ ...e, walls: e.walls.map((w) => (w.id === id ? { ...w, columnas: [] } : w)) }));
+  };
+
+  // Elimina un muro y limpia los nodos que quedan huérfanos (salvo el primer nodo, que es el ancla).
+  const deleteWall = (id: string) => {
+    const e = espacioActivo;
+    const walls = e.walls.filter((w) => w.id !== id);
+    const usedIds = new Set<string>();
+    walls.forEach((w) => { usedIds.add(w.a); usedIds.add(w.b); });
+    const nodes = e.nodes.filter((n, idx) => idx === 0 || usedIds.has(n.id));
+    commitEspacio({ ...e, nodes, walls });
+    if (!nodes.some((n) => n.id === selectedNodeId)) setSelectedNodeId(nodes[0].id);
+    setSelectedWallId(null);
+    setWallEditOpen(false);
+  };
+
+  // Clic en un muro: solo lo selecciona (muestra el menú contextual); no ejecuta ninguna acción directa.
+  const selectWall = (id: string) => {
+    setSelectedWallId((cur) => (cur === id ? null : id));
+    setWallEditOpen(false);
   };
 
   // Reubicar el nodo seleccionado a una posición (en metros)
   const moveNode = (nodeId: string, x: number, y: number) => {
     updateEspacio((e) => ({ ...e, nodes: e.nodes.map((n) => (n.id === nodeId ? { ...n, x, y } : n)) }));
+  };
+
+  // Cambia el largo del muro seleccionado moviendo su nodo "b" sobre la misma dirección
+  // (el nodo "a" queda fijo). Si ese nodo lo comparte otro muro, ese muro también se ajusta.
+  const applyWallDistance = (w: { a: string; b: string }, newLen: number) => {
+    if (!newLen || newLen <= 0) return;
+    const a = espacioActivo.nodes.find((n) => n.id === w.a);
+    const b = espacioActivo.nodes.find((n) => n.id === w.b);
+    if (!a || !b) return;
+    const curLen = Math.hypot(b.x - a.x, b.y - a.y);
+    if (curLen === 0) return;
+    const ux = (b.x - a.x) / curLen;
+    const uy = (b.y - a.y) / curLen;
+    moveNode(w.b, +(a.x + ux * newLen).toFixed(3), +(a.y + uy * newLen).toFixed(3));
   };
 
   // ── Niveles ──
@@ -284,7 +346,10 @@ export function PlanoEditor({ planId }: { planId?: string }) {
 
   // Clic en el lienzo: ubicar nueva habitación o reubicar el nodo seleccionado.
   const handleStageClick = (e: any) => {
-    if (!placing && !movingNode) return;
+    if (!placing && !movingNode) {
+      if (selectedWallId) { setSelectedWallId(null); setWallEditOpen(false); }
+      return;
+    }
     const stage = e.target?.getStage?.();
     const pos = stage?.getPointerPosition?.();
     if (!pos) return;
@@ -424,9 +489,26 @@ export function PlanoEditor({ planId }: { planId?: string }) {
         )}
       </div>
 
+      {/* Todo lo necesario para desarrollar el plano (herramientas + lienzo + métricas)
+          vive dentro de este contenedor para poder ponerlo en pantalla completa. */}
+      <div
+        ref={fsRef}
+        style={isFullscreen ? { background: 'var(--color-bg)', minHeight: '100vh', height: '100vh', padding: 16, display: 'flex', flexDirection: 'column', overflowY: 'auto' } : undefined}
+      >
       {/* Controles: piso · habitación · herramientas */}
       <div className="card" style={{ marginBottom: 12, display: 'grid', gap: 14 }}>
-        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+        {/* En móvil, piso/habitación quedan detrás de un desplegable para no ocupar toda la pantalla */}
+        <button
+          type="button"
+          className="show-mobile"
+          onClick={() => setShowPisoHab((v) => !v)}
+          style={{ alignItems: 'center', gap: 8, width: '100%', background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '8px 12px', color: '#f4efe6', cursor: 'pointer', font: 'inherit' }}
+        >
+          <span style={{ fontWeight: 700 }}>Piso y habitación</span>
+          <span className="small" style={{ color: '#8c8578' }}>{nivelActivo.nombre} · {espacioActivo.nombre}</span>
+          <span style={{ marginLeft: 'auto', color: '#8c8578' }}>{showPisoHab ? '▲' : '▼'}</span>
+        </button>
+        <div className={showPisoHab ? undefined : 'plano-pisohab-collapsed'} style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
           {/* Piso */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 240px' }}>
             <label className="small" style={{ fontWeight: 700 }}>Piso</label>
@@ -491,7 +573,16 @@ export function PlanoEditor({ planId }: { planId?: string }) {
           <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
             <button type="button" style={btn(movingNode)} onClick={() => { setPlacing(false); setMovingNode((v) => !v); }} title="Reubicar el punto seleccionado">✎ Mover</button>
             <button type="button" style={btn(false)} onClick={undo} title="Deshacer último muro">↶</button>
-            <button type="button" style={{ ...btn(false), color: '#ff6b6b', borderColor: 'rgba(255,107,107,0.3)' }} onClick={clearEspacio} title="Limpiar habitación">🗑️</button>
+            <button type="button" style={{ ...btn(false), color: '#ff6b6b', borderColor: 'rgba(255,107,107,0.3)', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={clearEspacio} title="Eliminar todo el proyecto">🗑️ Eliminar todo el proyecto</button>
+            <button
+              type="button"
+              style={{ ...btn(isFullscreen), display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Salir de pantalla completa' : 'Editar el plano en pantalla completa'}
+            >
+              {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
+              {isFullscreen ? 'Salir' : 'Pantalla completa'}
+            </button>
           </div>
         </div>
       </div>
@@ -509,16 +600,81 @@ export function PlanoEditor({ planId }: { planId?: string }) {
       )}
       {colActiva && !placing && !movingNode && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', marginBottom: 10, borderRadius: 10, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)' }}>
-          <span className="small" style={{ color: '#fbbf24', fontWeight: 600 }}>🏛️ Columna activa: los muros que dibujes llevarán {colCount} columna{colCount > 1 ? 's' : ''} de {colAncho}×{colFondo} cm. Toca un muro existente para ponerle o quitarle columnas. Cada columna suma 2 × saliente ({(2 * colFondo / 100).toFixed(2)} m) a las barrederas.</span>
+          <span className="small" style={{ color: '#fbbf24', fontWeight: 600 }}>🏛️ Columna activa: los muros que dibujes llevarán {colCount} columna{colCount > 1 ? 's' : ''} de {colAncho}×{colFondo} cm. Selecciona un muro existente y usa "Editar muro" para ponerle o quitarle columnas. Cada columna suma 2 × saliente ({(2 * colFondo / 100).toFixed(2)} m) a las barrederas.</span>
         </div>
       )}
-      <div ref={wrapRef} style={{ position: 'relative', width: '100%', height: '58vh', minHeight: 420, borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0c0b0a', cursor: placing || movingNode ? 'crosshair' : 'default', touchAction: 'none' }}>
+      {selectedWallId && !placing && !movingNode && (() => {
+        const w = espacioActivo.walls.find((x) => x.id === selectedWallId);
+        if (!w) return null;
+        const len = wallLength(espacioActivo.nodes, w);
+        return (
+          <div style={{ padding: '10px 14px', marginBottom: 10, borderRadius: 10, background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.35)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span className="small" style={{ color: '#93c5fd', fontWeight: 600 }}>
+                🧱 Muro seleccionado · {len.toFixed(2)} m{w.opening ? ' · abertura' : ''}{(w.columnas?.length || 0) > 0 ? ` · ${w.columnas!.length} columna${w.columnas!.length > 1 ? 's' : ''}` : ''}
+              </span>
+              <div style={{ display: 'flex', gap: 6, marginLeft: 'auto', flexWrap: 'wrap' }}>
+                <button type="button" style={btn(w.opening)} onClick={() => toggleWallOpening(w.id)}>🚪 {w.opening ? 'Quitar abertura' : 'Abertura'}</button>
+                <button
+                  type="button"
+                  style={btn(wallEditOpen)}
+                  onClick={() => {
+                    if (!wallEditOpen) {
+                      setWallEditDistance(len.toFixed(2));
+                      setWallEditCount(w.columnas?.length || colCount);
+                      setWallEditAncho(w.columnas?.[0]?.ancho ?? colAncho);
+                      setWallEditFondo(w.columnas?.[0]?.fondo ?? colFondo);
+                    }
+                    setWallEditOpen((v) => !v);
+                  }}
+                >
+                  ✎ Editar muro
+                </button>
+                <button type="button" style={{ ...btn(false), color: '#ff6b6b', borderColor: 'rgba(255,107,107,0.3)' }} onClick={() => deleteWall(w.id)}>🗑 Eliminar muro</button>
+                <button type="button" style={{ ...btn(false), padding: '6px 10px' }} onClick={() => { setSelectedWallId(null); setWallEditOpen(false); }} title="Deseleccionar">✕</button>
+              </div>
+            </div>
+            {wallEditOpen && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <label className="small">Distancia</label>
+                <input className="input" type="number" min={0.1} step={0.1} value={wallEditDistance} onChange={(e) => setWallEditDistance(e.target.value)} style={{ width: 80 }} aria-label="Distancia del muro seleccionado (m)" />
+                <span className="small">m</span>
+                <button type="button" style={btn(false)} onClick={() => applyWallDistance(w, parseFloat(wallEditDistance))}>Aplicar distancia</button>
+                <div style={{ flexBasis: '100%', height: 0 }} />
+                <label className="small">N° columnas</label>
+                <input className="input" type="number" min={1} step={1} value={wallEditCount} onChange={(e) => setWallEditCount(Math.max(1, parseInt(e.target.value) || 1))} style={{ width: 60 }} aria-label="Número de columnas del muro seleccionado" />
+                <label className="small">Ancho</label>
+                <input className="input" type="number" min={0} step={1} value={wallEditAncho} onChange={(e) => setWallEditAncho(parseFloat(e.target.value) || 0)} style={{ width: 70 }} aria-label="Ancho de columna (cm)" />
+                <span className="small">cm</span>
+                <label className="small">Saliente</label>
+                <input className="input" type="number" min={0} step={1} value={wallEditFondo} onChange={(e) => setWallEditFondo(parseFloat(e.target.value) || 0)} style={{ width: 70 }} aria-label="Saliente de columna (cm)" />
+                <span className="small">cm</span>
+                <button type="button" style={btn(false)} onClick={() => applyWallColumns(w.id, wallEditCount, wallEditAncho, wallEditFondo)}>Aplicar columnas</button>
+                {(w.columnas?.length || 0) > 0 && (
+                  <button type="button" style={{ ...btn(false), color: '#ff6b6b', borderColor: 'rgba(255,107,107,0.3)' }} onClick={() => clearWallColumns(w.id)}>Quitar columnas</button>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+      <div ref={wrapRef} style={{ position: 'relative', width: '100%', height: isFullscreen ? undefined : '58vh', flex: isFullscreen ? '1 1 auto' : undefined, minHeight: 420, borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0c0b0a', cursor: placing || movingNode ? 'crosshair' : 'default', touchAction: 'none' }}>
         {/* Zoom (overlay) */}
         <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 5, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <button type="button" style={{ ...dirBtn, background: 'rgba(20,18,16,0.85)' }} onClick={() => setScale((s) => Math.min(120, s + 6))} title="Acercar">+</button>
           <button type="button" style={{ ...dirBtn, background: 'rgba(20,18,16,0.85)' }} onClick={() => setScale((s) => Math.max(16, s - 6))} title="Alejar">−</button>
+          <button type="button" style={{ ...dirBtn, background: 'rgba(20,18,16,0.85)' }} onClick={recenterView} title="Centrar vista"><LocateFixed size={16} /></button>
         </div>
-        <Stage width={size.w} height={size.h} onClick={handleStageClick} onTap={handleStageClick} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+        <Stage
+          ref={stageRef}
+          width={size.w}
+          height={size.h}
+          draggable={!placing && !movingNode}
+          onClick={handleStageClick}
+          onTap={handleStageClick}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <Layer listening={false}>
             {gridLines.map((p, i) => (
               <Line key={i} points={p} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
@@ -539,9 +695,20 @@ export function PlanoEditor({ planId }: { planId?: string }) {
                     const pb = toPx(b.x, b.y);
                     const mid = { x: (pa.px + pb.px) / 2, y: (pa.py + pb.py) / 2 };
                     const len = Math.hypot(a.x - b.x, a.y - b.y);
+                    const isWallSel = w.id === selectedWallId;
+                    const wallClick = (ev: any) => { ev.cancelBubble = true; selectWall(w.id); };
                     return (
-                      <Group key={w.id} onClick={isActive ? () => toggleWallOpening(w.id) : undefined} onTap={isActive ? () => toggleWallOpening(w.id) : undefined}>
-                        <Line points={[pa.px, pa.py, pb.px, pb.py]} stroke={w.opening ? '#8c8578' : col} strokeWidth={w.opening ? 3 : 5} dash={w.opening ? [8, 6] : undefined} lineCap="round" />
+                      <Group key={w.id} onClick={isActive ? wallClick : undefined} onTap={isActive ? wallClick : undefined}>
+                        <Line
+                          points={[pa.px, pa.py, pb.px, pb.py]}
+                          stroke={isWallSel ? '#60a5fa' : w.opening ? '#8c8578' : col}
+                          strokeWidth={isWallSel ? 7 : w.opening ? 3 : 5}
+                          dash={w.opening ? [8, 6] : undefined}
+                          lineCap="round"
+                          shadowColor={isWallSel ? '#60a5fa' : undefined}
+                          shadowBlur={isWallSel ? 12 : 0}
+                          shadowOpacity={isWallSel ? 0.9 : 0}
+                        />
                         {(w.columnas?.length || 0) > 0 && (w.columnas || []).map((c, ci) => {
                           const n = w.columnas!.length;
                           const f = (ci + 1) / (n + 1);
@@ -576,8 +743,11 @@ export function PlanoEditor({ planId }: { planId?: string }) {
         </Stage>
       </div>
 
-      {/* Métricas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginTop: 12 }}>
+      {/* Métricas: en móvil se ocultan mientras está en pantalla completa (no caben bien) */}
+      <div
+        className={isFullscreen ? 'plano-metrics-fs-hide' : undefined}
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginTop: 12 }}
+      >
         <div className="card" style={{ padding: 14 }}>
           <div className="small">Perímetro total ({espacioActivo.nombre})</div>
           <div style={{ fontWeight: 700, fontSize: 20, color: '#b69462' }}>{perimTotal.toFixed(2)} m</div>
@@ -595,12 +765,14 @@ export function PlanoEditor({ planId }: { planId?: string }) {
           <div style={{ fontWeight: 700, fontSize: 20, color: '#f4efe6' }}>{areaNivel.toFixed(2)} m²</div>
         </div>
       </div>
+      </div>
 
       <p className="small" style={{ color: '#8c8578', marginTop: 10 }}>
         Cada habitación es un polígono independiente. Selecciona una habitación (chip o clic en sus nodos), elige un
-        nodo, escribe la distancia y una dirección para trazar muros; vuelve al primer nodo para cerrarla. Marca muros
-        como <strong style={{ color: '#a59e90' }}>abertura</strong> (clic en el muro) para puertas/pasillos.
-        Activa <strong style={{ color: '#fbbf24' }}>🏛️ Columna</strong> para que los muros lleven columnas (se dibujan en naranja y suman perímetro en Barrederas).
+        nodo, escribe la distancia y una dirección para trazar muros; vuelve al primer nodo para cerrarla. Haz clic en
+        un muro para seleccionarlo y elegir <strong style={{ color: '#a59e90' }}>Abertura</strong>, <strong style={{ color: '#a59e90' }}>Editar muro</strong> o{' '}
+        <strong style={{ color: '#a59e90' }}>Eliminar muro</strong>. Arrastra el lienzo para moverte por el plano y usa{' '}
+        <strong style={{ color: '#fbbf24' }}>⛶ Pantalla completa</strong> para trabajar con más espacio.
       </p>
     </div>
   );

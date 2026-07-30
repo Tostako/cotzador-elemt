@@ -14,6 +14,7 @@ export function ScrollSequence({
   children,
   id,
   className,
+  priority = false,
 }: {
   frames: string[];
   heightVh: number;
@@ -22,6 +23,9 @@ export function ScrollSequence({
   children?: ReactNode;
   id?: string;
   className?: string;
+  /** true para la secuencia visible al cargar (hero): empieza a precargar de inmediato.
+   *  Las demás esperan a estar cerca del viewport para no competir por ancho de banda. */
+  priority?: boolean;
 }) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -65,17 +69,49 @@ export function ScrollSequence({
       draw(lastFrame.current < 0 ? 0 : lastFrame.current, true);
     };
 
-    // Precarga + pre-decodificación de frames (evita decodificar en pleno scroll → sin tirones).
-    imagesRef.current = frames.map((src, i) => {
-      const im = new Image();
-      im.decoding = 'async';
-      im.src = src;
-      // decode() decodifica por adelantado; el dibujo durante el scroll ya es barato.
-      im.decode?.().then(() => { if (i === 0) draw(0, true); }).catch(() => { /* se dibuja al cargar */ });
-      if (i === 0) im.onload = () => draw(0, true);
-      return im;
-    });
+    // Precarga + pre-decodificación de frames, por lotes (evita un "aluvión" de 64 requests
+    // simultáneos que compiten por ancho de banda/CPU y hacen ver el scroll entrecortado).
+    imagesRef.current = new Array(frames.length);
     lastFrame.current = -1;
+    let loadCancelled = false;
+    const BATCH = 8;
+    let next = 0;
+    const loadBatch = () => {
+      if (loadCancelled) return;
+      const end = Math.min(next + BATCH, frames.length);
+      for (; next < end; next++) {
+        const idx = next;
+        const im = new Image();
+        im.decoding = 'async';
+        (im as unknown as { fetchPriority?: string }).fetchPriority = idx < BATCH ? 'high' : 'low';
+        im.src = frames[idx];
+        im.decode?.().then(() => { if (idx === 0) draw(0, true); }).catch(() => { /* se dibuja al cargar */ });
+        if (idx === 0) im.onload = () => draw(0, true);
+        imagesRef.current[idx] = im;
+      }
+      if (next < frames.length) {
+        const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
+        if (ric) ric(loadBatch, { timeout: 200 });
+        else window.setTimeout(loadBatch, 24);
+      }
+    };
+    if (priority) {
+      loadBatch();
+    }
+    // Las secuencias no prioritarias solo empiezan a descargar cuando están por
+    // entrar en pantalla (así el hero no compite con ellas por la red al cargar la página).
+    const io = priority
+      ? null
+      : new IntersectionObserver(
+          (entries) => {
+            if (entries[0]?.isIntersecting) {
+              loadBatch();
+              io?.disconnect();
+            }
+          },
+          { rootMargin: '800px 0px 800px 0px' }
+        );
+    io?.observe(section);
 
     let ticking = false;
     const update = () => {
@@ -102,11 +138,13 @@ export function ScrollSequence({
     const t = window.setTimeout(() => draw(lastFrame.current < 0 ? 0 : lastFrame.current, true), 120);
 
     return () => {
+      loadCancelled = true;
+      io?.disconnect();
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', resize);
       window.clearTimeout(t);
     };
-  }, [frames]);
+  }, [frames, priority]);
 
   return (
     <section id={id} ref={sectionRef} className={className} style={{ position: 'relative', height: `${heightVh}vh` }}>

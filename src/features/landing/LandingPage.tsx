@@ -1,18 +1,19 @@
-import { useNavigate } from 'react-router-dom';
-import { useEffect, useRef, useState, type ReactNode, type CSSProperties, type ComponentType } from 'react';
-import { PencilRuler, Receipt, CreditCard, Calculator, Package, Grid3x3, Wallet, X, DraftingCompass, Frame } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
+import { Calculator, X, DraftingCompass, Frame, Droplet, Zap, Camera, Video, FileCheck, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import logoGold from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado Original 1.png';
 import logoWhite from '../../assets/LOGO ABREVIADO/ELEMENThaus - Logo Abreviado White.png';
 import logoPrincipal from '../../assets/LogoPrincipal.png';
-import casaRelleno1 from '../../assets/casa_relleno1.png';
+import casaRelleno1 from '../../assets/casa_relleno1.webp';
 import { useStore } from '../../shared/services/store';
 import { ScrollSequence } from './ScrollSequence';
+import { landingFeatures } from './featuresData';
+import { FacebookIcon, InstagramIcon, WhatsAppIcon } from '../../shared/components/SocialIcons';
 
-// Secuencias de imágenes (ordenadas por nombre: frame_01..frame_64)
-const portadaMap = import.meta.glob('../../assets/secuencia_portada/*.jpg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+// Secuencia de la portada (ordenada por nombre: frame_01..frame_64), en WebP.
+const portadaMap = import.meta.glob('../../assets/portada_webp/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const portadaFrames = Object.keys(portadaMap).sort().map((k) => portadaMap[k]);
-const interiorMap = import.meta.glob('../../assets/secuencia_Interior/*.jpg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
-const interiorFrames = Object.keys(interiorMap).sort().map((k) => interiorMap[k]);
+
 
 const navLinks = [
   { label: 'Inicio', href: '#hero' },
@@ -151,14 +152,9 @@ function MagneticButton({
   );
 }
 
-type Feature = {
-  icon: ComponentType<{ size?: number | string; strokeWidth?: number }>;
-  title: string;
-  desc: string;
-};
-
 export function LandingPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const [scrolled, setScrolled] = useState(() => window.scrollY > 40);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -171,10 +167,22 @@ export function LandingPage() {
   const progressRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const heroOverlayRef = useRef<HTMLDivElement>(null);
-  const funcRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const dotRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  const counterRef = useRef<HTMLSpanElement>(null);
-  const lastFuncActive = useRef(-1);
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  // Al llegar con hash (p. ej. volviendo desde /funciones/... a /#features),
+  // React Router no hace scroll solo. Se espera un instante porque el layout de
+  // la portada es muy alto y las posiciones no son definitivas al montar.
+  // Va 'instant' y no 'auto': 'auto' hereda el scroll-behavior:smooth global y
+  // animaría el recorrido entero de la portada antes de llegar a la sección.
+  useEffect(() => {
+    if (!location.hash) return;
+    const id = location.hash.slice(1);
+    const t = setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top, behavior: 'instant' });
+    }, 80);
+    return () => clearTimeout(t);
+  }, [location.hash]);
 
   useEffect(() => {
     const t = requestAnimationFrame(() => setReady(true));
@@ -187,6 +195,28 @@ export function LandingPage() {
     mq.addEventListener?.('change', on);
     return () => mq.removeEventListener?.('change', on);
   }, []);
+
+  // Bloquea el scroll del body mientras el menú móvil está abierto.
+  // Sin esto, en Safari/Chrome de iOS el body sigue haciendo scroll detrás
+  // del overlay fixed y el menú "pierde" su fondo (bug clásico de iOS).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const scrollY = window.scrollY;
+    const { body } = document;
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.overflow = 'hidden';
+    return () => {
+      body.style.position = '';
+      body.style.top = '';
+      body.style.left = '';
+      body.style.right = '';
+      body.style.overflow = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, [menuOpen]);
 
   // Barra de progreso + color de fondo (todo por refs, sin re-render por frame).
   useEffect(() => {
@@ -253,28 +283,23 @@ export function LandingPage() {
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Funciones que aparecen una a una sobre la secuencia interior
-  const featuresSeq: Feature[] = [
-    { icon: DraftingCompass, title: 'Planos de casa', desc: 'Dibuja la vivienda por niveles y habitaciones en un editor CAD; de ahí salen todos los cálculos.' },
-    { icon: PencilRuler, title: 'Cotización inteligente', desc: 'Asistente de 5 pasos con cálculo automático de área y precio en vivo.' },
-    { icon: Grid3x3, title: 'Enchapes', desc: 'Pisos y paredes por tramos, patrones de instalación, desperdicio y sobrantes.' },
-    { icon: Frame, title: 'Barrederas', desc: 'Cálculo por perímetro con columnas del plano y número de piezas por material.' },
-    { icon: Package, title: 'Catálogo de materiales', desc: 'Precios por ferretería, mejor precio y listas de pedidos.' },
-    { icon: Calculator, title: 'Estimación de obra', desc: 'Costo de construcción por m²: obra negra, gris y acabados.' },
-    { icon: Receipt, title: 'Cuentas de cobro', desc: 'Documentos formales con firma, numeración y registro de pagos.' },
-    { icon: CreditCard, title: 'Planes de pago', desc: 'Cuotas configurables, abonos y estado de pago por cada cobro.' },
-    { icon: Wallet, title: 'Tarifas configurables', desc: 'Define precios de servicios y paquetes; el cotizador los aplica al instante.' },
-  ];
+  // Abre el detalle de una función con un fundido (cross-fade de página completa).
+  // Antes se compartía el view-transition-name de la imagen para que "volara" de
+  // la tarjeta a la página de detalle, pero se sentía como un salto brusco por el
+  // cambio de tamaño/posición; un fundido simple se percibe como una aparición.
+  const openFeature = (slug: string) => {
+    navigate(`/funciones/${slug}`, { viewTransition: true });
+  };
 
   const services = [
-    { n: '01', t: 'Diseño Arquitectónico', d: 'Planos arquitectónicos completos con normativa local.' },
-    { n: '02', t: 'Diseño Estructural', d: 'Cálculo de estructuras, cimentación y mampostería.' },
-    { n: '03', t: 'Instalaciones Hidrosanitarias', d: 'Redes de agua, desagüe y sistemas sanitarios.' },
-    { n: '04', t: 'Diseño Eléctrico', d: 'Planos eléctricos, iluminación y tableros.' },
-    { n: '05', t: 'Renders 3D', d: 'Visualización fotorealista de tu proyecto.' },
-    { n: '06', t: 'Recorrido 3D', d: 'Tour virtual interactivo para tus clientes.' },
-    { n: '07', t: 'Presupuesto de obra', d: 'Desglose detallado de costos de construcción.' },
-    { n: '08', t: 'Licencias', d: 'Trámites de licencias de construcción.' },
+    { icon: DraftingCompass, t: 'Diseño Arquitectónico', d: 'Planos arquitectónicos completos con normativa local.' },
+    { icon: Frame, t: 'Diseño Estructural', d: 'Cálculo de estructuras, cimentación y mampostería.' },
+    { icon: Droplet, t: 'Instalaciones Hidrosanitarias', d: 'Redes de agua, desagüe y sistemas sanitarios.' },
+    { icon: Zap, t: 'Diseño Eléctrico', d: 'Planos eléctricos, iluminación y tableros.' },
+    { icon: Camera, t: 'Renders 3D', d: 'Visualización fotorealista de tu proyecto.' },
+    { icon: Video, t: 'Recorrido 3D', d: 'Tour virtual interactivo para tus clientes.' },
+    { icon: Calculator, t: 'Presupuesto de obra', d: 'Desglose detallado de costos de construcción.' },
+    { icon: FileCheck, t: 'Licencias', d: 'Trámites de licencias de construcción.' },
   ];
 
   const steps = [
@@ -296,22 +321,12 @@ export function LandingPage() {
     el.style.transform = `translateY(${p * -36}px)`;
   };
 
-  // Funciones: activa una función a la vez según el avance
-  const funcProgress = (p: number) => {
-    const n = featuresSeq.length;
-    const active = Math.min(n - 1, Math.floor(p * n));
-    if (active === lastFuncActive.current) return;
-    lastFuncActive.current = active;
-    funcRefs.current.forEach((el, i) => {
-      if (!el) return;
-      const on = i === active;
-      el.style.opacity = on ? '1' : '0';
-      el.style.transform = on ? 'translateY(0) scale(1)' : `translateY(${i < active ? -30 : 30}px) scale(0.97)`;
-    });
-    dotRefs.current.forEach((d, i) => {
-      if (d) d.style.opacity = i === active ? '1' : '0.28';
-    });
-    if (counterRef.current) counterRef.current.textContent = String(active + 1).padStart(2, '0');
+  const scrollCarousel = (dir: 1 | -1) => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const card = el.querySelector('.lp-carousel-card') as HTMLElement | null;
+    const amount = (card?.offsetWidth || 400) + 20;
+    el.scrollBy({ left: dir * amount, behavior: 'smooth' });
   };
 
   return (
@@ -321,7 +336,7 @@ export function LandingPage() {
 
       {/* Nav */}
       <nav className={`landing-nav ${scrolled ? 'scrolled' : ''}`}>
-        <div style={{ maxWidth: 1240, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="landing-nav-inner">
           <button type="button" onClick={() => scrollTo('#hero')} style={{ border: 'none', background: 'transparent', padding: 0 }}>
             <img src={getImage('logo_abbreviated', logoPrincipal)} alt="ELEMENThaus" style={{ height: 48, width: 'auto', display: 'block' }} />
           </button>
@@ -388,7 +403,7 @@ export function LandingPage() {
           </div>
         </section>
       ) : (
-      <ScrollSequence id="hero" frames={portadaFrames} heightVh={480} dim={0.4} onProgress={heroProgress}>
+      <ScrollSequence id="hero" frames={portadaFrames} heightVh={480} dim={0.4} onProgress={heroProgress} priority>
         <div className="lp-mesh" style={{ width: 520, height: 520, top: '-8%', left: '-6%', background: 'radial-gradient(circle, rgba(182,148,98,0.22), transparent 60%)' }} />
         <div ref={heroOverlayRef} className="lp-hero-overlay">
           <img src={getImage('logo_main', logoGold)} alt="ELEMENThaus" style={{ width: 'clamp(130px, 16vw, 210px)', height: 'auto', filter: 'drop-shadow(0 0 30px rgba(182,148,98,0.4))' }} />
@@ -409,8 +424,15 @@ export function LandingPage() {
       {/* Lámina de contenido */}
       <div className="lp-content" ref={contentRef} style={{ backgroundColor: 'rgb(26, 23, 20)' }}>
 
-        {/* Cómo funciona */}
-        <section id="proc" ref={proc.ref} style={{ position: 'relative', padding: '104px 0 88px' }}>
+        {/* Cómo funciona — en escritorio se monta (sticky) sobre el final de la portada,
+            con fondo negro liquid glass, como una lámina que se desliza encima (parallax). */}
+        <div id="proc" ref={proc.ref} style={isMobile ? undefined : { position: 'relative', zIndex: 6, minHeight: '260vh', marginTop: '-100vh' }}>
+        <section
+          className={isMobile ? undefined : 'lp-proc-stack'}
+          style={isMobile
+            ? { position: 'relative', padding: '104px 0 88px' }
+            : { position: 'sticky', top: 0, minHeight: '100vh', display: 'flex', alignItems: 'center', padding: '96px 0' }}
+        >
           <div className="lp-wrap">
             <Reveal>
               <span className="lp-eyebrow">Cómo funciona</span>
@@ -460,87 +482,71 @@ export function LandingPage() {
             </div>
           </div>
         </section>
+        </div>
 
-        {/* FUNCIONES — móvil: lista estática; escritorio: secuencia interior */}
-        {isMobile ? (
-          <section id="features" style={{ padding: '80px 0' }}>
-            <div className="lp-wrap">
+        {/* FUNCIONES — carrusel con las 5 funciones principales sobre frames de la secuencia interior */}
+        <section id="features" style={{ padding: '90px 0 70px' }}>
+          <div className="lp-wrap">
+            <Reveal>
               <span className="lp-eyebrow">Funciones</span>
-              <h2 className="lp-display" style={{ fontSize: 'clamp(2rem, 7vw, 2.6rem)', marginTop: 14, color: '#f4efe6' }}>Una plataforma para todo tu estudio</h2>
-              <div style={{ display: 'grid', gap: 12, marginTop: 26 }}>
-                {featuresSeq.map((f) => {
-                  const Icon = f.icon;
-                  return (
-                    <div key={f.title} className="card" style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                      <span className="lp-func-ic" style={{ width: 50, height: 50, marginBottom: 0, flexShrink: 0 }}><Icon size={22} strokeWidth={1.7} /></span>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 16, color: '#f4efe6' }}>{f.title}</div>
-                        <div className="small" style={{ color: '#9b9486', marginTop: 4 }}>{f.desc}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        ) : (
-        <ScrollSequence id="features" frames={interiorFrames} heightVh={620} dim={0.62} onProgress={funcProgress}>
-          <div className="lp-func-wrap">
-            <span className="lp-eyebrow lp-func-eyebrow">Funciones</span>
-            <div className="lp-func-stage">
-              {featuresSeq.map((f, i) => {
-                const Icon = f.icon;
-                return (
-                  <div
-                    key={f.title}
-                    ref={(el) => { funcRefs.current[i] = el; }}
-                    className="lp-func-item"
-                    style={{ opacity: i === 0 ? 1 : 0, transform: i === 0 ? 'translateY(0) scale(1)' : 'translateY(30px) scale(0.97)' }}
-                  >
-                    <span className="lp-func-ic"><Icon size={34} strokeWidth={1.6} /></span>
-                    <h3 className="lp-func-title">{f.title}</h3>
-                    <p className="lp-func-desc">{f.desc}</p>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="lp-func-dots">
-              {featuresSeq.map((f, i) => (
-                <span key={f.title} ref={(el) => { dotRefs.current[i] = el; }} className="lp-func-dot" style={{ opacity: i === 0 ? 1 : 0.28 }} />
-              ))}
-            </div>
-            <div className="lp-func-count"><span ref={counterRef}>01</span> / {String(featuresSeq.length).padStart(2, '0')}</div>
+              <h2 className="lp-display" style={{ fontSize: 'clamp(2.1rem, 5vw, 3.2rem)', marginTop: 16, color: '#f4efe6', maxWidth: 720 }}>
+                Todo lo que necesita tu estudio, en un solo lugar
+              </h2>
+            </Reveal>
           </div>
-        </ScrollSequence>
-        )}
+          <Reveal delay={100}>
+            <div className="lp-carousel-wrap">
+              <div className="lp-carousel" ref={carouselRef}>
+                {landingFeatures.map((f) => (
+                  <button
+                    key={f.slug}
+                    type="button"
+                    className="lp-carousel-card"
+                    onClick={() => openFeature(f.slug)}
+                    aria-label={`Ver más sobre ${f.title}`}
+                  >
+                    <img src={f.img} alt="" loading="lazy" />
+                    <div className="lp-carousel-scrim" />
+                    <div className="lp-carousel-caption">
+                      <h3>{f.title}</h3>
+                      <p>{f.desc}</p>
+                      <span className="lp-carousel-cta">Ver más <ArrowRight size={15} /></span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="lp-carousel-nav lp-carousel-nav--prev" onClick={() => scrollCarousel(-1)} aria-label="Función anterior"><ChevronLeft size={20} /></button>
+              <button type="button" className="lp-carousel-nav lp-carousel-nav--next" onClick={() => scrollCarousel(1)} aria-label="Función siguiente"><ChevronRight size={20} /></button>
+            </div>
+          </Reveal>
+        </section>
 
-        {/* Servicios */}
-        <section id="services" style={{ position: 'relative', padding: '96px 0' }}>
+        {/* Servicios: sección grande, fondo negro, grilla de tarjetas */}
+        <section id="services" className="lp-services-section">
           <div className="lp-wrap">
             <Reveal>
               <span className="lp-eyebrow">Servicios</span>
-              <h2 className="lp-display" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.6rem)', maxWidth: 780, marginTop: 18, color: '#f4efe6' }}>
+              <h2 className="lp-display" style={{ fontSize: 'clamp(2.4rem, 6vw, 4rem)', marginTop: 16, color: '#f7f2e8', maxWidth: 800 }}>
                 {getConfig('services', 'title', 'Los servicios de tu estudio, en una plataforma')}
               </h2>
-              <p style={{ color: '#9b9486', maxWidth: 620, marginTop: 14, fontSize: 16, lineHeight: 1.6 }}>
+              <p style={{ color: '#9b9486', maxWidth: 600, marginTop: 16, fontSize: 17, lineHeight: 1.7 }}>
                 Cotiza y gestiona cualquiera de tus servicios de diseño y construcción. También puedes crear los tuyos
                 propios desde el panel de configuración.
               </p>
             </Reveal>
-
-            <div style={{ marginTop: 42 }}>
-              {services.map((s) => (
-                <Reveal key={s.n} delay={services.indexOf(s) * 45} y={18}>
-                  <div className="lp-srow">
-                    <div className="lp-sn">{s.n}</div>
-                    <div className="lp-st">{s.t}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 26, justifyContent: 'flex-end' }}>
-                      <span className="lp-sd">{s.d}</span>
-                      <span className="lp-arrow">→</span>
+            <div className="lp-services-grid">
+              {services.map((s, i) => {
+                const Icon = s.icon;
+                return (
+                  <Reveal key={s.t} delay={i * 50} y={20}>
+                    <div className="lp-service-card">
+                      <span className="lp-service-ic"><Icon size={26} strokeWidth={1.6} /></span>
+                      <h3>{s.t}</h3>
+                      <p>{s.d}</p>
                     </div>
-                  </div>
-                </Reveal>
-              ))}
+                  </Reveal>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -573,16 +579,51 @@ export function LandingPage() {
         </section>
 
         {/* Footer */}
-        <footer style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '58px 24px 50px' }}>
-          <div className="lp-wrap" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <img src={logoWhite} alt="ELEMENThaus" style={{ height: 34, width: 'auto' }} />
-              <span style={{ fontSize: 13, color: '#7c7568' }}>© 2026 ELEMENT. Todos los derechos reservados.</span>
+        <footer className="lp-footer">
+          <div className="lp-wrap">
+            <div className="lp-foot-grid">
+              <div className="lp-foot-brand">
+                <img src={logoWhite} alt="ELEMENThaus" style={{ height: 38, width: 'auto' }} />
+                <p>
+                  La plataforma integral para estudios de arquitectura y construcción: del plano
+                  a la cuenta de cobro, sin hojas de cálculo.
+                </p>
+                <div className="lp-foot-social">
+                  <a href="https://web.facebook.com/ARQ.RECINTO?locale=es_LA" target="_blank" rel="noopener noreferrer" aria-label="Facebook de ELEMENThaus"><FacebookIcon /></a>
+                  <a href="https://www.instagram.com/element.haus/" target="_blank" rel="noopener noreferrer" aria-label="Instagram de ELEMENThaus"><InstagramIcon /></a>
+                  <a href="https://wa.me/573184575744" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp +57 318 4575744" title="+57 318 4575744"><WhatsAppIcon /></a>
+                  <a href="https://wa.me/573157541417" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp +57 315 7541417" title="+57 315 7541417"><WhatsAppIcon /></a>
+                </div>
+              </div>
+
+              <div className="lp-foot-col">
+                <h3>Funciones</h3>
+                {landingFeatures.map((f) => (
+                  <button key={f.slug} type="button" onClick={() => navigate(`/funciones/${f.slug}`, { viewTransition: true })}>
+                    {f.title}
+                  </button>
+                ))}
+              </div>
+
+              <div className="lp-foot-col">
+                <h3>Navegación</h3>
+                {navLinks.map((l) => (
+                  <button key={l.href} type="button" onClick={() => scrollTo(l.href)}>{l.label}</button>
+                ))}
+              </div>
+
+              <div className="lp-foot-col">
+                <h3>Cuenta</h3>
+                <button type="button" onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}>
+                  {isAuthenticated ? 'Ir al Dashboard' : 'Iniciar sesión'}
+                </button>
+                {!isAuthenticated && <button type="button" onClick={() => navigate('/register')}>Crear cuenta</button>}
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-              {navLinks.map((l) => (
-                <button key={l.href} type="button" className="landing-nav-link" onClick={() => scrollTo(l.href)} style={{ border: 'none', background: 'transparent', fontSize: 13 }}>{l.label}</button>
-              ))}
+
+            <div className="lp-foot-bottom">
+              <span>© 2026 ELEMENT. Todos los derechos reservados.</span>
+              <span>Construcción · Arquitectura · Ingeniería</span>
             </div>
           </div>
         </footer>
@@ -595,17 +636,100 @@ export function LandingPage() {
         .lp-hero-cta{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:34px;}
         .lp-scroll-hint{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:2;color:#b3ac9d;font-size:13px;letter-spacing:.08em;pointer-events:none;animation:lpHintBob 1.8s ease-in-out infinite;}
         @keyframes lpHintBob{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(7px);}}
-        .lp-func-wrap{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px;pointer-events:none;}
-        .lp-func-eyebrow{position:absolute;top:14%;left:50%;transform:translateX(-50%);}
-        .lp-func-stage{position:relative;width:100%;max-width:660px;height:320px;}
-        .lp-func-item{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;transition:opacity .55s var(--ease-lp), transform .55s var(--ease-lp);will-change:opacity,transform;}
-        .lp-func-ic{display:inline-flex;align-items:center;justify-content:center;width:78px;height:78px;border-radius:20px;background:rgba(182,148,98,0.16);color:#d9b877;border:1px solid rgba(182,148,98,0.35);margin-bottom:22px;}
-        .lp-func-title{font-family:'Manrope',sans-serif;font-weight:800;font-size:clamp(1.7rem,4vw,2.9rem);color:#f7f2e8;letter-spacing:-0.01em;}
-        .lp-func-desc{color:#cabfa9;max-width:520px;margin:14px auto 0;font-size:clamp(1rem,2vw,1.2rem);line-height:1.6;}
-        .lp-func-dots{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);display:flex;gap:9px;}
-        .lp-func-dot{width:7px;height:7px;border-radius:50%;background:#d9b877;transition:opacity .4s ease;}
-        .lp-func-count{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);color:#8c8578;font-size:14px;letter-spacing:.12em;font-weight:600;}
-        .lp-func-count span{color:#d9b877;}
+        /* "Cómo funciona": en escritorio se pega (sticky) y se desliza sobre el final
+           de la portada, con fondo negro liquid glass — efecto parallax de láminas. */
+        .lp-proc-stack{
+          border-radius:44px 44px 0 0;
+          background:
+            radial-gradient(55% 45% at 25% 12%, rgba(182,148,98,0.10), transparent 60%),
+            linear-gradient(180deg, rgba(12,11,10,0.82) 0%, rgba(6,6,7,0.96) 45%, #050505 100%);
+          backdrop-filter:blur(34px) saturate(150%);
+          -webkit-backdrop-filter:blur(34px) saturate(150%);
+          box-shadow:0 -40px 90px rgba(0,0,0,0.6);
+          z-index:6;
+        }
+        .lp-proc-stack > .lp-wrap{width:100%;}
+        .lp-carousel-wrap{position:relative;margin-top:52px;padding:0 24px;}
+        .lp-carousel{display:flex;gap:24px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 4px 24px;scrollbar-width:none;}
+        .lp-carousel::-webkit-scrollbar{display:none;}
+        /* Las imágenes del carrusel son horizontales (16:9 y 4:3), así que la tarjeta
+           también lo es: un recorte cuadrado les cortaría demasiado. */
+        .lp-carousel-card{
+          position:relative;flex:0 0 auto;width:min(760px, 88vw);aspect-ratio:16/10;
+          border-radius:32px;overflow:hidden;scroll-snap-align:start;background:#111;
+          padding:0;border:1px solid rgba(255,255,255,0.08);cursor:pointer;font:inherit;text-align:left;
+          transition:transform .35s var(--ease-lp), border-color .35s ease;
+        }
+        .lp-carousel-card:hover{transform:translateY(-6px);border-color:rgba(182,148,98,0.4);}
+        .lp-carousel-card:focus-visible{outline:2px solid #b69462;outline-offset:3px;}
+        .lp-carousel-card img{transition:transform .5s var(--ease-lp);}
+        .lp-carousel-card:hover img{transform:scale(1.04);}
+        .lp-carousel-cta{
+          display:inline-flex;align-items:center;gap:7px;margin-top:16px;
+          padding:9px 18px;border-radius:999px;font-size:14px;font-weight:600;color:#0d0c0b;
+          background:#e9dcc2;transition:background .25s ease, gap .25s ease;
+        }
+        .lp-carousel-card:hover .lp-carousel-cta{background:#fff;gap:11px;}
+        .lp-carousel-card img{width:100%;height:100%;object-fit:cover;display:block;}
+        .lp-carousel-scrim{position:absolute;inset:0;background:linear-gradient(180deg, transparent 45%, rgba(0,0,0,0.88) 100%);}
+        .lp-carousel-caption{position:absolute;left:0;right:0;bottom:0;padding:32px 34px;}
+        .lp-carousel-caption h3{font-family:'Manrope',sans-serif;font-weight:800;font-size:clamp(1.4rem,2vw,1.75rem);color:#f7f2e8;letter-spacing:-0.01em;}
+        .lp-carousel-caption p{color:#d8d2c4;margin:10px 0 0;font-size:15.5px;line-height:1.55;max-width:440px;}
+        .lp-carousel-nav{
+          position:absolute;top:50%;transform:translateY(-50%);z-index:2;
+          width:52px;height:52px;border-radius:50%;display:grid;place-items:center;
+          background:rgba(20,19,18,0.6);border:1px solid rgba(255,255,255,0.14);color:#f4efe6;cursor:pointer;
+          backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+          transition:background .2s ease;
+        }
+        .lp-carousel-nav:hover{background:rgba(182,148,98,0.28);}
+        .lp-carousel-nav--prev{left:6px;}
+        .lp-carousel-nav--next{right:6px;}
+        @media (max-width:860px){.lp-carousel-nav{display:none;}}
+        .lp-services-section{background:#050505;padding:120px 24px 130px;}
+        .lp-services-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));gap:22px;margin-top:48px;}
+        .lp-service-card{
+          padding:32px 26px;border-radius:24px;
+          background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01) 50%, rgba(0,0,0,0.1)), rgba(14,13,12,0.5);
+          border:1px solid rgba(255,255,255,0.08);
+          transition:transform .3s var(--ease-lp), border-color .3s ease;
+        }
+        .lp-service-card:hover{transform:translateY(-4px);border-color:rgba(182,148,98,0.3);}
+        .lp-service-ic{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:15px;background:rgba(182,148,98,0.14);color:#d9b877;border:1px solid rgba(182,148,98,0.3);margin-bottom:18px;}
+        .lp-service-card h3{font-family:'Manrope',sans-serif;font-weight:800;font-size:1.15rem;color:#f7f2e8;letter-spacing:-0.01em;}
+        .lp-service-card p{color:#a59e90;margin:10px 0 0;font-size:14px;line-height:1.6;}
+        .lp-footer{border-top:1px solid rgba(255,255,255,0.08);background:#050505;padding:70px 24px 40px;}
+        .lp-foot-grid{
+          display:grid;grid-template-columns:minmax(260px,1.5fr) repeat(3, minmax(140px,1fr));
+          gap:clamp(28px,4vw,52px);
+        }
+        .lp-foot-brand p{color:#7c7568;font-size:14px;line-height:1.65;margin:18px 0 0;max-width:330px;}
+        .lp-foot-social{display:flex;gap:10px;margin-top:20px;}
+        .lp-foot-social a{
+          display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;
+          border-radius:50%;color:#c8c0b1;border:1px solid rgba(255,255,255,0.12);
+          background:rgba(255,255,255,0.03);transition:color .2s ease, border-color .2s ease, background .2s ease, transform .2s ease;
+        }
+        .lp-foot-social a:hover{color:#0d0c0b;background:#e9dcc2;border-color:#e9dcc2;transform:translateY(-2px);}
+        .lp-foot-col{display:flex;flex-direction:column;align-items:flex-start;gap:11px;}
+        .lp-foot-col h3{
+          font-family:'Manrope',sans-serif;font-weight:700;font-size:12px;letter-spacing:0.14em;
+          text-transform:uppercase;color:#b69462;margin:0 0 5px;
+        }
+        .lp-foot-col button{
+          background:none;border:none;padding:0;cursor:pointer;font:inherit;text-align:left;
+          color:#9b9486;font-size:14px;transition:color .2s ease;
+        }
+        .lp-foot-col button:hover{color:#f4efe6;}
+        .lp-foot-bottom{
+          display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;
+          margin-top:52px;padding-top:26px;border-top:1px solid rgba(255,255,255,0.07);
+          color:#5f594f;font-size:12.5px;
+        }
+        @media (max-width:820px){
+          .lp-foot-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+          .lp-foot-brand{grid-column:1 / -1;}
+        }
       `}</style>
     </div>
   );
