@@ -103,6 +103,15 @@ function toSnakeProject(p: EnchapeProject) {
   }
 }
 
+/** Lee un campo aceptando snake_case o camelCase.
+ *
+ *  Hace falta porque no todo lo que llega viene en snake_case: el backend puede
+ *  devolver el proyecto en camelCase, y lo que se restaura de localStorage ya
+ *  está en camelCase (se guarda el EnchapeProject tal cual). Leyendo solo
+ *  snake_case se perdían formato_largo, m2_caja y precio_m2, así que el material
+ *  aparecía con nombre pero sin medidas ni precio y no se podía calcular nada. */
+const campo = (o: any, snake: string, camel: string) => (o?.[snake] !== undefined ? o[snake] : o?.[camel])
+
 // Inverso de toSnakeProject: convierte el tile_project del backend a EnchapeProject.
 function fromSnakeProject(d: any): EnchapeProject {
   const rid = (p: string) => p + '_' + Math.random().toString(36).slice(2, 8)
@@ -121,11 +130,11 @@ function fromSnakeProject(d: any): EnchapeProject {
         segmentos: (Array.isArray(e?.segmentos) && e.segmentos.length ? e.segmentos : [{ largo: 0, ancho: 0 }]).map((s: any) => ({ largo: Number(s?.largo) || 0, ancho: Number(s?.ancho) || 0 })),
         x: Number(e?.x) || 0,
         y: Number(e?.y) || 0,
-        materialId: e?.material_id ?? undefined,
-        patronId: e?.patron_id ?? undefined,
-        ajusteDesperdicio: Number(e?.ajuste_desperdicio) || 0,
-        orientacionManual: e?.orientacion_manual ?? null,
-        filtroTipoAcabado: e?.filtro_tipo_acabado ?? null,
+        materialId: campo(e, 'material_id', 'materialId') ?? undefined,
+        patronId: campo(e, 'patron_id', 'patronId') ?? undefined,
+        ajusteDesperdicio: Number(campo(e, 'ajuste_desperdicio', 'ajusteDesperdicio')) || 0,
+        orientacionManual: campo(e, 'orientacion_manual', 'orientacionManual') ?? null,
+        filtroTipoAcabado: campo(e, 'filtro_tipo_acabado', 'filtroTipoAcabado') ?? null,
         nodos: Array.isArray(e?.nodos) ? e.nodos.map((p: any) => ({ id: String(p?.id ?? rid('n')), x: Number(p?.x) || 0, y: Number(p?.y) || 0 })) : undefined,
         muros: Array.isArray(e?.muros) ? e.muros.map((m: any) => ({ a: String(m?.a), b: String(m?.b), abertura: !!(m?.abertura ?? m?.apertura ?? m?.opening) })) : undefined,
         puntos: Array.isArray(e?.puntos) ? e.puntos.map((p: any) => ({ x: Number(p?.x) || 0, y: Number(p?.y) || 0 })) : undefined,
@@ -135,37 +144,37 @@ function fromSnakeProject(d: any): EnchapeProject {
     materiales: (Array.isArray(d?.materiales) ? d.materiales : []).map((m: any) => ({
       id: m?.id ?? rid('mat'),
       nombre: m?.nombre ?? '',
-      tipoAcabado: m?.tipo_acabado ?? 'Cerámica',
-      formatoLargo: m?.formato_largo,
-      formatoAncho: m?.formato_ancho,
-      formatoGrosor: m?.formato_grosor,
+      tipoAcabado: campo(m, 'tipo_acabado', 'tipoAcabado') ?? 'Cerámica',
+      formatoLargo: campo(m, 'formato_largo', 'formatoLargo'),
+      formatoAncho: campo(m, 'formato_ancho', 'formatoAncho'),
+      formatoGrosor: campo(m, 'formato_grosor', 'formatoGrosor'),
       color: m?.color,
       marca: m?.marca,
       categoria: m?.categoria ?? 'Ambos',
-      m2caja: m?.m2_caja,
-      pesoCaja: m?.peso_caja,
-      modoPrecio: m?.modo_precio ?? 'm2',
-      precioM2: m?.precio_m2,
-      precioCaja: m?.precio_caja,
-      umbralSobranteCm: m?.umbral_sobrante_cm ?? null,
+      m2caja: campo(m, 'm2_caja', 'm2caja'),
+      pesoCaja: campo(m, 'peso_caja', 'pesoCaja'),
+      modoPrecio: campo(m, 'modo_precio', 'modoPrecio') ?? 'm2',
+      precioM2: campo(m, 'precio_m2', 'precioM2'),
+      precioCaja: campo(m, 'precio_caja', 'precioCaja'),
+      umbralSobranteCm: campo(m, 'umbral_sobrante_cm', 'umbralSobranteCm') ?? null,
     })),
-    bancoSobrantes: (Array.isArray(d?.banco_sobrantes) ? d.banco_sobrantes : []).map((s: any) => ({
+    bancoSobrantes: (Array.isArray(campo(d, 'banco_sobrantes', 'bancoSobrantes')) ? campo(d, 'banco_sobrantes', 'bancoSobrantes') : []).map((s: any) => ({
       id: s?.id ?? rid('sob'),
-      materialId: s?.material_id,
+      materialId: campo(s, 'material_id', 'materialId'),
       ancho: Number(s?.ancho) || 0,
       alto: Number(s?.alto) || 0,
       cantidad: Number(s?.cantidad) || 0,
-      origenNivelId: s?.origen_nivel_id,
-      origenSpaceId: s?.origen_space_id,
-      patronId: s?.patron_id,
+      origenNivelId: campo(s, 'origen_nivel_id', 'origenNivelId'),
+      origenSpaceId: campo(s, 'origen_space_id', 'origenSpaceId'),
+      patronId: campo(s, 'patron_id', 'patronId'),
       direccion: s?.direccion,
-      totalCortes: s?.total_cortes,
-      tramoIndex: s?.tramo_index,
+      totalCortes: campo(s, 'total_cortes', 'totalCortes'),
+      tramoIndex: campo(s, 'tramo_index', 'tramoIndex'),
       origen: s?.origen,
       fecha: s?.fecha,
     })),
-    createdAt: d?.created_at,
-    updatedAt: d?.updated_at,
+    createdAt: campo(d, 'created_at', 'createdAt'),
+    updatedAt: campo(d, 'updated_at', 'updatedAt'),
   } as EnchapeProject
 }
 
@@ -255,7 +264,10 @@ export function useEnchapes(): UseEnchapesReturn {
   const [proyecto, setProyecto] = useState<EnchapeProject>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) return JSON.parse(saved)
+      // Se normaliza en vez de usar el JSON.parse crudo: así un proyecto guardado
+      // por una versión anterior (o al que le falte algún campo) no deja el
+      // estado a medias — p. ej. sin `materiales`, que rompía el catálogo.
+      if (saved) return fromSnakeProject(JSON.parse(saved))
     } catch { /* ignore */ }
     return createDefaultProject()
   })
