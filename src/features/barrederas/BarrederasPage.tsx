@@ -5,6 +5,7 @@ import { apiService } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { fromBackendPlan, type PlanoMeta } from '../planos/mapping';
 import { PlanoPicker } from '../planos/PlanoPicker';
+import { FormModal } from '../../shared/components/FormModal';
 import { espacioColumnas, espacioColumnasExtra, espacioPerimetros, uid, type Espacio, type Nivel } from '../planos/planoGeometry';
 
 const dataOf = (res: any) => (res && typeof res === 'object' && 'data' in res ? res.data : res);
@@ -124,6 +125,8 @@ function BarrederasCalc({ planId }: { planId: string }) {
   // cada llamada genera un material con uid() distinto, editId apuntaba a uno que no
   // estaba en la lista y patchEdit no encontraba nada — las ediciones se perdían.
   const [editId, setEditId] = useState<string>(() => materiales[0]?.id || ''); // material en edición
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [esNuevo, setEsNuevo] = useState(false);
   const [asignacion, setAsignacion] = useState<Record<string, string>>({});
 
   // Guarda la biblioteca de materiales para reutilizarla en otras obras.
@@ -188,13 +191,18 @@ function BarrederasCalc({ planId }: { planId: string }) {
   const patchEdit = (patch: Partial<Material>) =>
     setMateriales((ms) => ms.map((m) => (m.id === editId ? { ...m, ...patch } : m)));
 
-  const addMaterial = () => {
+  // El formulario del material vive en una ventana emergente.
+  const abrirEditor = (id: string) => { setEditId(id); setEsNuevo(false); setModalAbierto(true); };
+  const abrirNuevo = () => {
     const m = nuevoMaterial();
     setMateriales((ms) => [...ms, m]);
     setEditId(m.id);
+    setEsNuevo(true);
+    setModalAbierto(true);
   };
+  const cerrarEditor = () => { setModalAbierto(false); setEsNuevo(false); };
 
-  const removeMaterial = () => {
+  const eliminarDesdeModal = () => {
     if (materiales.length <= 1) return;
     const id = editId;
     const rest = materiales.filter((m) => m.id !== id);
@@ -206,6 +214,7 @@ function BarrederasCalc({ planId }: { planId: string }) {
       for (const k of Object.keys(a)) next[k] = a[k] === id ? fallback : a[k];
       return next;
     });
+    cerrarEditor();
   };
 
   // "Guardar materiales": biblioteca local (ya persiste) + catálogo de Materiales.
@@ -261,7 +270,6 @@ function BarrederasCalc({ planId }: { planId: string }) {
 
   const hayCeramica = materiales.some((m) => m.modo === 'ceramica');
   const hayColumnas = niveles.some((nv) => nv.espacios.some((e) => espacioColumnas(e) > 0));
-  const labelDe = (m: Material) => `${m.nombre}${m.color ? ` — ${m.color}` : ''} · ${m.modo === 'ceramica' ? 'cerámica' : 'metro'}`;
 
   return (
     <main>
@@ -282,73 +290,91 @@ function BarrederasCalc({ planId }: { planId: string }) {
           <button type="button" className="btn btn-small" onClick={guardarMateriales} disabled={savingMat} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>{savingMat ? 'Guardando…' : (<><Save size={15} /> Guardar materiales</>)}</button>
         </div>
 
-        {/* Selector de material a editar */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
-          <select className="select" value={editId} onChange={(e) => setEditId(e.target.value)} style={{ flex: '1 1 220px', maxWidth: 320 }}>
-            {materiales.map((m) => (
-              <option key={m.id} value={m.id}>{labelDe(m)}</option>
-            ))}
-          </select>
-          <button type="button" className="btn btn-small btn-secondary" onClick={addMaterial} style={{ width: 'auto' }}>+ Agregar material</button>
-          <button type="button" className="btn btn-small btn-danger" onClick={removeMaterial} disabled={materiales.length <= 1} style={{ width: 'auto' }}>Eliminar</button>
-        </div>
-
-        {/* Edición del material seleccionado */}
-        {editMat && (
-          <div style={{ padding: 12, borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8 }}>
-              <div>
-                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Nombre</label>
-                <input className="input" value={editMat.nombre} onChange={(e) => patchEdit({ nombre: e.target.value })} />
+        {/* Lista de materiales: el formulario vive en una ventana emergente */}
+        <div style={{ display: 'grid', gap: 8 }}>
+          {materiales.map((m) => (
+            <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+                <div style={{ fontWeight: 600 }}>{m.nombre}{m.color ? ` — ${m.color}` : ''}</div>
+                <p className="small" style={{ color: '#8c8578' }}>
+                  {m.modo === 'ceramica' ? `Por cerámica · ${m.largo_cm} cm · ${money(m.precio_por_ceramica)}` : `Por metro · ${money(m.precio_por_metro)}`}
+                </p>
               </div>
-              <div>
-                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Tipo</label>
-                <input className="input" value={editMat.tipo} onChange={(e) => patchEdit({ tipo: e.target.value })} placeholder="aluminio, cerámica…" />
-              </div>
-              <div>
-                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Color</label>
-                <input className="input" value={editMat.color} onChange={(e) => patchEdit({ color: e.target.value })} />
-              </div>
-              <div>
-                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Modo de cálculo</label>
-                <select className="select" value={editMat.modo} onChange={(e) => patchEdit({ modo: e.target.value as Modo })}>
-                  <option value="metro">Por metro</option>
-                  <option value="ceramica">Por cerámica (cortada)</option>
-                </select>
-              </div>
+              <button type="button" className="btn btn-small btn-secondary" onClick={() => abrirEditor(m.id)} style={{ width: 'auto' }}>✎ Editar</button>
             </div>
-
-            {editMat.modo === 'metro' ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginTop: 10 }}>
-                <div>
-                  <label className="small" style={{ display: 'block', marginBottom: 4 }}>Precio por metro</label>
-                  <input className="input" type="number" min={0} step={0.5} value={editMat.precio_por_metro} onChange={(e) => patchEdit({ precio_por_metro: parseFloat(e.target.value) || 0 })} />
-                </div>
-                <div>
-                  <label className="small" style={{ display: 'block', marginBottom: 4 }}>Altura (cm)</label>
-                  <input className="input" type="number" min={0} step={1} value={editMat.altura} onChange={(e) => patchEdit({ altura: parseFloat(e.target.value) || 0 })} />
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginTop: 10 }}>
-                <div>
-                  <label className="small" style={{ display: 'block', marginBottom: 4 }}>Largo de la cerámica (cm)</label>
-                  <input className="input" type="number" min={0} step={1} value={editMat.largo_cm} onChange={(e) => patchEdit({ largo_cm: parseFloat(e.target.value) || 0 })} placeholder="Ej: 60" />
-                </div>
-                <div>
-                  <label className="small" style={{ display: 'block', marginBottom: 4 }}>Tiras por cerámica</label>
-                  <input className="input" type="number" min={1} step={1} value={editMat.piezas_por_ceramica} onChange={(e) => patchEdit({ piezas_por_ceramica: parseInt(e.target.value) || 1 })} />
-                </div>
-                <div>
-                  <label className="small" style={{ display: 'block', marginBottom: 4 }}>Precio por cerámica</label>
-                  <input className="input" type="number" min={0} step={0.5} value={editMat.precio_por_ceramica} onChange={(e) => patchEdit({ precio_por_ceramica: parseFloat(e.target.value) || 0 })} />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+          ))}
+        </div>
+        <button type="button" className="btn btn-small btn-secondary mt-2" onClick={abrirNuevo} style={{ width: 'auto' }}>+ Agregar material</button>
         <p className="small" style={{ color: '#8c8578', marginTop: 10 }}>💾 “Guardar materiales” los deja disponibles para tus próximas obras y en la sección Materiales.</p>
       </div>
+
+      {/* Ventana emergente con el formulario del material */}
+      {modalAbierto && editMat && (
+        <FormModal
+          title={esNuevo ? 'Nuevo material' : 'Editar material'}
+          subtitle="Se usa para calcular las barrederas de las habitaciones que lo tengan asignado."
+          onClose={cerrarEditor}
+          footer={
+            <>
+              {!esNuevo && (
+                <button type="button" className="btn btn-small btn-danger" onClick={eliminarDesdeModal} disabled={materiales.length <= 1} style={{ width: 'auto', marginRight: 'auto' }}>Eliminar</button>
+              )}
+              <button type="button" className="btn btn-small btn-secondary" onClick={cerrarEditor} style={{ width: 'auto' }}>Cancelar</button>
+              <button type="button" className="btn btn-small" onClick={cerrarEditor} style={{ width: 'auto' }}>Listo</button>
+            </>
+          }
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+            <div>
+              <label className="small" style={{ display: 'block', marginBottom: 4 }}>Nombre</label>
+              <input className="input" value={editMat.nombre} onChange={(e) => patchEdit({ nombre: e.target.value })} />
+            </div>
+            <div>
+              <label className="small" style={{ display: 'block', marginBottom: 4 }}>Tipo</label>
+              <input className="input" value={editMat.tipo} onChange={(e) => patchEdit({ tipo: e.target.value })} placeholder="aluminio, cerámica…" />
+            </div>
+            <div>
+              <label className="small" style={{ display: 'block', marginBottom: 4 }}>Color</label>
+              <input className="input" value={editMat.color} onChange={(e) => patchEdit({ color: e.target.value })} />
+            </div>
+            <div>
+              <label className="small" style={{ display: 'block', marginBottom: 4 }}>Modo de cálculo</label>
+              <select className="select" value={editMat.modo} onChange={(e) => patchEdit({ modo: e.target.value as Modo })}>
+                <option value="metro">Por metro</option>
+                <option value="ceramica">Por cerámica (cortada)</option>
+              </select>
+            </div>
+          </div>
+
+          {editMat.modo === 'metro' ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginTop: 12 }}>
+              <div>
+                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Precio por metro</label>
+                <input className="input" type="number" min={0} step={0.5} value={editMat.precio_por_metro} onChange={(e) => patchEdit({ precio_por_metro: parseFloat(e.target.value) || 0 })} />
+              </div>
+              <div>
+                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Altura (cm)</label>
+                <input className="input" type="number" min={0} step={1} value={editMat.altura} onChange={(e) => patchEdit({ altura: parseFloat(e.target.value) || 0 })} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginTop: 12 }}>
+              <div>
+                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Largo de la cerámica (cm)</label>
+                <input className="input" type="number" min={0} step={1} value={editMat.largo_cm} onChange={(e) => patchEdit({ largo_cm: parseFloat(e.target.value) || 0 })} placeholder="Ej: 60" />
+              </div>
+              <div>
+                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Tiras por cerámica</label>
+                <input className="input" type="number" min={1} step={1} value={editMat.piezas_por_ceramica} onChange={(e) => patchEdit({ piezas_por_ceramica: parseInt(e.target.value) || 1 })} />
+              </div>
+              <div>
+                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Precio por cerámica</label>
+                <input className="input" type="number" min={0} step={0.5} value={editMat.precio_por_ceramica} onChange={(e) => patchEdit({ precio_por_ceramica: parseFloat(e.target.value) || 0 })} />
+              </div>
+            </div>
+          )}
+        </FormModal>
+      )}
 
       {/* Columnas del plano (solo lectura) — se marcan y miden en el editor de planos */}
       {hayColumnas && (
