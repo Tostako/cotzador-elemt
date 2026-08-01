@@ -207,7 +207,9 @@ export function Fase3Materiales({
   )
 
   return (
-    <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))' }}>
+    {/* min(340px, 100%): sin el min(), en pantallas angostas la columna se queda
+        clavada en 340 y la tarjeta desborda el ancho de la página. */}
+    <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))' }}>
       {/* Material catalog */}
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ComponentType, type ReactNode } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useEnchapes } from './hooks/useEnchapes'
 import { apiService } from '../../shared/services/api'
@@ -34,6 +34,31 @@ async function buscarProyectoDerivado(planId: string, planNombre?: string): Prom
   } catch {
     return null // sin listado seguimos con la importación normal
   }
+}
+
+/** Encabezado de sección para la página única de enchapes. Sustituye a los
+ *  botones de fases: todo el contenido está seguido y se recorre con scroll. */
+function Seccion({
+  icon: Icon,
+  titulo,
+  descripcion,
+  children,
+}: {
+  icon: ComponentType<{ size?: number | string; color?: string }>
+  titulo: string
+  descripcion: string
+  children: ReactNode
+}) {
+  return (
+    <section style={{ marginTop: 34 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <Icon size={20} color="#b69462" />
+        <h2 style={{ fontSize: 'clamp(18px, 4.5vw, 22px)', fontWeight: 700 }}>{titulo}</h2>
+      </div>
+      <p className="small" style={{ color: '#8c8578', marginBottom: 14 }}>{descripcion}</p>
+      {children}
+    </section>
+  )
 }
 
 export function EnchapesPage() {
@@ -115,8 +140,6 @@ function EnchapesCalc({ projectParam }: { projectParam: string | null }) {
     setOrientacion,
     bancoSobrantes,
     eliminarSobrante,
-    fase,
-    setFase,
     getNivelActivo,
     getMaterial,
     espacioCompleto,
@@ -138,13 +161,6 @@ function EnchapesCalc({ projectParam }: { projectParam: string | null }) {
   const nivelActivo = getNivelActivo()
   const espacios = nivelActivo?.espacios || []
 
-  const phases = [
-    { label: '1. Plano', icon: DraftingCompass },
-    { label: '2. Resumen', icon: ClipboardList },
-    { label: '3. Materiales', icon: Package },
-    { label: '4. Presupuesto', icon: Calculator },
-  ]
-
   return (
     <main>
       <BackButton />
@@ -160,7 +176,7 @@ function EnchapesCalc({ projectParam }: { projectParam: string | null }) {
       <p className="small">Calcula materiales, desperdicio y presupuesto para pisos y paredes</p>
 
       {/* Project info */}
-      <div className="card mt-2" style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+      <div className="card mt-2" style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
         <div>
           <label className="small" style={{ display: 'block', marginBottom: 4 }} htmlFor="ench-proyecto">Proyecto</label>
           <input
@@ -193,30 +209,14 @@ function EnchapesCalc({ projectParam }: { projectParam: string | null }) {
         </div>
       </div>
 
-      {/* Phase navigator */}
-      <div className="flex-gap" style={{ marginTop: 24, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-        {phases.map((ph, idx) => {
-          const phase = idx + 1
-          const active = fase === phase
-          const Icon = ph.icon
-          return (
-            <button
-              type="button"
-              key={phase}
-              onClick={() => setFase(phase)}
-              className={active ? 'phase-btn phase-btn--active' : 'phase-btn'}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
-            >
-              <Icon size={16} /> {ph.label}
-            </button>
-          )
-        })}
+      {/* Acciones del proyecto */}
+      <div className="flex-gap" style={{ marginTop: 20, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <button
           type="button"
           onClick={saveToBackend}
           disabled={isSaving}
           className="save-btn"
-          style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
         >
           <Save size={16} /> {isSaving ? 'Guardando...' : 'Guardar proyecto'}
         </button>
@@ -230,7 +230,9 @@ function EnchapesCalc({ projectParam }: { projectParam: string | null }) {
         </button>
       </div>
 
-      {fase === 1 && (
+      {/* Todo en una sola página, en el orden del trabajo:
+          plano → materiales → presupuesto → resumen. */}
+      <Seccion icon={DraftingCompass} titulo="Plano" descripcion="Las habitaciones vienen del plano de casa; para cambiarlas se edita allí.">
         <Fase1Canvas
           niveles={niveles}
           nivelActivoId={nivelActivoId}
@@ -257,17 +259,9 @@ function EnchapesCalc({ projectParam }: { projectParam: string | null }) {
           readOnly
           onEditarPlano={() => navigate('/planos')}
         />
-      )}
+      </Seccion>
 
-      {fase === 2 && (
-        <Fase2Resumen
-          niveles={niveles}
-          computeArea={computeArea}
-          getMaterial={getMaterial}
-        />
-      )}
-
-      {fase === 3 && (
+      <Seccion icon={Package} titulo="Materiales" descripcion="Asigna a cada habitación su material y patrón de instalación.">
         <Fase3Materiales
           niveles={niveles}
           materiales={materiales}
@@ -284,17 +278,25 @@ function EnchapesCalc({ projectParam }: { projectParam: string | null }) {
           updateMaterial={updateMaterial}
           removeMaterial={removeMaterial}
         />
-      )}
+      </Seccion>
 
-      {fase === 4 && (
+      <Seccion icon={Calculator} titulo="Presupuesto" descripcion="Costo por material según las cajas y precios configurados.">
         <Fase4Presupuesto
           niveles={niveles}
           materiales={materiales}
         />
-      )}
+      </Seccion>
 
-      {/* Banco de sobrantes (visible en Fase 3 y 4) */}
-      {(fase === 3 || fase === 4) && bancoSobrantes.length > 0 && (
+      <Seccion icon={ClipboardList} titulo="Resumen" descripcion="Totales de área y materiales de toda la obra.">
+        <Fase2Resumen
+          niveles={niveles}
+          computeArea={computeArea}
+          getMaterial={getMaterial}
+        />
+      </Seccion>
+
+      {/* Banco de sobrantes: depende de los materiales asignados, así que va al final */}
+      {bancoSobrantes.length > 0 && (
         <div className="card" style={{ marginTop: 20 }}>
           <h3 className="section-title" style={{ marginTop: 0, marginBottom: 12 }}>
             ♻️ Banco de sobrantes
