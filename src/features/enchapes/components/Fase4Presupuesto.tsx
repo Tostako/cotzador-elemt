@@ -63,7 +63,7 @@ export function Fase4Presupuesto({ niveles, materiales }: Fase4PresupuestoProps)
             <h4 className="section-title" style={{ marginTop: 0 }}>
               Totales por material
             </h4>
-            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))' }}>
               {Object.values(budget.porMaterial).map((tot) => (
                 <div key={tot.nombre} className="grand-total">
                   <div style={{ fontWeight: 700, marginBottom: 6, color: '#b69462' }}>{tot.nombre}</div>

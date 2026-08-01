@@ -28,6 +28,7 @@ const EnchapesPage = lazy(() => import('../features/enchapes/EnchapesPage').then
 const PlanosPage = lazy(() => import('../features/planos/PlanosPage').then((m) => ({ default: m.PlanosPage })));
 const PlanoEditorPage = lazy(() => import('../features/planos/PlanoEditorPage').then((m) => ({ default: m.PlanoEditorPage })));
 const BarrederasPage = lazy(() => import('../features/barrederas/BarrederasPage').then((m) => ({ default: m.BarrederasPage })));
+const CornisasPage = lazy(() => import('../features/cornisas/CornisasPage').then((m) => ({ default: m.CornisasPage })));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
@@ -66,6 +67,8 @@ export const router = createBrowserRouter([
   { path: '/calculadoras/enchapes', element: prot(<EnchapesPage />) },
   { path: '/calculadoras/barrederas', element: prot(<BarrederasPage />) },
   { path: '/calculadoras/barrederas/:planId', element: prot(<BarrederasPage />) },
+  { path: '/calculadoras/cornisas', element: prot(<CornisasPage />) },
+  { path: '/calculadoras/cornisas/:planId', element: prot(<CornisasPage />) },
   { path: '/planos', element: prot(<PlanosPage />) },
   { path: '/planos/nuevo', element: prot(<PlanoEditorPage />) },
   { path: '/planos/:id', element: prot(<PlanoEditorPage />) },

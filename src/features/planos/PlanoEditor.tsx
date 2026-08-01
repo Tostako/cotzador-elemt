@@ -316,7 +316,12 @@ export function PlanoEditor({ planId }: { planId?: string }) {
 
   // ── Espacios (habitaciones) ──
   // "+ Habitación" entra en modo ubicar: el siguiente clic en el lienzo fija el punto inicial.
-  const addEspacio = () => setPlacing(true);
+  // En móvil el botón ＋ vive dentro del desplegable de piso/habitación; si queda
+  // abierto tapa el lienzo justo cuando hay que tocarlo para ubicar la habitación.
+  const addEspacio = () => {
+    setPlacing(true);
+    setShowPisoHab(false);
+  };
 
   const createEspacioAt = (x: number, y: number) => {
     const nombre = `Habitación ${espacios.length + 1}`;
@@ -353,9 +358,19 @@ export function PlanoEditor({ planId }: { planId?: string }) {
     const stage = e.target?.getStage?.();
     const pos = stage?.getPointerPosition?.();
     if (!pos) return;
+    // getPointerPosition devuelve coordenadas de pantalla. Como el lienzo es
+    // arrastrable, hay que deshacer su transformación: sin esto el punto cae
+    // desviado exactamente lo que el usuario haya desplazado el plano, que en
+    // móvil es siempre (hay que arrastrar para moverse por el plano).
+    const tr = stage.getAbsoluteTransform?.().copy?.();
+    let local = pos;
+    if (tr) {
+      tr.invert();
+      local = tr.point(pos);
+    }
     const snap = (v: number) => Math.round((v / scale) * 2) / 2; // a la ½ metro más cercana
-    const wx = snap(pos.x - ox);
-    const wy = snap(pos.y - oy);
+    const wx = snap(local.x - ox);
+    const wy = snap(local.y - oy);
     if (placing) {
       createEspacioAt(wx, wy);
     } else {

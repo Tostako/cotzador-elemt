@@ -6,6 +6,7 @@ import type { PatronOpcion } from '../utils/calculations'
 import { generarPlanoSVG } from '../utils/calculations'
 import { showNotification } from '../../../shared/hooks/useNotifications'
 import { MaterialForm } from './MaterialForm'
+import { FormModal } from '../../../shared/components/FormModal'
 
 // Biblioteca de materiales de enchape reutilizable entre proyectos (navegador).
 const LIB_KEY = 'enchapes_materiales_lib_v1'
@@ -92,6 +93,12 @@ export function Fase3Materiales({
     setMatForm({ ...m })
     setEditingMaterialId(m.id)
     setShowAddMaterial(true)
+  }, [])
+
+  const cerrarFormulario = useCallback(() => {
+    setShowAddMaterial(false)
+    setEditingMaterialId(null)
+    setMatForm(makeBlankMaterial())
   }, [])
 
   const handleDeleteMaterial = useCallback(
@@ -206,8 +213,10 @@ export function Fase3Materiales({
     [niveles]
   )
 
+  // min(340px, 100%): sin el min(), en pantallas angostas la columna se queda
+  // clavada en 340 y la tarjeta desborda el ancho de la página.
   return (
-    <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))' }}>
+    <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))' }}>
       {/* Material catalog */}
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
@@ -249,25 +258,40 @@ export function Fase3Materiales({
               type="button"
               className="toolbar-btn"
               onClick={() => {
-                setShowAddMaterial((v) => !v)
-                if (showAddMaterial) {
-                  setMatForm(makeBlankMaterial())
-                  setEditingMaterialId(null)
-                }
+                setMatForm(makeBlankMaterial())
+                setEditingMaterialId(null)
+                setShowAddMaterial(true)
               }}
             >
-              {showAddMaterial ? 'Cancelar' : '+ Material'}
+              + Material
             </button>
           </div>
         </div>
 
+        {/* El formulario del material vive en una ventana emergente */}
         {showAddMaterial && (
-          <MaterialForm
-            matForm={matForm}
-            setMatForm={setMatForm}
-            editingMaterialId={editingMaterialId}
-            onSave={handleSaveMaterial}
-          />
+          <FormModal
+            title={editingMaterialId ? 'Editar material' : 'Nuevo material'}
+            subtitle="Formato, precio y tipo de acabado del material de enchape."
+            maxWidth={620}
+            onClose={cerrarFormulario}
+            footer={
+              <>
+                <button type="button" className="btn btn-small btn-secondary" onClick={cerrarFormulario} style={{ width: 'auto' }}>Cancelar</button>
+                <button type="button" className="btn btn-small" onClick={handleSaveMaterial} style={{ width: 'auto' }}>
+                  {editingMaterialId ? 'Guardar cambios' : 'Agregar material'}
+                </button>
+              </>
+            }
+          >
+            <MaterialForm
+              matForm={matForm}
+              setMatForm={setMatForm}
+              editingMaterialId={editingMaterialId}
+              onSave={handleSaveMaterial}
+              sinBotones
+            />
+          </FormModal>
         )}
 
         <div className="flex-gap" style={{ flexDirection: 'column' }}>

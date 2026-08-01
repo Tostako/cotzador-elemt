@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ComponentType } from 'react';
 import {
   Home, PencilRuler, Grid3x3, Package, Calculator,
   Settings, Wallet, User, Receipt, CreditCard,
-  LogOut, Building2, ChevronDown, DraftingCompass, Frame, FileText, LayoutGrid, ScrollText,
+  LogOut, Building2, ChevronDown, DraftingCompass, Frame, FileText, LayoutGrid, ScrollText, PanelTop,
 } from 'lucide-react';
 import { useStore } from '../../shared/services/store';
 
@@ -69,6 +69,7 @@ const groups: NavGroup[] = [
       { route: '/planos', icon: DraftingCompass, label: 'Planos', match: (p) => p.startsWith('/planos') },
       { route: '/calculadoras/enchapes', icon: Grid3x3, label: 'Enchapes', match: (p) => p.startsWith('/calculadoras/enchapes') },
       { route: '/calculadoras/barrederas', icon: Frame, label: 'Barrederas', match: (p) => p.startsWith('/calculadoras/barrederas') },
+      { route: '/calculadoras/cornisas', icon: PanelTop, label: 'Cornisas de techo', match: (p) => p.startsWith('/calculadoras/cornisas') },
       { route: '/materiales', icon: Package, label: 'Materiales', match: (p) => p.startsWith('/materiales') },
     ],
   },

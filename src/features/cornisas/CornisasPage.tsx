@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Frame, Save } from 'lucide-react';
+import { PanelTop, Save } from 'lucide-react';
 import { apiService } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { fromBackendPlan, type PlanoMeta } from '../planos/mapping';
@@ -12,35 +12,34 @@ const dataOf = (res: any) => (res && typeof res === 'object' && 'data' in res ? 
 const money = (n: number) => '$' + Math.round(n).toLocaleString('es-CO');
 
 // Biblioteca de materiales reutilizable entre obras (persistida en el navegador).
-const LIB_KEY = 'barrederas_materiales_v1';
+const LIB_KEY = 'cornisas_materiales_v1';
 
-type Modo = 'metro' | 'ceramica';
+// Las cornisas se venden por metro lineal o en tiras/molduras de largo fijo.
+type Modo = 'metro' | 'tira';
 type Material = {
   id: string;
   nombre: string;
   tipo: string;
   color: string;
-  altura: number; // cm
+  altura: number; // desarrollo (alto de la cara vista) en cm
   modo: Modo;
   // modo === 'metro'
   precio_por_metro: number;
-  // modo === 'ceramica'
-  largo_cm: number; // largo de cada pieza (ej. 60)
-  piezas_por_ceramica: number; // tiras que salen de una cerámica (por defecto 1)
-  precio_por_ceramica: number;
+  // modo === 'tira'
+  largo_cm: number; // largo de cada tira (ej. 200 o 244)
+  precio_por_tira: number;
 };
 
 const nuevoMaterial = (): Material => ({
   id: uid(),
-  nombre: 'Barredera',
-  tipo: 'aluminio',
+  nombre: 'Cornisa',
+  tipo: 'poliuretano',
   color: '',
-  altura: 10,
+  altura: 7.5,
   modo: 'metro',
   precio_por_metro: 0,
-  largo_cm: 60,
-  piezas_por_ceramica: 1,
-  precio_por_ceramica: 0,
+  largo_cm: 200,
+  precio_por_tira: 0,
 });
 
 const normalizeMat = (m: any): Material => ({ ...nuevoMaterial(), ...m, id: m?.id || uid() });
@@ -59,72 +58,70 @@ const loadLib = (): Material[] => {
 };
 
 // Cálculo por habitación según el material asignado.
-function calcEspacio(perimetro: number, m?: Material): { ceramicas: number | null; precio: number } {
-  if (!m) return { ceramicas: null, precio: 0 };
-  if (m.modo === 'ceramica') {
+function calcEspacio(perimetro: number, m?: Material): { tiras: number | null; precio: number } {
+  if (!m) return { tiras: null, precio: 0 };
+  if (m.modo === 'tira') {
     const largoM = (m.largo_cm || 0) / 100;
-    const piezasNecesarias = largoM > 0 ? Math.ceil(perimetro / largoM) : 0;
-    const porCeramica = Math.max(1, m.piezas_por_ceramica || 1);
-    const ceramicas = Math.ceil(piezasNecesarias / porCeramica);
-    return { ceramicas, precio: ceramicas * (m.precio_por_ceramica || 0) };
+    const tiras = largoM > 0 ? Math.ceil(perimetro / largoM) : 0;
+    return { tiras, precio: tiras * (m.precio_por_tira || 0) };
   }
-  return { ceramicas: null, precio: perimetro * (m.precio_por_metro || 0) };
+  return { tiras: null, precio: perimetro * (m.precio_por_metro || 0) };
 }
 
-// Guarda los materiales en el catálogo de Materiales (categoría "Barrederas").
+// Guarda los materiales en el catálogo de Materiales (categoría "Cornisas").
 async function guardarEnCatalogo(materiales: Material[]): Promise<void> {
   const cats = dataOf(await apiService.getCatalogCategories());
-  let cat = (Array.isArray(cats) ? cats : []).find((c: any) => (c.name || '').toLowerCase() === 'barrederas');
-  if (!cat) cat = dataOf(await apiService.createCatalogCategory({ name: 'Barrederas', description: 'Materiales de barrederas' }));
+  let cat = (Array.isArray(cats) ? cats : []).find((c: any) => (c.name || '').toLowerCase() === 'cornisas');
+  if (!cat) cat = dataOf(await apiService.createCatalogCategory({ name: 'Cornisas', description: 'Cornisas de techo' }));
   const catId = cat?.id;
   if (!catId) return;
   const existing = dataOf(await apiService.getCatalogProducts(String(catId)));
   const existingNames = new Set((Array.isArray(existing) ? existing : []).map((p: any) => (p.name || '').toLowerCase()));
   for (const m of materiales) {
     if (existingNames.has(m.nombre.trim().toLowerCase())) continue;
-    const desc = m.modo === 'ceramica'
-      ? `${m.tipo} · cerámica ${m.largo_cm} cm · ${m.piezas_por_ceramica} tira(s)/cerámica`
-      : `${m.tipo} · por metro · altura ${m.altura} cm`;
+    const desc = m.modo === 'tira'
+      ? `${m.tipo} · tira de ${m.largo_cm} cm · desarrollo ${m.altura} cm`
+      : `${m.tipo} · por metro · desarrollo ${m.altura} cm`;
     const prod = dataOf(await apiService.createCatalogProduct({ category_id: catId, name: m.nombre.trim(), description: desc }));
-    const precio = m.modo === 'ceramica' ? m.precio_por_ceramica : m.precio_por_metro;
+    const precio = m.modo === 'tira' ? m.precio_por_tira : m.precio_por_metro;
     if (prod?.id && precio > 0) {
       await apiService.addCatalogPrice(String(prod.id), {
-        hardware_store: 'Barrederas',
+        hardware_store: 'Cornisas',
         brand: m.tipo || 'General',
         price: precio,
-        notes: m.modo === 'ceramica' ? `Por cerámica (${m.largo_cm} cm)` : 'Por metro',
+        notes: m.modo === 'tira' ? `Por tira (${m.largo_cm} cm)` : 'Por metro',
       });
     }
   }
 }
 
-export function BarrederasPage() {
+export function CornisasPage() {
   const { planId } = useParams();
   const navigate = useNavigate();
   return planId ? (
-    <BarrederasCalc planId={planId} />
+    <CornisasCalc planId={planId} />
   ) : (
     <PlanoPicker
-      titulo="Barrederas"
-      icono={<Frame size={28} color="#b69462" />}
-      descripcion="Elige un plano de casa para calcular las barrederas por habitación."
-      onSelect={(id) => navigate(`/calculadoras/barrederas/${id}`)}
+      titulo="Cornisas de techo"
+      icono={<PanelTop size={28} color="#b69462" />}
+      descripcion="Elige un plano de casa para calcular las cornisas de techo por habitación."
+      onSelect={(id) => navigate(`/calculadoras/cornisas/${id}`)}
     />
   );
 }
 
-function BarrederasCalc({ planId }: { planId: string }) {
+function CornisasCalc({ planId }: { planId: string }) {
   const navigate = useNavigate();
   const [meta, setMeta] = useState<PlanoMeta>({ nombre: '', propietario: '', ubicacion: '' });
   const [niveles, setNiveles] = useState<Nivel[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingMat, setSavingMat] = useState(false);
-  const [materiales, setMateriales] = useState<Material[]>(() => loadLib()); // desde la biblioteca
+  const [materiales, setMateriales] = useState<Material[]>(() => loadLib());
   // Se toma el id del array ya creado, NO de otro loadLib(): sin biblioteca guardada
   // cada llamada genera un material con uid() distinto, editId apuntaba a uno que no
   // estaba en la lista y patchEdit no encontraba nada — las ediciones se perdían.
-  const [editId, setEditId] = useState<string>(() => materiales[0]?.id || ''); // material en edición
+  const [editId, setEditId] = useState<string>(() => materiales[0]?.id || '');
   const [modalAbierto, setModalAbierto] = useState(false);
   const [esNuevo, setEsNuevo] = useState(false);
   const [asignacion, setAsignacion] = useState<Record<string, string>>({});
@@ -164,13 +161,14 @@ function BarrederasCalc({ planId }: { planId: string }) {
   const getMat = (id: string | undefined) => materiales.find((m) => m.id === id);
   const editMat = getMat(editId) || materiales[0];
 
-  // Cada columna del muro suma 2 × su saliente (medidas puestas en el editor de planos).
+  // Mismo perímetro que barrederas: las aberturas no cuentan y cada columna
+  // suma 2 × su saliente (medidas puestas en el editor de planos).
   const extraColumnas = (e: Espacio) => espacioColumnasExtra(e);
   const perimetroDe = (e: Espacio) => espacioPerimetros(e).conMuro + extraColumnas(e);
 
   const totales = useMemo(() => {
     let metros = 0;
-    let ceramicas = 0;
+    let tiras = 0;
     let precio = 0;
     let columnas = 0;
     niveles.forEach((nv) =>
@@ -180,11 +178,11 @@ function BarrederasCalc({ planId }: { planId: string }) {
         const r = calcEspacio(perimetro, m);
         metros += perimetro;
         columnas += espacioColumnas(e);
-        if (r.ceramicas != null) ceramicas += r.ceramicas;
+        if (r.tiras != null) tiras += r.tiras;
         precio += r.precio;
       })
     );
-    return { metros, ceramicas, precio, columnas };
+    return { metros, tiras, precio, columnas };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [niveles, asignacion, materiales]);
 
@@ -234,10 +232,10 @@ function BarrederasCalc({ planId }: { planId: string }) {
   const guardar = async () => {
     setSaving(true);
     try {
-      const created = dataOf(await apiService.importPlanToGuardaescobas(planId, { nombre: `Barrederas ${meta.nombre}` }));
+      const created = dataOf(await apiService.importPlanToCornisas(planId, { nombre: `Cornisas ${meta.nombre}` }));
       const projectId = created?.id;
       if (projectId) {
-        await apiService.updateGuardaescobasProject(String(projectId), {
+        await apiService.updateCornisasProject(String(projectId), {
           materiales: materiales.map((m) => ({
             id: m.id,
             nombre: m.nombre,
@@ -247,12 +245,11 @@ function BarrederasCalc({ planId }: { planId: string }) {
             modo: m.modo,
             precio_por_metro: m.precio_por_metro,
             largo_cm: m.largo_cm,
-            piezas_por_ceramica: m.piezas_por_ceramica,
-            precio_por_ceramica: m.precio_por_ceramica,
+            precio_por_tira: m.precio_por_tira,
           })),
         });
       }
-      showNotification('Guardado', 'success', 'Se creó el proyecto de barrederas con sus materiales.');
+      showNotification('Guardado', 'success', 'Se creó el proyecto de cornisas con sus materiales.');
     } catch (e: any) {
       showNotification('Error', 'error', e?.message || 'No se pudo guardar el proyecto.');
     } finally {
@@ -268,16 +265,16 @@ function BarrederasCalc({ planId }: { planId: string }) {
     );
   }
 
-  const hayCeramica = materiales.some((m) => m.modo === 'ceramica');
+  const hayTira = materiales.some((m) => m.modo === 'tira');
   const hayColumnas = niveles.some((nv) => nv.espacios.some((e) => espacioColumnas(e) > 0));
 
   return (
     <main>
       {/* flexWrap: en móvil el título y los botones no caben en una línea y se salían del ancho. */}
       <div className="flex-between" style={{ marginBottom: 8, gap: 12, flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 'clamp(20px, 5.5vw, 28px)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}><Frame size={26} color="#b69462" /> Barrederas — {meta.nombre || 'Plano'}</h1>
+        <h1 style={{ fontSize: 'clamp(20px, 5.5vw, 28px)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}><PanelTop size={26} color="#b69462" /> Cornisas de techo — {meta.nombre || 'Plano'}</h1>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate('/calculadoras/barrederas')} style={{ width: 'auto' }}>← Cambiar plano</button>
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate('/calculadoras/cornisas')} style={{ width: 'auto' }}>← Cambiar plano</button>
           <button type="button" className="btn btn-small" onClick={guardar} disabled={saving} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>{saving ? 'Guardando…' : (<><Save size={15} /> Guardar obra</>)}</button>
         </div>
       </div>
@@ -297,7 +294,7 @@ function BarrederasCalc({ planId }: { planId: string }) {
               <div style={{ flex: '1 1 160px', minWidth: 0 }}>
                 <div style={{ fontWeight: 600 }}>{m.nombre}{m.color ? ` — ${m.color}` : ''}</div>
                 <p className="small" style={{ color: '#8c8578' }}>
-                  {m.modo === 'ceramica' ? `Por cerámica · ${m.largo_cm} cm · ${money(m.precio_por_ceramica)}` : `Por metro · ${money(m.precio_por_metro)}`}
+                  {m.modo === 'tira' ? `Por tira · ${m.largo_cm} cm · ${money(m.precio_por_tira)}` : `Por metro · ${money(m.precio_por_metro)}`}
                 </p>
               </div>
               <button type="button" className="btn btn-small btn-secondary" onClick={() => abrirEditor(m.id)} style={{ width: 'auto' }}>✎ Editar</button>
@@ -312,7 +309,7 @@ function BarrederasCalc({ planId }: { planId: string }) {
       {modalAbierto && editMat && (
         <FormModal
           title={esNuevo ? 'Nuevo material' : 'Editar material'}
-          subtitle="Se usa para calcular las barrederas de las habitaciones que lo tengan asignado."
+          subtitle="Se usa para calcular las cornisas de las habitaciones que lo tengan asignado."
           onClose={cerrarEditor}
           footer={
             <>
@@ -331,7 +328,7 @@ function BarrederasCalc({ planId }: { planId: string }) {
             </div>
             <div>
               <label className="small" style={{ display: 'block', marginBottom: 4 }}>Tipo</label>
-              <input className="input" value={editMat.tipo} onChange={(e) => patchEdit({ tipo: e.target.value })} placeholder="aluminio, cerámica…" />
+              <input className="input" value={editMat.tipo} onChange={(e) => patchEdit({ tipo: e.target.value })} placeholder="poliuretano, yeso, MDF…" />
             </div>
             <div>
               <label className="small" style={{ display: 'block', marginBottom: 4 }}>Color</label>
@@ -341,7 +338,7 @@ function BarrederasCalc({ planId }: { planId: string }) {
               <label className="small" style={{ display: 'block', marginBottom: 4 }}>Modo de cálculo</label>
               <select className="select" value={editMat.modo} onChange={(e) => patchEdit({ modo: e.target.value as Modo })}>
                 <option value="metro">Por metro</option>
-                <option value="ceramica">Por cerámica (cortada)</option>
+                <option value="tira">Por tira (largo fijo)</option>
               </select>
             </div>
           </div>
@@ -353,23 +350,23 @@ function BarrederasCalc({ planId }: { planId: string }) {
                 <input className="input" type="number" min={0} step={0.5} value={editMat.precio_por_metro} onChange={(e) => patchEdit({ precio_por_metro: parseFloat(e.target.value) || 0 })} />
               </div>
               <div>
-                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Altura (cm)</label>
-                <input className="input" type="number" min={0} step={1} value={editMat.altura} onChange={(e) => patchEdit({ altura: parseFloat(e.target.value) || 0 })} />
+                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Desarrollo (cm)</label>
+                <input className="input" type="number" min={0} step={0.5} value={editMat.altura} onChange={(e) => patchEdit({ altura: parseFloat(e.target.value) || 0 })} />
               </div>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginTop: 12 }}>
               <div>
-                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Largo de la cerámica (cm)</label>
-                <input className="input" type="number" min={0} step={1} value={editMat.largo_cm} onChange={(e) => patchEdit({ largo_cm: parseFloat(e.target.value) || 0 })} placeholder="Ej: 60" />
+                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Largo de la tira (cm)</label>
+                <input className="input" type="number" min={0} step={1} value={editMat.largo_cm} onChange={(e) => patchEdit({ largo_cm: parseFloat(e.target.value) || 0 })} placeholder="Ej: 200" />
               </div>
               <div>
-                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Tiras por cerámica</label>
-                <input className="input" type="number" min={1} step={1} value={editMat.piezas_por_ceramica} onChange={(e) => patchEdit({ piezas_por_ceramica: parseInt(e.target.value) || 1 })} />
+                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Precio por tira</label>
+                <input className="input" type="number" min={0} step={0.5} value={editMat.precio_por_tira} onChange={(e) => patchEdit({ precio_por_tira: parseFloat(e.target.value) || 0 })} />
               </div>
               <div>
-                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Precio por cerámica</label>
-                <input className="input" type="number" min={0} step={0.5} value={editMat.precio_por_ceramica} onChange={(e) => patchEdit({ precio_por_ceramica: parseFloat(e.target.value) || 0 })} />
+                <label className="small" style={{ display: 'block', marginBottom: 4 }}>Desarrollo (cm)</label>
+                <input className="input" type="number" min={0} step={0.5} value={editMat.altura} onChange={(e) => patchEdit({ altura: parseFloat(e.target.value) || 0 })} />
               </div>
             </div>
           )}
@@ -395,16 +392,15 @@ function BarrederasCalc({ planId }: { planId: string }) {
                   <th style={{ textAlign: 'left', padding: '10px 8px' }}>Habitación</th>
                   <th style={{ textAlign: 'right', padding: '10px 8px' }}>Metros</th>
                   <th style={{ textAlign: 'left', padding: '10px 8px' }}>Material</th>
-                  {hayCeramica && <th style={{ textAlign: 'right', padding: '10px 8px' }}>Cerámicas</th>}
+                  {hayTira && <th style={{ textAlign: 'right', padding: '10px 8px' }}>Tiras</th>}
                   <th style={{ textAlign: 'right', padding: '10px 8px' }}>Precio</th>
                 </tr>
               </thead>
               <tbody>
                 {nv.espacios.map((e) => {
-                  const base = espacioPerimetros(e).conMuro;
                   const ncol = espacioColumnas(e);
                   const extra = extraColumnas(e);
-                  const perimetro = base + extra;
+                  const perimetro = espacioPerimetros(e).conMuro + extra;
                   const material = getMat(asignacion[e.id]);
                   const r = calcEspacio(perimetro, material);
                   return (
@@ -418,15 +414,15 @@ function BarrederasCalc({ planId }: { planId: string }) {
                         {extra > 0 && <span className="small" style={{ color: '#f59e0b' }}> (+{extra.toFixed(2)})</span>}
                       </td>
                       <td style={{ padding: '10px 8px' }}>
-                        <select className="select" value={asignacion[e.id] || ''} onChange={(ev) => setAsignacion((a) => ({ ...a, [e.id]: ev.target.value }))} style={{ maxWidth: 220 }}>
+                        <select className="select" value={asignacion[e.id] || ''} onChange={(ev) => setAsignacion((a) => ({ ...a, [e.id]: ev.target.value }))} style={{ maxWidth: 220 }} aria-label={`Material de ${e.nombre}`}>
                           {materiales.map((mm) => (
                             <option key={mm.id} value={mm.id}>{mm.nombre}{mm.color ? ` — ${mm.color}` : ''}</option>
                           ))}
                         </select>
                       </td>
-                      {hayCeramica && (
+                      {hayTira && (
                         <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 700, color: '#60a5fa' }}>
-                          {r.ceramicas != null ? r.ceramicas : '—'}
+                          {r.tiras != null ? r.tiras : '—'}
                         </td>
                       )}
                       <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 700, color: '#b69462' }}>{money(r.precio)}</td>
@@ -442,13 +438,13 @@ function BarrederasCalc({ planId }: { planId: string }) {
       {/* Totales */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
         <div className="card" style={{ padding: 16 }}>
-          <div className="small">Total metros de barrederas</div>
+          <div className="small">Total metros de cornisa</div>
           <div style={{ fontWeight: 800, fontSize: 24, color: '#b69462' }}>{totales.metros.toFixed(2)} m</div>
         </div>
-        {hayCeramica && (
+        {hayTira && (
           <div className="card" style={{ padding: 16 }}>
-            <div className="small">Cerámicas necesarias</div>
-            <div style={{ fontWeight: 800, fontSize: 24, color: '#60a5fa' }}>{totales.ceramicas}</div>
+            <div className="small">Tiras necesarias</div>
+            <div style={{ fontWeight: 800, fontSize: 24, color: '#60a5fa' }}>{totales.tiras}</div>
           </div>
         )}
         <div className="card" style={{ padding: 16 }}>
