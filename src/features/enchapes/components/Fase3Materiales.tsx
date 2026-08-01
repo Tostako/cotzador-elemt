@@ -206,9 +206,9 @@ export function Fase3Materiales({
     [niveles]
   )
 
+  // min(340px, 100%): sin el min(), en pantallas angostas la columna se queda
+  // clavada en 340 y la tarjeta desborda el ancho de la página.
   return (
-    {/* min(340px, 100%): sin el min(), en pantallas angostas la columna se queda
-        clavada en 340 y la tarjeta desborda el ancho de la página. */}
     <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))' }}>
       {/* Material catalog */}
       <div className="card">
