@@ -6,15 +6,19 @@ interface MaterialFormProps {
   setMatForm: React.Dispatch<React.SetStateAction<MaterialEnchape>>
   editingMaterialId: string | null
   onSave: () => void
+  /** Dentro de un modal el título y el botón de guardar los pone el propio modal. */
+  sinBotones?: boolean
 }
 
-export function MaterialForm({ matForm, setMatForm, editingMaterialId, onSave }: MaterialFormProps) {
+export function MaterialForm({ matForm, setMatForm, editingMaterialId, onSave, sinBotones = false }: MaterialFormProps) {
   return (
-    <div className="form-section" style={{ marginBottom: 16 }}>
-      <h4 className="section-title" style={{ marginTop: 0 }}>
-        {editingMaterialId ? 'Editar material' : 'Nuevo material'}
-      </h4>
-      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+    <div className={sinBotones ? undefined : 'form-section'} style={sinBotones ? undefined : { marginBottom: 16 }}>
+      {!sinBotones && (
+        <h4 className="section-title" style={{ marginTop: 0 }}>
+          {editingMaterialId ? 'Editar material' : 'Nuevo material'}
+        </h4>
+      )}
+      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))' }}>
         <div>
           <label className="small" htmlFor="mat-nombre">Nombre</label>
           <input
@@ -172,9 +176,11 @@ export function MaterialForm({ matForm, setMatForm, editingMaterialId, onSave }:
           />
         </div>
       </div>
-      <button type="button" className="toolbar-btn" style={{ marginTop: 12 }} onClick={onSave}>
-        {editingMaterialId ? 'Guardar cambios' : 'Agregar material'}
-      </button>
+      {!sinBotones && (
+        <button type="button" className="toolbar-btn" style={{ marginTop: 12 }} onClick={onSave}>
+          {editingMaterialId ? 'Guardar cambios' : 'Agregar material'}
+        </button>
+      )}
     </div>
   )
 }

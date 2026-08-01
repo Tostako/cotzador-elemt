@@ -5,8 +5,7 @@ import { apiService } from '../../shared/services/api'
 import { showNotification } from '../../shared/hooks/useNotifications'
 import { PlanoPicker } from '../planos/PlanoPicker'
 import { BackButton } from '../../shared/components/BackButton'
-import { Grid3x3, DraftingCompass, ClipboardList, Package, Calculator, Save, Trash2 } from 'lucide-react'
-import { Fase1Canvas } from './components/Fase1Canvas'
+import { Grid3x3, ClipboardList, Package, Calculator, Save, Trash2 } from 'lucide-react'
 import { Fase2Resumen } from './components/Fase2Resumen'
 import { Fase3Materiales } from './components/Fase3Materiales'
 import { Fase4Presupuesto } from './components/Fase4Presupuesto'
@@ -112,24 +111,6 @@ function EnchapesCalc({ projectParam }: { projectParam: string | null }) {
     proyecto,
     updateProyecto,
     niveles,
-    nivelActivoId,
-    addNivel,
-    removeNivel,
-    renameNivel,
-    selectNivel,
-    addSpace,
-    removeSpace,
-    updateSpace,
-    updateSegmento,
-    addSegmento,
-    removeSegmento,
-    addAdjacentSpace,
-    conexiones,
-    addConexion,
-    removeConexion,
-    selectedCardId,
-    setSelectedCardId,
-    updateSpacePosition,
     materiales,
     addMaterial,
     updateMaterial,
@@ -140,7 +121,6 @@ function EnchapesCalc({ projectParam }: { projectParam: string | null }) {
     setOrientacion,
     bancoSobrantes,
     eliminarSobrante,
-    getNivelActivo,
     getMaterial,
     espacioCompleto,
     computeArea,
@@ -157,9 +137,6 @@ function EnchapesCalc({ projectParam }: { projectParam: string | null }) {
     if (projectParam) loadProject(projectParam)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectParam])
-
-  const nivelActivo = getNivelActivo()
-  const espacios = nivelActivo?.espacios || []
 
   return (
     <main>
@@ -230,37 +207,8 @@ function EnchapesCalc({ projectParam }: { projectParam: string | null }) {
         </button>
       </div>
 
-      {/* Todo en una sola página, en el orden del trabajo:
-          plano → materiales → presupuesto → resumen. */}
-      <Seccion icon={DraftingCompass} titulo="Plano" descripcion="Las habitaciones vienen del plano de casa; para cambiarlas se edita allí.">
-        <Fase1Canvas
-          niveles={niveles}
-          nivelActivoId={nivelActivoId}
-          selectNivel={selectNivel}
-          addNivel={addNivel}
-          removeNivel={removeNivel}
-          renameNivel={renameNivel}
-          espacios={espacios}
-          conexiones={conexiones}
-          addSpace={addSpace}
-          removeSpace={removeSpace}
-          updateSpace={updateSpace}
-          updateSegmento={updateSegmento}
-          addSegmento={addSegmento}
-          removeSegmento={removeSegmento}
-          addAdjacentSpace={addAdjacentSpace}
-          addConexion={addConexion}
-          removeConexion={removeConexion}
-          selectedCardId={selectedCardId}
-          setSelectedCardId={setSelectedCardId}
-          updateSpacePosition={updateSpacePosition}
-          computeArea={computeArea}
-          getMaterial={getMaterial}
-          readOnly
-          onEditarPlano={() => navigate('/planos')}
-        />
-      </Seccion>
-
+      {/* El dibujo del plano y la creación de espacios viven en "Planos": aquí solo
+          se trabaja sobre las habitaciones que ya trae el plano elegido. */}
       <Seccion icon={Package} titulo="Materiales" descripcion="Asigna a cada habitación su material y patrón de instalación.">
         <Fase3Materiales
           niveles={niveles}
