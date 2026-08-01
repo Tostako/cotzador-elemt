@@ -117,7 +117,10 @@ function CornisasCalc({ planId }: { planId: string }) {
   const [saving, setSaving] = useState(false);
   const [savingMat, setSavingMat] = useState(false);
   const [materiales, setMateriales] = useState<Material[]>(() => loadLib());
-  const [editId, setEditId] = useState<string>(() => loadLib()[0]?.id || '');
+  // Se toma el id del array ya creado, NO de otro loadLib(): sin biblioteca guardada
+  // cada llamada genera un material con uid() distinto, editId apuntaba a uno que no
+  // estaba en la lista y patchEdit no encontraba nada — las ediciones se perdían.
+  const [editId, setEditId] = useState<string>(() => materiales[0]?.id || '');
   const [asignacion, setAsignacion] = useState<Record<string, string>>({});
 
   // Guarda la biblioteca de materiales para reutilizarla en otras obras.

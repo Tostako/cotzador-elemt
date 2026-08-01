@@ -120,7 +120,10 @@ function BarrederasCalc({ planId }: { planId: string }) {
   const [saving, setSaving] = useState(false);
   const [savingMat, setSavingMat] = useState(false);
   const [materiales, setMateriales] = useState<Material[]>(() => loadLib()); // desde la biblioteca
-  const [editId, setEditId] = useState<string>(() => loadLib()[0]?.id || ''); // material en edición
+  // Se toma el id del array ya creado, NO de otro loadLib(): sin biblioteca guardada
+  // cada llamada genera un material con uid() distinto, editId apuntaba a uno que no
+  // estaba en la lista y patchEdit no encontraba nada — las ediciones se perdían.
+  const [editId, setEditId] = useState<string>(() => materiales[0]?.id || ''); // material en edición
   const [asignacion, setAsignacion] = useState<Record<string, string>>({});
 
   // Guarda la biblioteca de materiales para reutilizarla en otras obras.
