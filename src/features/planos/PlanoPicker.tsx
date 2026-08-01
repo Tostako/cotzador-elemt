@@ -47,8 +47,9 @@ export function PlanoPicker({
 
   return (
     <main>
-      <div className="flex-between" style={{ marginBottom: 8, gap: 12 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* flexWrap: en móvil el título y el botón no caben en una línea y se salían del ancho. */}
+      <div className="flex-between" style={{ marginBottom: 8, gap: 12, flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: 'clamp(22px, 6vw, 32px)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
           {icono} {titulo}
         </h1>
         <button type="button" className="btn btn-small" onClick={() => navigate('/planos/nuevo')} style={{ width: 'auto' }}>

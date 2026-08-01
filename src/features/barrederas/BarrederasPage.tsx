@@ -265,9 +265,10 @@ function BarrederasCalc({ planId }: { planId: string }) {
 
   return (
     <main>
-      <div className="flex-between" style={{ marginBottom: 8, gap: 12 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}><Frame size={26} color="#b69462" /> Barrederas — {meta.nombre || 'Plano'}</h1>
-        <div style={{ display: 'flex', gap: 8 }}>
+      {/* flexWrap: en móvil el título y los botones no caben en una línea y se salían del ancho. */}
+      <div className="flex-between" style={{ marginBottom: 8, gap: 12, flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: 'clamp(20px, 5.5vw, 28px)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}><Frame size={26} color="#b69462" /> Barrederas — {meta.nombre || 'Plano'}</h1>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate('/calculadoras/barrederas')} style={{ width: 'auto' }}>← Cambiar plano</button>
           <button type="button" className="btn btn-small" onClick={guardar} disabled={saving} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>{saving ? 'Guardando…' : (<><Save size={15} /> Guardar obra</>)}</button>
         </div>

@@ -148,8 +148,9 @@ function EnchapesCalc({ projectParam }: { projectParam: string | null }) {
   return (
     <main>
       <BackButton />
-      <div className="flex-between" style={{ marginBottom: 8, gap: 12 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* flexWrap: en móvil el título y el botón no caben en una línea y se salían del ancho. */}
+      <div className="flex-between" style={{ marginBottom: 8, gap: 12, flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: 'clamp(22px, 6vw, 32px)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
           <Grid3x3 size={28} color="#b69462" /> Calculadora de Enchapes
         </h1>
         <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate('/calculadoras/enchapes')} style={{ width: 'auto' }}>
