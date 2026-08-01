@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   PencilRuler, History, Receipt, Building2,
   Wallet, CreditCard, User, Calculator, Package,
-  TrendingUp, FileText, DraftingCompass, Frame, Grid3x3,
+  TrendingUp, FileText, DraftingCompass, Frame, Grid3x3, PanelTop,
 } from 'lucide-react';
 import { useStore } from '../../shared/services/store';
 
@@ -43,6 +43,7 @@ export function DashboardPage() {
     { icon: FileText, title: 'Cotizaciones', desc: `${quotes.length} guardadas`, route: '/history', accent: '#34d399' },
     { icon: Grid3x3, title: 'Enchapes', desc: 'Pisos y paredes', route: '/calculadoras/enchapes', accent: '#f59e0b' },
     { icon: Frame, title: 'Barrederas', desc: 'Cálculo por perímetro', route: '/calculadoras/barrederas', accent: '#c084fc' },
+    { icon: PanelTop, title: 'Cornisas de techo', desc: 'Cálculo por perímetro', route: '/calculadoras/cornisas', accent: '#38bdf8' },
     { icon: Package, title: 'Materiales', desc: 'Catálogo y pedidos', route: '/materiales', accent: '#f472b6' },
     { icon: Calculator, title: 'Estimaciones de obra', desc: 'Precios por m²', route: '/estimacion', accent: '#5e5ce6' },
     { icon: Wallet, title: 'Tarifas', desc: 'Servicios y paquetes', route: '/tarifas', accent: '#34c759' },

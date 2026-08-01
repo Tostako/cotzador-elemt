@@ -370,4 +370,15 @@ export const apiService = {
   updateGuardaescobasProject: (id: string, data: any) => api(`/tile-calculator/guardaescobas-projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteGuardaescobasProject: (id: string) => api(`/tile-calculator/guardaescobas-projects/${id}`, { method: 'DELETE' }),
   calculateGuardaescobas: (id: string) => api(`/tile-calculator/guardaescobas-projects/${id}/calculate`, { method: 'POST' }),
+
+  // ── Cornisas de techo ──────────────────────────────
+  // Espejo de los de guardaescobas. Pendientes de crear en el backend:
+  // hasta entonces "Guardar obra" en Cornisas devolverá error; el resto de la
+  // calculadora (elegir plano, materiales, cálculo) funciona sin ellos.
+  getCornisasProjects: () => api('/tile-calculator/cornisas-projects'),
+  getCornisasProject: (id: string) => api(`/tile-calculator/cornisas-projects/${id}`),
+  createCornisasProject: (data: any) => api('/tile-calculator/cornisas-projects', { method: 'POST', body: JSON.stringify(data) }),
+  updateCornisasProject: (id: string, data: any) => api(`/tile-calculator/cornisas-projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCornisasProject: (id: string) => api(`/tile-calculator/cornisas-projects/${id}`, { method: 'DELETE' }),
+  importPlanToCornisas: (id: string, data: any) => api(`/tile-calculator/house-plans/${id}/import-to-cornisas`, { method: 'POST', body: JSON.stringify(data) }),
 };
