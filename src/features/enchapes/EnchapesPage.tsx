@@ -1,6 +1,9 @@
-﻿import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useEnchapes } from './hooks/useEnchapes'
+import { apiService } from '../../shared/services/api'
+import { showNotification } from '../../shared/hooks/useNotifications'
+import { PlanoPicker } from '../planos/PlanoPicker'
 import { BackButton } from '../../shared/components/BackButton'
 import { Grid3x3, DraftingCompass, ClipboardList, Package, Calculator, Save, Trash2 } from 'lucide-react'
 import { Fase1Canvas } from './components/Fase1Canvas'
@@ -8,7 +11,76 @@ import { Fase2Resumen } from './components/Fase2Resumen'
 import { Fase3Materiales } from './components/Fase3Materiales'
 import { Fase4Presupuesto } from './components/Fase4Presupuesto'
 
+const dataOf = (res: any) => (res && typeof res === 'object' && 'data' in res ? res.data : res)
+
+/** Busca un proyecto de enchapes ya derivado de este plano, para reabrirlo en vez
+ *  de crear otro. Sin esto cada visita dejaría un proyecto nuevo en el servidor,
+ *  y la app no tiene pantalla para verlos ni borrarlos. */
+async function buscarProyectoDerivado(planId: string, planNombre?: string): Promise<any | null> {
+  try {
+    const res = dataOf(await apiService.getTileProjects())
+    const list: any[] = Array.isArray(res) ? res : []
+    // 1) Vínculo real, si el backend lo devuelve.
+    const porPlan = list.find((p) => {
+      const ref = p?.house_plan_id ?? p?.housePlanId ?? p?.plano_id
+      return ref != null && String(ref) === String(planId)
+    })
+    if (porPlan) return porPlan
+    // 2) Si no hay vínculo, por el nombre con el que se crean ("Enchapes <plano>").
+    //    Es frágil: si renombras el plano deja de emparejar y se creará otro proyecto.
+    const esperado = `enchapes ${String(planNombre || '').trim()}`.trim().toLowerCase()
+    if (esperado === 'enchapes') return null
+    return list.find((p) => String(p?.nombre || '').trim().toLowerCase() === esperado) || null
+  } catch {
+    return null // sin listado seguimos con la importación normal
+  }
+}
+
 export function EnchapesPage() {
+  const [searchParams] = useSearchParams()
+  const projectParam = searchParams.get('project')
+
+  // Con ?project= se entra al asistente; si no, primero se elige un plano
+  // — igual que en barrederas, que siempre parte de un plano.
+  if (projectParam) return <EnchapesCalc projectParam={projectParam} />
+  return <EnchapesPicker />
+}
+
+function EnchapesPicker() {
+  const navigate = useNavigate()
+  const [abriendo, setAbriendo] = useState<string | null>(null)
+
+  const abrirPlano = async (planId: string, plan: any) => {
+    setAbriendo(planId)
+    try {
+      const existente = await buscarProyectoDerivado(planId, plan?.nombre)
+      let projectId = existente?.id
+      if (!projectId) {
+        const created = dataOf(
+          await apiService.importPlanToTiles(planId, { nombre: `Enchapes ${String(plan?.nombre || '').trim()}`.trim() })
+        )
+        projectId = created?.id
+      }
+      if (!projectId) throw new Error('El servidor no devolvió el proyecto de enchapes.')
+      navigate(`/calculadoras/enchapes?project=${projectId}`)
+    } catch (e: any) {
+      showNotification('Error', 'error', e?.message || 'No se pudo abrir el plano en enchapes.')
+      setAbriendo(null)
+    }
+  }
+
+  return (
+    <PlanoPicker
+      titulo="Enchapes"
+      icono={<Grid3x3 size={28} color="#b69462" />}
+      descripcion="Elige un plano de casa para calcular materiales, desperdicio y presupuesto de pisos y paredes."
+      onSelect={abrirPlano}
+      busyId={abriendo}
+    />
+  )
+}
+
+function EnchapesCalc({ projectParam }: { projectParam: string | null }) {
   const navigate = useNavigate()
   const enchapes = useEnchapes()
   const {
@@ -58,8 +130,6 @@ export function EnchapesPage() {
   } = enchapes
 
   // Si venimos derivados de un plano (?project=<id>), cargamos ese proyecto.
-  const [searchParams] = useSearchParams()
-  const projectParam = searchParams.get('project')
   useEffect(() => {
     if (projectParam) loadProject(projectParam)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,9 +148,14 @@ export function EnchapesPage() {
   return (
     <main>
       <BackButton />
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Grid3x3 size={28} color="#b69462" /> Calculadora de Enchapes
-      </h1>
+      <div className="flex-between" style={{ marginBottom: 8, gap: 12 }}>
+        <h1 style={{ fontSize: 32, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Grid3x3 size={28} color="#b69462" /> Calculadora de Enchapes
+        </h1>
+        <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate('/calculadoras/enchapes')} style={{ width: 'auto' }}>
+          ← Cambiar plano
+        </button>
+      </div>
       <p className="small">Calcula materiales, desperdicio y presupuesto para pisos y paredes</p>
 
       {/* Project info */}

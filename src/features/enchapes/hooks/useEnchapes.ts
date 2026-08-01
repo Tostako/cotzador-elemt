@@ -13,7 +13,9 @@ import { computeArea, calcularInstalacion, calcularSobrantesEspacio, patronesPar
 import { showNotification } from '../../../shared/hooks/useNotifications'
 import { apiService } from '../../../shared/services/api'
 
-const STORAGE_KEY = 'element_enchapes_project'
+/** Borrador del proyecto de enchapes en el navegador. Lo exporta para que el
+ *  selector de planos pueda detectar si hay trabajo en curso sin duplicar la clave. */
+export const STORAGE_KEY = 'element_enchapes_project'
 
 function uid(prefix: string): string {
   return prefix + '_' + Math.random().toString(36).slice(2, 9)

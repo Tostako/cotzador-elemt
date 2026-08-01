@@ -4,6 +4,7 @@ import { Frame, Save } from 'lucide-react';
 import { apiService } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { fromBackendPlan, type PlanoMeta } from '../planos/mapping';
+import { PlanoPicker } from '../planos/PlanoPicker';
 import { espacioColumnas, espacioColumnasExtra, espacioPerimetros, uid, type Espacio, type Nivel } from '../planos/planoGeometry';
 
 const dataOf = (res: any) => (res && typeof res === 'object' && 'data' in res ? res.data : res);
@@ -98,59 +99,16 @@ async function guardarEnCatalogo(materiales: Material[]): Promise<void> {
 
 export function BarrederasPage() {
   const { planId } = useParams();
-  return planId ? <BarrederasCalc planId={planId} /> : <PlanoPicker />;
-}
-
-function PlanoPicker() {
   const navigate = useNavigate();
-  const [plans, setPlans] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let cancel = false;
-    (async () => {
-      try {
-        const res = dataOf(await apiService.getHousePlans());
-        if (!cancel) setPlans(Array.isArray(res) ? res : []);
-      } catch {
-        if (!cancel) setPlans([]);
-      } finally {
-        if (!cancel) setLoading(false);
-      }
-    })();
-    return () => { cancel = true; };
-  }, []);
-
-  return (
-    <main>
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}><Frame size={28} color="#b69462" /> Barrederas</h1>
-      <p className="small" style={{ marginBottom: 16 }}>Elige un plano de casa para calcular las barrederas por habitación.</p>
-      {loading ? (
-        <p className="small" style={{ color: '#999' }}>Cargando planos…</p>
-      ) : plans.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <p className="small" style={{ color: '#999' }}>No tienes planos. Crea uno primero en “Planos”.</p>
-          <button type="button" className="btn mt-2" onClick={() => navigate('/planos/nuevo')} style={{ width: 'auto' }}>Crear un plano</button>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 12 }}>
-          {plans.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className="card"
-              onClick={() => navigate(`/calculadoras/barrederas/${p.id}`)}
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit' }}
-            >
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>{p.nombre || 'Plano sin nombre'}</div>
-                <p className="small">{[p.propietario, p.ubicacion].filter(Boolean).join(' · ') || '—'}</p>
-              </div>
-              <span className="small" style={{ color: '#b69462' }}>Calcular →</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </main>
+  return planId ? (
+    <BarrederasCalc planId={planId} />
+  ) : (
+    <PlanoPicker
+      titulo="Barrederas"
+      icono={<Frame size={28} color="#b69462" />}
+      descripcion="Elige un plano de casa para calcular las barrederas por habitación."
+      onSelect={(id) => navigate(`/calculadoras/barrederas/${id}`)}
+    />
   );
 }
 
