@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { Save, Package, Target, Eye } from 'lucide-react'
 import type { Nivel, Espacio, MaterialEnchape, ResultadoCalculo } from '../types/enchapes'
 import { TIPOS_ACABADO, ACABADOS_CONTINUOS, getPatron, nombreConColor } from '../types/enchapes'
@@ -7,6 +7,31 @@ import { generarPlanoSVG } from '../utils/calculations'
 import { showNotification } from '../../../shared/hooks/useNotifications'
 import { MaterialForm } from './MaterialForm'
 import { FormModal } from '../../../shared/components/FormModal'
+import { productosDeCategoria, precioDe, partirNombreColor, leerDescripcionEnchape, type ProductoCatalogo } from '../../../shared/services/catalogoMateriales'
+
+/** Producto del catálogo → material de enchape. Los datos van dentro de
+ *  `description` (así los escribe guardarEnMateriales) y el precio sale de la
+ *  ferretería más barata. */
+function desdeCatalogo(p: ProductoCatalogo): MaterialEnchape {
+  const { nombre, color } = partirNombreColor(String(p.name || ''))
+  const d = leerDescripcionEnchape(p.description)
+  return {
+    id: 'cat_' + p.id,
+    nombre: nombre || 'Material',
+    color,
+    tipoAcabado: d.tipoAcabado,
+    formatoLargo: d.formatoLargo,
+    formatoAncho: d.formatoAncho,
+    formatoGrosor: d.formatoGrosor,
+    marca: d.marca,
+    categoria: d.categoria,
+    modoPrecio: 'm2',
+    precioM2: precioDe(p),
+    umbralSobranteCm: null,
+  } as MaterialEnchape
+}
+
+const claveDe = (m: MaterialEnchape) => `${m.nombre}|${m.color ?? ''}`.trim().toLowerCase()
 
 // Biblioteca de materiales de enchape reutilizable entre proyectos (navegador).
 const LIB_KEY = 'enchapes_materiales_lib_v1'
@@ -71,6 +96,28 @@ export function Fase3Materiales({
   const [exportingCatalogo, setExportingCatalogo] = useState(false)
   const [previewSpaceId, setPreviewSpaceId] = useState<string | null>(null)
   const [lib, setLib] = useState<MaterialEnchape[]>(() => loadLib())
+
+  // Los materiales guardados en el catálogo se suman a los del navegador, para
+  // que lo creado en un dispositivo se pueda usar en otro. No se añaden solos al
+  // proyecto: se ofrecen en el desplegable "Desde guardados" para elegirlos.
+  // (Añadirlos al proyecto chocaría con loadProject, que reemplaza `materiales`.)
+  useEffect(() => {
+    let cancel = false
+    ;(async () => {
+      try {
+        const prods = await productosDeCategoria('Enchapes')
+        if (cancel || prods.length === 0) return
+        setLib((locales) => {
+          const existentes = new Set(locales.map(claveDe))
+          const nuevos = prods.map(desdeCatalogo).filter((m) => !existentes.has(claveDe(m)))
+          return nuevos.length ? [...locales, ...nuevos] : locales
+        })
+      } catch {
+        /* sin catálogo se sigue con los del navegador */
+      }
+    })()
+    return () => { cancel = true }
+  }, [])
 
   const handleSaveMaterial = useCallback(() => {
     if (!matForm.nombre.trim()) {
