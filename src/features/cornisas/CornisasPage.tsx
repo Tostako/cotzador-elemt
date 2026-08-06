@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PanelTop, Save } from 'lucide-react';
 import { apiService } from '../../shared/services/api';
@@ -6,6 +6,7 @@ import { showNotification } from '../../shared/hooks/useNotifications';
 import { fromBackendPlan, type PlanoMeta } from '../planos/mapping';
 import { PlanoPicker } from '../planos/PlanoPicker';
 import { FormModal } from '../../shared/components/FormModal';
+import { productosDeCategoria, precioDe, partirNombreColor, leerDescripcionLineal, type ProductoCatalogo } from '../../shared/services/catalogoMateriales';
 import { espacioColumnas, espacioColumnasExtra, espacioPerimetros, uid, type Espacio, type Nivel } from '../planos/planoGeometry';
 
 const dataOf = (res: any) => (res && typeof res === 'object' && 'data' in res ? res.data : res);
@@ -43,6 +44,29 @@ const nuevoMaterial = (): Material => ({
 });
 
 const normalizeMat = (m: any): Material => ({ ...nuevoMaterial(), ...m, id: m?.id || uid() });
+
+/** Producto del catálogo → material de cornisas. La info va dentro de
+ *  `description` (así la escribe guardarEnCatalogo) y el precio sale de la
+ *  ferretería más barata. */
+const desdeCatalogo = (p: ProductoCatalogo): Material => {
+  const { nombre, color } = partirNombreColor(String(p.name || ''));
+  const d = leerDescripcionLineal(p.description);
+  const precio = precioDe(p);
+  return {
+    ...nuevoMaterial(),
+    id: 'cat_' + p.id,
+    nombre: nombre || 'Cornisa',
+    color,
+    tipo: d.tipo || 'poliuretano',
+    altura: d.altura || 7.5,
+    modo: d.porMetro ? 'metro' : 'tira',
+    precio_por_metro: d.porMetro ? precio : 0,
+    largo_cm: d.largo_cm || 200,
+    precio_por_tira: d.porMetro ? 0 : precio,
+  };
+};
+
+const claveDe = (m: Material) => `${m.nombre}|${m.color}`.trim().toLowerCase();
 
 const loadLib = (): Material[] => {
   try {
@@ -125,6 +149,62 @@ function CornisasCalc({ planId }: { planId: string }) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [esNuevo, setEsNuevo] = useState(false);
   const [asignacion, setAsignacion] = useState<Record<string, string>>({});
+
+  // ¿Había biblioteca guardada antes de montar? Si no, los materiales actuales
+  // son solo la semilla por defecto y el catálogo puede reemplazarlos.
+  const habiaLibLocal = useRef(localStorage.getItem(LIB_KEY) !== null);
+
+  // Los materiales viven en el catálogo (compartido entre dispositivos); la
+  // biblioteca del navegador queda como respaldo. Antes solo se leía el
+  // navegador, así que lo creado en el PC no aparecía en el celular.
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      try {
+        const prods = await productosDeCategoria('Cornisas');
+        if (cancel || prods.length === 0) return;
+        const delCatalogo = prods.map(desdeCatalogo);
+        setMateriales((locales) => {
+          if (!habiaLibLocal.current) return delCatalogo; // no había nada local: se usa el catálogo
+          // Con biblioteca local, esta manda: puede tener cambios sin exportar.
+          const existentes = new Set(locales.map(claveDe));
+          const nuevos = delCatalogo.filter((m) => !existentes.has(claveDe(m)));
+          return nuevos.length ? [...locales, ...nuevos] : locales;
+        });
+      } catch {
+        /* sin catálogo se sigue con los del navegador */
+      }
+    })();
+    return () => { cancel = true; };
+  }, []);
+
+  // El material en edición debe existir siempre en la lista. Si deja de existir
+  // (p. ej. al reemplazarla con la del catálogo), patchEdit no encontraría nada
+  // que editar y los cambios se perderían en silencio.
+  useEffect(() => {
+    if (materiales.length && !materiales.some((m) => m.id === editId)) {
+      setEditId(materiales[0].id);
+    }
+  }, [materiales, editId]);
+
+  // Lo mismo para el material asignado a cada habitación: al llegar los del
+  // catálogo, las asignaciones apuntaban al material semilla que ya no existe y
+  // la tabla mostraba $0 aunque el material sí tuviera precio.
+  useEffect(() => {
+    if (!materiales.length) return;
+    const ids = new Set(materiales.map((m) => m.id));
+    setAsignacion((a) => {
+      let cambio = false;
+      const next = { ...a };
+      for (const k of Object.keys(next)) {
+        if (!ids.has(next[k])) {
+          next[k] = materiales[0].id;
+          cambio = true;
+        }
+      }
+      return cambio ? next : a;
+    });
+  }, [materiales]);
 
   // Guarda la biblioteca de materiales para reutilizarla en otras obras.
   useEffect(() => {
