@@ -10,6 +10,8 @@ const FeatureDetailPage = lazy(() => import('../features/landing/FeatureDetailPa
 const ObrasPage = lazy(() => import('../features/presupuestos/ObrasPage').then((m) => ({ default: m.ObrasPage })));
 const PresupuestoObraPage = lazy(() => import('../features/presupuestos/PresupuestoObraPage').then((m) => ({ default: m.PresupuestoObraPage })));
 const PanelObraPage = lazy(() => import('../features/presupuestos/PanelObraPage').then((m) => ({ default: m.PanelObraPage })));
+const CatalogoApusPage = lazy(() => import('../features/presupuestos/CatalogoApusPage').then((m) => ({ default: m.CatalogoApusPage })));
+const InsumosObraPage = lazy(() => import('../features/presupuestos/InsumosPage').then((m) => ({ default: m.InsumosPage })));
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('../features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })));
 const ForgotPasswordPage = lazy(() => import('../features/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
@@ -77,6 +79,8 @@ export const router = createBrowserRouter([
   // se edita (DOC-04 §8).
   { path: '/obra', element: prot(<ObrasPage />) },
   { path: '/obra/:projectId/panel', element: prot(<PanelObraPage />) },
+  { path: '/catalogo/apus', element: prot(<CatalogoApusPage />) },
+  { path: '/catalogo/insumos', element: prot(<InsumosObraPage />) },
   { path: '/obra/:projectId/presupuesto', element: prot(<PresupuestoObraPage />) },
   { path: '/planos', element: prot(<PlanosPage />) },
   { path: '/planos/nuevo', element: prot(<PlanoEditorPage />) },

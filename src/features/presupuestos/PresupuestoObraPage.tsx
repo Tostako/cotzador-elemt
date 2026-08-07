@@ -5,6 +5,7 @@ import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { ResumenFinanciero } from './ResumenFinanciero';
+import { ExportarMenu } from './ExportarMenu';
 import { money, aNumero, type Aiu, type Apu, type Presupuesto, type Proyecto } from './types';
 
 const AIU_INICIAL: Aiu = {
@@ -137,6 +138,7 @@ export function PresupuestoObraPage() {
           <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate(`/obra/${projectId}/panel`)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <LayoutDashboard size={15} /> Panel
           </button>
+          <ExportarMenu projectId={projectId} deshabilitado={vacio} />
           <button type="button" className="btn btn-small" onClick={() => setModalActividad(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Plus size={16} /> Agregar actividad
           </button>

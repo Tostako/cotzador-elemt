@@ -444,6 +444,13 @@ export const apiService = {
   // Analítica — HU-17, HU-18
   getAnalitica: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/analytics/summary`),
 
+  // Documentos — HU-20, HU-21. Generación asíncrona: devuelve 202 + id y hay
+  // que consultar el estado hasta que pase de GENERANDO a LISTO.
+  generarDocumento: (projectId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/documents`, { method: 'POST', body: JSON.stringify(data) }),
+  getDocumento: (docId: string) => api(`${PRESUP_BASE}/documents/${docId}`),
+  getDocumentos: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/documents`),
+
   // Deshacer — HU-07 (token válido 10 s)
   deshacer: (undoToken: string) => api(`${PRESUP_BASE}/undo/${undoToken}`, { method: 'POST' }),
 };

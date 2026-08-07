@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ComponentType } from 'react';
 import {
   Home, PencilRuler, Grid3x3, Package, Calculator,
   Settings, Wallet, User, Receipt, CreditCard,
-  LogOut, Building2, ChevronDown, DraftingCompass, Frame, FileText, LayoutGrid, ScrollText, PanelTop, HardHat,
+  LogOut, Building2, ChevronDown, DraftingCompass, Frame, FileText, LayoutGrid, ScrollText, PanelTop, HardHat, Layers, Boxes,
 } from 'lucide-react';
 import { useStore } from '../../shared/services/store';
 
@@ -79,6 +79,10 @@ const groups: NavGroup[] = [
     icon: HardHat,
     items: [
       { route: '/obra', icon: HardHat, label: 'Proyectos de obra', match: (p) => p.startsWith('/obra') },
+      // Los catálogos son globales, no del proyecto: por eso cuelgan de
+      // /catalogo y no de /obra/:id (DOC-04 §8).
+      { route: '/catalogo/apus', icon: Layers, label: 'Base de APUs', match: (p) => p.startsWith('/catalogo/apus') },
+      { route: '/catalogo/insumos', icon: Boxes, label: 'Insumos', match: (p) => p.startsWith('/catalogo/insumos') },
     ],
   },
   {
