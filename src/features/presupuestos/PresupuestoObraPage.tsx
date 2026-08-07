@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { HardHat, Plus, ChevronDown, ChevronRight, Trash2, Search } from 'lucide-react';
+import { HardHat, Plus, ChevronDown, ChevronRight, Trash2, Search, LayoutDashboard } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
@@ -134,6 +134,9 @@ export function PresupuestoObraPage() {
         </h1>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate('/obra')} style={{ width: 'auto' }}>← Proyectos</button>
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate(`/obra/${projectId}/panel`)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <LayoutDashboard size={15} /> Panel
+          </button>
           <button type="button" className="btn btn-small" onClick={() => setModalActividad(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Plus size={16} /> Agregar actividad
           </button>

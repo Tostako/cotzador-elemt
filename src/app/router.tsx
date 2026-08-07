@@ -9,6 +9,7 @@ const LandingPage = lazy(() => import('../features/landing/LandingPage').then((m
 const FeatureDetailPage = lazy(() => import('../features/landing/FeatureDetailPage').then((m) => ({ default: m.FeatureDetailPage })));
 const ObrasPage = lazy(() => import('../features/presupuestos/ObrasPage').then((m) => ({ default: m.ObrasPage })));
 const PresupuestoObraPage = lazy(() => import('../features/presupuestos/PresupuestoObraPage').then((m) => ({ default: m.PresupuestoObraPage })));
+const PanelObraPage = lazy(() => import('../features/presupuestos/PanelObraPage').then((m) => ({ default: m.PanelObraPage })));
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('../features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })));
 const ForgotPasswordPage = lazy(() => import('../features/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
@@ -75,6 +76,7 @@ export const router = createBrowserRouter([
   // /catalogo, no del proyecto, para que la ruta refleje el alcance de lo que
   // se edita (DOC-04 §8).
   { path: '/obra', element: prot(<ObrasPage />) },
+  { path: '/obra/:projectId/panel', element: prot(<PanelObraPage />) },
   { path: '/obra/:projectId/presupuesto', element: prot(<PresupuestoObraPage />) },
   { path: '/planos', element: prot(<PlanosPage />) },
   { path: '/planos/nuevo', element: prot(<PlanoEditorPage />) },
