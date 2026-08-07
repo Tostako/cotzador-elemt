@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ComponentType } from 'react';
 import {
   Home, PencilRuler, Grid3x3, Package, Calculator,
   Settings, Wallet, User, Receipt, CreditCard,
-  LogOut, Building2, ChevronDown, DraftingCompass, Frame, FileText, LayoutGrid, ScrollText, PanelTop,
+  LogOut, Building2, ChevronDown, DraftingCompass, Frame, FileText, LayoutGrid, ScrollText, PanelTop, HardHat,
 } from 'lucide-react';
 import { useStore } from '../../shared/services/store';
 
@@ -71,6 +71,14 @@ const groups: NavGroup[] = [
       { route: '/calculadoras/barrederas', icon: Frame, label: 'Barrederas', match: (p) => p.startsWith('/calculadoras/barrederas') },
       { route: '/calculadoras/cornisas', icon: PanelTop, label: 'Cornisas de techo', match: (p) => p.startsWith('/calculadoras/cornisas') },
       { route: '/materiales', icon: Package, label: 'Materiales', match: (p) => p.startsWith('/materiales') },
+    ],
+  },
+  {
+    key: 'obra',
+    title: 'Presupuestos de Obra',
+    icon: HardHat,
+    items: [
+      { route: '/obra', icon: HardHat, label: 'Proyectos de obra', match: (p) => p.startsWith('/obra') },
     ],
   },
   {

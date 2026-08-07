@@ -114,6 +114,10 @@ const runtimeEnv = (typeof window !== 'undefined' && (window as any).__ENV) || {
 const API_URL = import.meta.env.VITE_API_URL || runtimeEnv.VITE_API_URL || 'http://localhost:3000/api/v1';
 export const SHOP_SLUG = import.meta.env.VITE_SHOP_SLUG || runtimeEnv.VITE_SHOP_SLUG || 'elemet-haus';
 
+/** Prefijo del módulo de Presupuestos de Obra. Vacío porque API_URL ya termina
+ *  en /api/v1 y la especificación numera las rutas como "/v1/projects". */
+const PRESUP_BASE = '';
+
 function getToken() {
   const user = localStorage.getItem('element_user:v1');
   if (!user) return null;
@@ -381,4 +385,65 @@ export const apiService = {
   updateCornisasProject: (id: string, data: any) => api(`/tile-calculator/cornisas-projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteCornisasProject: (id: string) => api(`/tile-calculator/cornisas-projects/${id}`, { method: 'DELETE' }),
   importPlanToCornisas: (id: string, data: any) => api(`/tile-calculator/house-plans/${id}/import-to-cornisas`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // ── Presupuestos de Obra / APU (DOC-05) ───────────────
+  // La especificación escribe las rutas como "/v1/projects"; aquí van sin ese
+  // prefijo porque API_URL ya termina en /api/v1. Si el backend las publica en
+  // otra base, se cambia PRESUP_BASE y no hay que tocar las pantallas.
+  //
+  // Proyectos de obra — HU-01, HU-03
+  getObraProyectos: () => api(`${PRESUP_BASE}/projects`),
+  getObraProyecto: (id: string) => api(`${PRESUP_BASE}/projects/${id}`),
+  createObraProyecto: (data: any) => api(`${PRESUP_BASE}/projects`, { method: 'POST', body: JSON.stringify(data) }),
+  updateObraProyecto: (id: string, data: any) => api(`${PRESUP_BASE}/projects/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteObraProyecto: (id: string) => api(`${PRESUP_BASE}/projects/${id}`, { method: 'DELETE' }),
+
+  // Presupuesto — HU-04, HU-05, HU-06, HU-07
+  getPresupuesto: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/budget`),
+  addActividad: (projectId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items`, { method: 'POST', body: JSON.stringify(data) }),
+  /** Solo se acepta el campo `cantidad`; cualquier otro devuelve 422. */
+  updateActividadCantidad: (projectId: string, itemId: string, cantidad: number) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}`, { method: 'PATCH', body: JSON.stringify({ cantidad }) }),
+  deleteActividad: (projectId: string, itemId: string) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}`, { method: 'DELETE' }),
+  getActividadApu: (projectId: string, itemId: string) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/apu`),
+
+  // Cierre financiero — HU-16
+  getAiu: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/aiu`),
+  updateAiu: (projectId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/aiu`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Catálogo — HU-09, HU-14
+  getApus: (params?: { q?: string; capituloId?: string; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.q) qs.set('q', params.q);
+    if (params?.capituloId) qs.set('capituloId', params.capituloId);
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const s = qs.toString();
+    return api(`${PRESUP_BASE}/catalog/apus${s ? `?${s}` : ''}`);
+  },
+  getApu: (id: string) => api(`${PRESUP_BASE}/catalog/apus/${id}`),
+  getCapitulos: () => api(`${PRESUP_BASE}/catalog/chapters`),
+  getInsumos: (params?: { q?: string; grupo?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.q) qs.set('q', params.q);
+    if (params?.grupo) qs.set('grupo', params.grupo);
+    const s = qs.toString();
+    return api(`${PRESUP_BASE}/catalog/supplies${s ? `?${s}` : ''}`);
+  },
+  /** dryRun=true devuelve el impacto sin aplicar el cambio (patrón de dos fases). */
+  setPrecioInsumo: (supplyId: string, data: any, dryRun = false) =>
+    api(`${PRESUP_BASE}/catalog/supplies/${supplyId}/prices${dryRun ? '?dryRun=true' : ''}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getUsoInsumo: (supplyId: string) => api(`${PRESUP_BASE}/catalog/supplies/${supplyId}/usage`),
+
+  // Analítica — HU-17, HU-18
+  getAnalitica: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/analytics/summary`),
+
+  // Deshacer — HU-07 (token válido 10 s)
+  deshacer: (undoToken: string) => api(`${PRESUP_BASE}/undo/${undoToken}`, { method: 'POST' }),
 };

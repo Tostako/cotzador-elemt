@@ -7,6 +7,8 @@ import { useStore } from '../shared/services/store';
 // (p. ej. Konva en Planos/Barrederas) solo se descargan al entrar a esas rutas.
 const LandingPage = lazy(() => import('../features/landing/LandingPage').then((m) => ({ default: m.LandingPage })));
 const FeatureDetailPage = lazy(() => import('../features/landing/FeatureDetailPage').then((m) => ({ default: m.FeatureDetailPage })));
+const ObrasPage = lazy(() => import('../features/presupuestos/ObrasPage').then((m) => ({ default: m.ObrasPage })));
+const PresupuestoObraPage = lazy(() => import('../features/presupuestos/PresupuestoObraPage').then((m) => ({ default: m.PresupuestoObraPage })));
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('../features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })));
 const ForgotPasswordPage = lazy(() => import('../features/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
@@ -69,6 +71,11 @@ export const router = createBrowserRouter([
   { path: '/calculadoras/barrederas/:planId', element: prot(<BarrederasPage />) },
   { path: '/calculadoras/cornisas', element: prot(<CornisasPage />) },
   { path: '/calculadoras/cornisas/:planId', element: prot(<CornisasPage />) },
+  // Presupuestos de Obra (APU) — los catálogos son globales y cuelgan de
+  // /catalogo, no del proyecto, para que la ruta refleje el alcance de lo que
+  // se edita (DOC-04 §8).
+  { path: '/obra', element: prot(<ObrasPage />) },
+  { path: '/obra/:projectId/presupuesto', element: prot(<PresupuestoObraPage />) },
   { path: '/planos', element: prot(<PlanosPage />) },
   { path: '/planos/nuevo', element: prot(<PlanoEditorPage />) },
   { path: '/planos/:id', element: prot(<PlanoEditorPage />) },

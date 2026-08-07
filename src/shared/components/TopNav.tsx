@@ -14,6 +14,7 @@ const navLinks: { to: string; label: string; match: (p: string) => boolean }[] =
   { to: '/quote', label: 'Cotizar', match: (p) => p === '/quote' },
   { to: '/history', label: 'Cotizaciones', match: (p) => p.startsWith('/history') },
   { to: '/planos', label: 'Planos', match: (p) => p.startsWith('/planos') },
+  { to: '/obra', label: 'Obra', match: (p) => p.startsWith('/obra') },
   { to: '/materiales', label: 'Materiales', match: (p) => p.startsWith('/materiales') },
 ];
 
