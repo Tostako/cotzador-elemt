@@ -1,3 +1,4 @@
+import { AlertTriangle } from 'lucide-react';
 import { money, aNumero, type Aiu } from './types';
 
 /**
@@ -13,11 +14,14 @@ export function ResumenFinanciero({
   areaM2,
   onChange,
   guardando,
+  sinGuardar,
 }: {
   aiu: Aiu;
   areaM2?: number;
   onChange: (patch: Partial<Aiu>) => void;
   guardando?: boolean;
+  /** El cálculo es correcto pero el servidor no aceptó el guardado. */
+  sinGuardar?: boolean;
 }) {
   const costoDirecto = aNumero(aiu.costoDirecto);
   // Se calcula en el cliente para que el usuario vea el efecto mientras teclea;
@@ -57,6 +61,17 @@ export function ResumenFinanciero({
         <h3 style={{ fontSize: 16, fontWeight: 700 }}>Resumen financiero</h3>
         {guardando && <span className="small" style={{ color: '#8c8578' }}>Guardando…</span>}
       </div>
+
+      {/* Sin este aviso, el usuario ve el total recalculado y da por hecho que
+          quedó guardado, cuando el servidor no lo aceptó. */}
+      {sinGuardar && !guardando && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', marginBottom: 12, borderRadius: 9, background: 'rgba(255,149,0,0.09)', border: '1px solid rgba(255,149,0,0.28)' }}>
+          <AlertTriangle size={15} color="#ff9500" style={{ flexShrink: 0, marginTop: 1 }} />
+          <span className="small" style={{ color: '#d8cbb4' }}>
+            El cálculo es correcto, pero no se pudo guardar en el servidor. Al recargar volverán los valores anteriores.
+          </span>
+        </div>
+      )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 14 }}>
         <span className="small" style={{ color: '#a59e90' }}>Costo directo</span>

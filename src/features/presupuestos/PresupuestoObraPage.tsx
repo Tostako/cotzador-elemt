@@ -29,6 +29,7 @@ export function PresupuestoObraPage() {
   const [error, setError] = useState<string | null>(null);
   const [colapsados, setColapsados] = useState<Set<string>>(new Set());
   const [guardandoAiu, setGuardandoAiu] = useState(false);
+  const [aiuSinGuardar, setAiuSinGuardar] = useState(false);
   const [modalActividad, setModalActividad] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -68,8 +69,11 @@ export function PresupuestoObraPage() {
       try {
         const res = extractData(await apiService.updateAiu(projectId, { ...aiu, ...patch }));
         if (res) setAiu((a) => ({ ...a, ...res }));
+        setAiuSinGuardar(false);
       } catch {
-        /* se conserva el valor local; el usuario ve el cálculo igualmente */
+        // El cálculo local sigue siendo correcto, pero NO se guardó: callarlo
+        // haría creer que sí. Se marca y el resumen lo indica.
+        setAiuSinGuardar(true);
       } finally {
         setGuardandoAiu(false);
       }
@@ -230,7 +234,7 @@ export function PresupuestoObraPage() {
 
           {/* Resumen financiero — siempre visible */}
           <div style={{ minWidth: 0 }}>
-            <ResumenFinanciero aiu={aiuVigente} areaM2={proyecto?.areaM2} onChange={cambiarAiu} guardando={guardandoAiu} />
+            <ResumenFinanciero aiu={aiuVigente} areaM2={proyecto?.areaM2} onChange={cambiarAiu} guardando={guardandoAiu} sinGuardar={aiuSinGuardar} />
           </div>
         </div>
       </div>
