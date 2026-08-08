@@ -114,9 +114,10 @@ const runtimeEnv = (typeof window !== 'undefined' && (window as any).__ENV) || {
 const API_URL = import.meta.env.VITE_API_URL || runtimeEnv.VITE_API_URL || 'http://localhost:3000/api/v1';
 export const SHOP_SLUG = import.meta.env.VITE_SHOP_SLUG || runtimeEnv.VITE_SHOP_SLUG || 'elemet-haus';
 
-/** Prefijo del módulo de Presupuestos de Obra. Vacío porque API_URL ya termina
- *  en /api/v1 y la especificación numera las rutas como "/v1/projects". */
-const PRESUP_BASE = '';
+/** Prefijo del módulo de Presupuestos de Obra: el backend lo publica bajo
+ *  /api/v1/costos/... (p. ej. @Controller('costos/projects')). API_URL ya
+ *  aporta /api/v1, así que aquí solo va /costos. */
+const PRESUP_BASE = '/costos';
 
 function getToken() {
   const user = localStorage.getItem('element_user:v1');
@@ -209,9 +210,13 @@ async function api(path: string, options: RequestInit = {}) {
     }
   }
 
-  // shop_slug en la query (auth y demás; las públicas ya lo llevan en el path)
+  // shop_slug en la query (auth y demás; las públicas ya lo llevan en el path).
+  // El módulo de presupuestos de obra queda fuera: resuelve el tenant desde el
+  // JWT y no lee este parámetro, así que ensuciaría la URL sin aportar nada.
   let finalPath = path;
-  if (!path.includes('shop_slug') && !path.startsWith('/public/')) {
+  const necesitaShopSlug =
+    !path.includes('shop_slug') && !path.startsWith('/public/') && !path.startsWith(`${PRESUP_BASE}/`);
+  if (necesitaShopSlug) {
     const separator = path.includes('?') ? '&' : '?';
     finalPath = `${path}${separator}shop_slug=${SHOP_SLUG}`;
   }
