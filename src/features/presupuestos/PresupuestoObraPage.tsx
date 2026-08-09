@@ -6,16 +6,10 @@ import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { ResumenFinanciero } from './ResumenFinanciero';
 import { ExportarMenu } from './ExportarMenu';
-import { money, aNumero, type Aiu, type Apu, type Presupuesto, type Proyecto } from './types';
+import { money, aNumero, AIU_POR_DEFECTO, type Aiu, type Apu, type Presupuesto, type Proyecto } from './types';
+import { aiuABackend, aiuDesdeBackend, proyectoDesdeBackend } from './mapeo';
 
-const AIU_INICIAL: Aiu = {
-  administracionPct: 15,
-  imprevistosPct: 3,
-  utilidadPct: 5,
-  ivaAplica: false,
-  ivaPct: 19,
-  costoDirecto: '0',
-};
+const AIU_INICIAL: Aiu = { ...AIU_POR_DEFECTO, costoDirecto: '0' };
 
 /** HU-04, HU-05, HU-06, HU-16 · Presupuesto de obra por capítulos. */
 export function PresupuestoObraPage() {
@@ -41,9 +35,9 @@ export function PresupuestoObraPage() {
         apiService.getPresupuesto(projectId).then(extractData),
         apiService.getAiu(projectId).then(extractData).catch(() => null),
       ]);
-      setProyecto(proy || null);
+      setProyecto(proy ? proyectoDesdeBackend(proy) : null);
       setPresupuesto(pres || { capitulos: [], totales: { costoDirecto: '0', total: '0' } });
-      if (aiuRes) setAiu({ ...AIU_INICIAL, ...aiuRes });
+      if (aiuRes) setAiu({ ...AIU_INICIAL, ...aiuDesdeBackend(aiuRes) });
     } catch (e: any) {
       setError(e?.message || 'No se pudo cargar el presupuesto.');
     } finally {
@@ -67,8 +61,8 @@ export function PresupuestoObraPage() {
     temporizador.current = setTimeout(async () => {
       setGuardandoAiu(true);
       try {
-        const res = extractData(await apiService.updateAiu(projectId, { ...aiu, ...patch }));
-        if (res) setAiu((a) => ({ ...a, ...res }));
+        const res = extractData(await apiService.updateAiu(projectId, aiuABackend({ ...aiu, ...patch })));
+        if (res) setAiu((a) => ({ ...a, ...aiuDesdeBackend(res) }));
         setAiuSinGuardar(false);
       } catch {
         // El cálculo local sigue siendo correcto, pero NO se guardó: callarlo

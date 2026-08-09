@@ -156,6 +156,19 @@ export interface Aiu {
   total?: Importe;
 }
 
+/** AIU de arranque de un proyecto nuevo: los porcentajes habituales en obra.
+ *  Se usan al crear (el formulario no los pide) y como respaldo si el servidor
+ *  aún no tiene valores guardados. Crear con 0/0/0 daría un total igual al
+ *  costo directo, que nadie quiere. */
+export const AIU_POR_DEFECTO: Aiu = {
+  administracionPct: 15,
+  imprevistosPct: 3,
+  utilidadPct: 5,
+  ivaAplica: false,
+  ivaPct: 19,
+  descuento: 0,
+};
+
 // ── Analítica (panel principal) ────────────────────────────
 
 export interface ResumenAnalitica {

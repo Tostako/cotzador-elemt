@@ -5,6 +5,7 @@ import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { ETIQUETA_TIPO_OBRA, money, type NuevoProyecto, type Proyecto, type TipoObra } from './types';
+import { proyectoABackend, proyectoDesdeBackend, proyectosDesdeBackend } from './mapeo';
 
 const hoy = () => new Date().toISOString().slice(0, 10);
 
@@ -33,7 +34,7 @@ export function ObrasPage() {
     (async () => {
       try {
         const data = extractData(await apiService.getObraProyectos());
-        if (!cancel) setProyectos(Array.isArray(data) ? data : []);
+        if (!cancel) setProyectos(proyectosDesdeBackend(data));
       } catch (e: any) {
         if (!cancel) setError(e?.message || 'No se pudieron cargar los proyectos.');
       } finally {
@@ -59,7 +60,10 @@ export function ObrasPage() {
     }
     setGuardando(true);
     try {
-      const creado = extractData(await apiService.createObraProyecto({ ...form, nombre: form.nombre.trim() }));
+      // El backend espera area_m2 / tipo_obra y el AIU anidado, no los nombres
+      // de la interfaz: la traducción va en mapeo.ts.
+      const cuerpo = proyectoABackend({ ...form, nombre: form.nombre.trim() });
+      const creado = proyectoDesdeBackend(extractData(await apiService.createObraProyecto(cuerpo)));
       showNotification('Correcto', 'success', 'Proyecto de obra creado.');
       setModalAbierto(false);
       if (creado?.id) navigate(`/obra/${creado.id}/presupuesto`);

@@ -397,11 +397,28 @@ export const apiService = {
   // otra base, se cambia PRESUP_BASE y no hay que tocar las pantallas.
   //
   // Proyectos de obra — HU-01, HU-03
-  getObraProyectos: () => api(`${PRESUP_BASE}/projects`),
+  getObraProyectos: (params?: { estado?: string; page?: number; per_page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.estado) qs.set('estado', params.estado);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.per_page) qs.set('per_page', String(params.per_page));
+    const s = qs.toString();
+    return api(`${PRESUP_BASE}/projects${s ? `?${s}` : ''}`);
+  },
   getObraProyecto: (id: string) => api(`${PRESUP_BASE}/projects/${id}`),
   createObraProyecto: (data: any) => api(`${PRESUP_BASE}/projects`, { method: 'POST', body: JSON.stringify(data) }),
-  updateObraProyecto: (id: string, data: any) => api(`${PRESUP_BASE}/projects/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  /** `version` viaja como If-Match para el control de concurrencia optimista. */
+  updateObraProyecto: (id: string, data: any, version?: number | string) =>
+    api(`${PRESUP_BASE}/projects/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+      ...(version != null ? { headers: { 'If-Match': String(version) } } : {}),
+    }),
+  /** Borrado lógico: mueve el proyecto a la papelera (H-09). */
   deleteObraProyecto: (id: string) => api(`${PRESUP_BASE}/projects/${id}`, { method: 'DELETE' }),
+  restaurarObraProyecto: (id: string) => api(`${PRESUP_BASE}/projects/${id}/restaurar`, { method: 'POST' }),
+  // Ojo: el backend escribe la ruta "paperera", no "papelera".
+  getObraPapelera: () => api(`${PRESUP_BASE}/projects/paperera`),
 
   // Presupuesto — HU-04, HU-05, HU-06, HU-07
   getPresupuesto: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/budget`),
