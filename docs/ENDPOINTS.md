@@ -227,7 +227,106 @@ y si no la respuesta tal cual — así tolera ambas formas.
 
 ---
 
-## 5. Resumen
+## 5. Presupuestos de Obra (APU)
+
+Módulo aparte, publicado bajo **`/api/v1/costos/…`**. Se define en el
+documento DOC-05 de la carpeta de análisis y cubre las fases 1 y 2.
+
+**Dos diferencias respecto al resto de la API:**
+
+1. **No lleva `shop_slug`.** El tenant se resuelve desde el JWT. `api()` excluye
+   estas rutas del parámetro que añade automáticamente a todo lo demás.
+2. **Mezcla convenciones de nombres.** El proyecto usa `snake_case`
+   (`area_m2`, `tipo_obra`) pero el AIU usa el prefijo delante
+   (`pctAdministracion`, `pctIva`). La traducción vive en
+   [`mapeo.ts`](../src/features/presupuestos/mapeo.ts) y las lecturas aceptan
+   ambas formas, para que un cambio de contrato no pierda campos en silencio.
+
+### 5.1 Proyectos de obra — HU-01, HU-03
+
+| Método | Ruta | Uso |
+|---|---|---|
+| GET | `/costos/projects` | Listar (`?estado=` `?page=` `?per_page=`) |
+| GET | `/costos/projects/:id` | Detalle |
+| POST | `/costos/projects` | Crear (el AIU va anidado) |
+| PATCH | `/costos/projects/:id` | Editar (admite `If-Match: <version>`) |
+| DELETE | `/costos/projects/:id` | Borrado lógico → papelera |
+| POST | `/costos/projects/:id/restaurar` | Restaurar |
+| GET | `/costos/projects/paperera` | Listar papelera |
+
+⚠️ **Riesgo de orden de rutas:** `/projects/paperera` debe declararse **antes**
+que `/projects/:id`, o el router interpretará `paperera` como un id.
+
+### 5.2 Presupuesto — HU-04, HU-05, HU-06, HU-07
+
+| Método | Ruta | Uso |
+|---|---|---|
+| GET | `/costos/projects/:id/budget` | Presupuesto por capítulos |
+| POST | `/costos/projects/:id/budget/items` | Agregar actividad desde un APU |
+| PATCH | `/costos/projects/:id/budget/items/:itemId` | Cambiar cantidad (solo ese campo) |
+| DELETE | `/costos/projects/:id/budget/items/:itemId` | Eliminar actividad |
+| POST | `/costos/undo/:undoToken` | Deshacer (token válido 10 s) |
+
+### 5.3 APU de una actividad — HU-11 (decisión H-07)
+
+Los dos alcances son endpoints distintos **a propósito**, con permisos distintos:
+
+| Método | Ruta | Alcance |
+|---|---|---|
+| GET | `/costos/projects/:id/budget/items/:itemId/apu` | Instantánea del proyecto |
+| PUT | `/costos/projects/:id/budget/items/:itemId/apu` | **Solo este proyecto** |
+| POST | `/costos/projects/:id/budget/items/:itemId/apu/promote` | **Catálogo global** (`?dryRun=true` primero) |
+
+El cuerpo del `PUT` lleva **solo rendimientos**; los precios los pone el
+servidor desde el maestro de insumos.
+
+### 5.4 Catálogo — HU-09, HU-10, HU-12, HU-14
+
+| Método | Ruta | Uso |
+|---|---|---|
+| GET | `/costos/catalog/apus` | Buscar (`?q=` `?capituloId=` `?limit=`) |
+| GET | `/costos/catalog/apus/:id` | Detalle con composición |
+| POST | `/costos/catalog/apus` | Crear APU (origen Personalizado) |
+| PATCH | `/costos/catalog/apus/:id` | Editar el catálogo (admin) |
+| GET | `/costos/catalog/apus/:id/impact` | A quién afectaría editarlo |
+| POST | `/costos/catalog/apus/:id/duplicate` | Duplicar (nombre distinto obligatorio) |
+| GET | `/costos/catalog/chapters` | Capítulos |
+| GET | `/costos/catalog/supplies` | Insumos (`?q=` `?grupo=`) |
+| POST | `/costos/catalog/supplies` | Alta de insumo |
+| POST | `/costos/catalog/supplies/:id/prices` | Nuevo precio (`?dryRun=true` primero) |
+| GET | `/costos/catalog/supplies/:id/usage` | Dónde se usa |
+
+**Patrón de dos fases** (precios y promoción de APU): primero `?dryRun=true`
+devuelve el impacto y un `confirmationToken`; la operación real exige ese token.
+Una variación por encima del umbral obliga a confirmación reforzada.
+
+### 5.5 Cierre financiero, analítica y salidas
+
+| Método | Ruta | Historia |
+|---|---|---|
+| GET · PUT | `/costos/projects/:id/aiu` | HU-16 |
+| GET | `/costos/projects/:id/analytics/summary` | HU-17, HU-18 |
+| GET | `/costos/projects/:id/analytics/consolidated` | HU-19 |
+| GET | `/costos/templates` | HU-02 |
+| POST | `/costos/projects/:id/apply-template` | HU-02 (`modo` obligatorio si ya hay contenido) |
+| GET · POST | `/costos/projects/:id/documents` | HU-20, HU-21 (asíncrono: 202 + id) |
+| GET | `/costos/documents/:docId` | Estado del documento |
+
+### 5.6 Fuera de alcance
+
+| Historia | Decisión |
+|---|---|
+| HU-23 · Asistente de IA en modo local | **Descartada** por decisión de producto |
+| HU-24 · IA generativa | **Descartada** (dependía de HU-23) |
+
+Los endpoints `/ai/query` y `/ai/apu-proposals` del DOC-05 **no se consumen**
+y no hace falta implementarlos.
+
+---
+
+## 6. Resumen
+
+### Sistema original
 
 | Área | Endpoints | Estado |
 |---|---|---|
@@ -238,8 +337,27 @@ y si no la respuesta tal cual — así tolera ambas formas.
 | Enchapes | 5 | ✅ |
 | Barrederas | 6 | ✅ |
 | Cornisas | 6 | ❌ Pendientes |
-| Catálogo | 12 | ✅ |
+| Catálogo de materiales | 12 | ✅ |
 | Cotizaciones | 6 | ✅ |
 | Planes y pagos | 9 | ✅ |
 | Configuración | 2 | ✅ |
-| **Total** | **66** | **60 disponibles · 6 pendientes** |
+| **Subtotal** | **66** | 60 disponibles · 6 pendientes |
+
+### Presupuestos de Obra
+
+| Área | Endpoints | Estado |
+|---|---|---|
+| Proyectos | 7 | ✅ confirmado por backend |
+| Presupuesto y deshacer | 5 | ⏳ en desarrollo |
+| APU de actividad (2 alcances) | 3 | ⏳ en desarrollo |
+| Catálogo de APUs e insumos | 11 | ⏳ en desarrollo |
+| AIU, analítica, plantillas y documentos | 9 | ⏳ en desarrollo |
+| **Subtotal** | **35** | |
+
+**Estado de las fases:** 1 y 2 completas en el frontend (17 historias). Queda la
+fase 3 —papelera, deshacer, memorias de cálculo, importaciones Excel, cotización
+a proveedores y marca— menos HU-23 y HU-24, descartadas.
+
+> Ninguna pantalla del módulo se ha probado contra el backend real: todo se
+> verificó con respuestas simuladas según los contratos del DOC-05. Para
+> comprobarlo de verdad está [`diagnostico-obra.js`](diagnostico-obra.js).
