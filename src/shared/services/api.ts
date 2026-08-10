@@ -473,6 +473,9 @@ export const apiService = {
       body: JSON.stringify(data),
     }),
   getUsoInsumo: (supplyId: string) => api(`${PRESUP_BASE}/catalog/supplies/${supplyId}/usage`),
+  /** Alta de insumo. Se usa también desde la composición de un APU: el insumo
+   *  queda en el maestro, no dentro del APU (RN-10.3). */
+  createInsumo: (data: any) => api(`${PRESUP_BASE}/catalog/supplies`, { method: 'POST', body: JSON.stringify(data) }),
 
   // Analítica — HU-17, HU-18, HU-19
   getAnalitica: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/analytics/summary`),

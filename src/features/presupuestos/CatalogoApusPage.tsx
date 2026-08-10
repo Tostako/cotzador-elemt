@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Layers, Search, ChevronDown, ChevronRight, Copy } from 'lucide-react';
+import { Layers, Search, ChevronDown, ChevronRight, Copy, Plus } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
+import { ModalNuevoApu } from './ModalNuevoApu';
 import { ETIQUETA_RECURSO, aNumero, money, type Apu, type Capitulo, type ComponenteApu, type GrupoRecurso } from './types';
 
 /**
@@ -20,6 +21,7 @@ export function CatalogoApusPage() {
   const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState<string | null>(null);
   const [recarga, setRecarga] = useState(0);
+  const [modalNuevo, setModalNuevo] = useState(false);
 
   // HU-12 · La copia exige un nombre distinto: dos APUs con la misma
   // descripción son indistinguibles en el buscador del presupuesto.
@@ -85,12 +87,17 @@ export function CatalogoApusPage() {
         <h1 style={{ fontSize: 'clamp(22px, 6vw, 32px)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
           <Layers size={28} color="#b69462" /> Base de APUs
         </h1>
-        {/* El contador sale de la misma consulta que la pantalla (H-13) */}
-        {!cargando && !error && (
-          <span className="small" style={{ color: '#8c8578' }}>
-            {apus.length} APU{apus.length === 1 ? '' : 's'}{capituloId ? ' en el capítulo' : ' en el catálogo'}
-          </span>
-        )}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* El contador sale de la misma consulta que la pantalla (H-13) */}
+          {!cargando && !error && (
+            <span className="small" style={{ color: '#8c8578' }}>
+              {apus.length} APU{apus.length === 1 ? '' : 's'}{capituloId ? ' en el capítulo' : ' en el catálogo'}
+            </span>
+          )}
+          <button type="button" className="btn btn-small" onClick={() => setModalNuevo(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Plus size={15} /> Nuevo APU
+          </button>
+        </div>
       </div>
       <p className="small" style={{ marginBottom: 16 }}>
         Análisis de precios unitarios reutilizables entre proyectos. Al agregar uno al presupuesto, el proyecto guarda su propia copia.
@@ -142,6 +149,13 @@ export function CatalogoApusPage() {
             />
           ))}
         </div>
+      )}
+
+      {modalNuevo && (
+        <ModalNuevoApu
+          onClose={() => setModalNuevo(false)}
+          onCreado={() => { setModalNuevo(false); setRecarga((n) => n + 1); }}
+        />
       )}
     </main>
   );
