@@ -8,6 +8,7 @@ import { ResumenFinanciero } from './ResumenFinanciero';
 import { ExportarMenu } from './ExportarMenu';
 import { ModalPlantillas } from './ModalPlantillas';
 import { ModalEditarApu } from './ModalEditarApu';
+import { AvisoDeshacer } from './AvisoDeshacer';
 import { money, aNumero, AIU_POR_DEFECTO, type Aiu, type Apu, type Presupuesto, type Proyecto } from './types';
 import { aiuABackend, aiuDesdeBackend, proyectoDesdeBackend } from './mapeo';
 
@@ -29,6 +30,7 @@ export function PresupuestoObraPage() {
   const [modalActividad, setModalActividad] = useState(false);
   const [modalPlantillas, setModalPlantillas] = useState(false);
   const [apuEnEdicion, setApuEnEdicion] = useState<{ itemId: string; descripcion: string } | null>(null);
+  const [deshacer, setDeshacer] = useState<{ token: string; expiraEn?: string; mensaje: string } | null>(null);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -99,12 +101,19 @@ export function PresupuestoObraPage() {
     }
   };
 
+  // HU-07 · El borrado es lógico y reversible, así que no se pide confirmación
+  // previa: se ejecuta y se ofrece deshacer durante diez segundos. Interrumpir
+  // con un diálogo en cada eliminación rompe el ritmo de quien presupuesta.
   const eliminarActividad = async (itemId: string, descripcion: string) => {
-    if (!window.confirm(`¿Eliminar "${descripcion}" del presupuesto?`)) return;
     try {
-      await apiService.deleteActividad(projectId, itemId);
-      showNotification('Correcto', 'success', 'Actividad eliminada.');
-      cargar();
+      const res = extractData(await apiService.deleteActividad(projectId, itemId));
+      await cargar();
+      if (res?.undoToken) {
+        setDeshacer({ token: res.undoToken, expiraEn: res.expiraEn, mensaje: `Se eliminó "${descripcion}".` });
+      } else {
+        // Sin token no hay vuelta atrás: al menos hay que decirlo.
+        showNotification('Eliminada', 'success', `Se eliminó "${descripcion}".`);
+      }
     } catch (e: any) {
       showNotification('Error', 'error', e?.message || 'No se pudo eliminar.');
     }
@@ -275,7 +284,25 @@ export function PresupuestoObraPage() {
           projectId={projectId}
           presupuestoTieneContenido={!vacio}
           onClose={() => setModalPlantillas(false)}
-          onAplicada={() => { setModalPlantillas(false); cargar(); }}
+          onAplicada={(res) => {
+            setModalPlantillas(false);
+            cargar();
+            // Aplicar una plantilla en modo REEMPLAZAR borra lo anterior:
+            // el mismo token de deshacer sirve para revertirlo.
+            if (res?.undoToken) {
+              setDeshacer({ token: res.undoToken, expiraEn: res.expiraEn, mensaje: 'Se aplicó la plantilla.' });
+            }
+          }}
+        />
+      )}
+
+      {deshacer && (
+        <AvisoDeshacer
+          token={deshacer.token}
+          mensaje={deshacer.mensaje}
+          expiraEn={deshacer.expiraEn}
+          onDeshecho={() => { setDeshacer(null); cargar(); }}
+          onCerrar={() => setDeshacer(null)}
         />
       )}
 

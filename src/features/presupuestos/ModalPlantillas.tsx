@@ -31,7 +31,8 @@ export function ModalPlantillas({
   projectId: string;
   presupuestoTieneContenido: boolean;
   onClose: () => void;
-  onAplicada: () => void;
+  /** Recibe la respuesta del servidor: trae el undoToken para poder revertir. */
+  onAplicada: (res?: any) => void;
 }) {
   const [plantillas, setPlantillas] = useState<Plantilla[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -83,7 +84,7 @@ export function ModalPlantillas({
       } else {
         showNotification('Correcto', 'success', `${cargadas} actividad(es) cargada(s) desde la plantilla.`);
       }
-      onAplicada();
+      onAplicada(res);
     } catch (e: any) {
       showNotification('Error', 'error', e?.message || 'No se pudo aplicar la plantilla.');
     } finally {

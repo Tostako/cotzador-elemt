@@ -35,6 +35,7 @@ export function InsumosPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState<Insumo | null>(null);
+  const [viendoUso, setViendoUso] = useState<Insumo | null>(null);
 
   const cargar = async () => {
     setCargando(true);
@@ -118,7 +119,21 @@ export function InsumosPage() {
                     <td style={{ padding: '10px 8px' }}>{i.descripcion}</td>
                     <td style={{ padding: '10px 8px', textAlign: 'center', color: '#8c8578' }}>{i.unidad}</td>
                     <td style={{ padding: '10px 8px', color: '#8c8578' }}>{ETIQUETA_RECURSO[i.grupo] ?? i.grupo}</td>
-                    <td style={{ padding: '10px 8px', textAlign: 'right', color: '#8c8578' }}>{i.usoEnApus ?? '—'}</td>
+                    {/* HU-15 · El contador es accionable: lleva a la lista concreta */}
+                    <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                      {(i.usoEnApus ?? 0) > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setViendoUso(i)}
+                          style={{ background: 'none', border: 'none', color: '#b69462', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'underline' }}
+                          title="Ver en qué APUs se usa"
+                        >
+                          {i.usoEnApus}
+                        </button>
+                      ) : (
+                        <span style={{ color: '#8c8578' }}>{i.usoEnApus ?? '—'}</span>
+                      )}
+                    </td>
                     <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 700, color: '#b69462' }}>{money(i.valorUnitario)}</td>
                     <td style={{ padding: '10px 8px', textAlign: 'right' }}>
                       <button type="button" className="btn btn-small btn-secondary" onClick={() => setEditando(i)} style={{ width: 'auto' }}>
@@ -133,6 +148,8 @@ export function InsumosPage() {
         </div>
       )}
 
+      {viendoUso && <ModalUsoInsumo insumo={viendoUso} onClose={() => setViendoUso(null)} />}
+
       {editando && (
         <ModalCambioPrecio
           insumo={editando}
@@ -141,6 +158,84 @@ export function InsumosPage() {
         />
       )}
     </main>
+  );
+}
+
+/**
+ * HU-15 · Dónde se usa un insumo.
+ *
+ * Convierte el contador «uso en APUs» en información accionable: la lista
+ * concreta de APUs con su rendimiento, y por separado lo que se vería afectado
+ * en el proyecto activo. Sirve para decidir con criterio antes de tocar un
+ * precio.
+ */
+function ModalUsoInsumo({ insumo, onClose }: { insumo: Insumo; onClose: () => void }) {
+  const [uso, setUso] = useState<any>(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      try {
+        const d = extractData(await apiService.getUsoInsumo(insumo.id));
+        if (!cancel) setUso(d);
+      } catch (e: any) {
+        if (!cancel) setError(e?.message || 'No se pudo consultar el uso.');
+      } finally {
+        if (!cancel) setCargando(false);
+      }
+    })();
+    return () => { cancel = true; };
+  }, [insumo.id]);
+
+  const apus: any[] = Array.isArray(uso?.apus) ? uso.apus : [];
+
+  return (
+    <FormModal
+      title="Dónde se usa este insumo"
+      subtitle={insumo.descripcion}
+      maxWidth={560}
+      onClose={onClose}
+      footer={<button type="button" className="btn btn-small" onClick={onClose} style={{ width: 'auto' }}>Cerrar</button>}
+    >
+      {cargando ? (
+        <p className="small" style={{ color: '#999' }}>Consultando…</p>
+      ) : error ? (
+        <p className="small" style={{ color: '#ff6b6b' }}>{error}</p>
+      ) : (
+        <>
+          <p className="small" style={{ color: '#8c8578', marginBottom: 12 }}>
+            Aparece en <strong style={{ color: '#f4efe6' }}>{uso?.totalApus ?? apus.length}</strong> APU(s) del catálogo.
+            Cambiar su precio los recalcula todos.
+          </p>
+
+          {apus.length === 0 ? (
+            <p className="small" style={{ color: '#8c8578' }}>Ningún APU lo usa: se puede eliminar sin impacto.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: 8, maxHeight: 280, overflowY: 'auto' }}>
+              {apus.map((a) => (
+                <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 11px', borderRadius: 9, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <span style={{ flex: 1, minWidth: 0 }}>{a.descripcion}</span>
+                  <span className="small" style={{ color: '#8c8578', whiteSpace: 'nowrap' }}>
+                    rend. <strong style={{ color: '#c0b8a9' }}>{a.rendimiento}</strong>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {uso?.enProyectoActivo && (
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <p className="small" style={{ color: '#8c8578' }}>
+                En el proyecto activo afecta a <strong style={{ color: '#f4efe6' }}>{uso.enProyectoActivo.actividades}</strong> actividad(es),
+                por un valor de <strong style={{ color: '#b69462' }}>{money(uso.enProyectoActivo.valorAfectado)}</strong>.
+              </p>
+            </div>
+          )}
+        </>
+      )}
+    </FormModal>
   );
 }
 
