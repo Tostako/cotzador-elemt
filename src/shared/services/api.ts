@@ -431,6 +431,17 @@ export const apiService = {
     api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}`, { method: 'DELETE' }),
   getActividadApu: (projectId: string, itemId: string) =>
     api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/apu`),
+  /** HU-11 · Alcance de PROYECTO: edita la instantánea, el catálogo no se toca.
+   *  El cuerpo solo lleva rendimientos; los precios salen del maestro. */
+  updateActividadApu: (projectId: string, itemId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/apu`, { method: 'PUT', body: JSON.stringify(data) }),
+  /** HU-11 · Alcance de CATÁLOGO: publica la versión del proyecto como versión
+   *  nueva del APU global. Acción distinta, permiso distinto (admin_catalogo). */
+  promoverApu: (projectId: string, itemId: string, body?: any, dryRun = false) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/apu/promote${dryRun ? '?dryRun=true' : ''}`, {
+      method: 'POST',
+      body: JSON.stringify(body ?? {}),
+    }),
 
   // Cierre financiero — HU-16
   getAiu: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/aiu`),

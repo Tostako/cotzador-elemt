@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { HardHat, Plus, ChevronDown, ChevronRight, Trash2, Search, LayoutDashboard, ClipboardList, LayoutTemplate } from 'lucide-react';
+import { HardHat, Plus, ChevronDown, ChevronRight, Trash2, Search, LayoutDashboard, ClipboardList, LayoutTemplate, FileSearch } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { ResumenFinanciero } from './ResumenFinanciero';
 import { ExportarMenu } from './ExportarMenu';
 import { ModalPlantillas } from './ModalPlantillas';
+import { ModalEditarApu } from './ModalEditarApu';
 import { money, aNumero, AIU_POR_DEFECTO, type Aiu, type Apu, type Presupuesto, type Proyecto } from './types';
 import { aiuABackend, aiuDesdeBackend, proyectoDesdeBackend } from './mapeo';
 
@@ -27,6 +28,7 @@ export function PresupuestoObraPage() {
   const [aiuSinGuardar, setAiuSinGuardar] = useState(false);
   const [modalActividad, setModalActividad] = useState(false);
   const [modalPlantillas, setModalPlantillas] = useState(false);
+  const [apuEnEdicion, setApuEnEdicion] = useState<{ itemId: string; descripcion: string } | null>(null);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -225,7 +227,16 @@ export function PresupuestoObraPage() {
                                 </td>
                                 <td style={{ padding: '10px 8px', textAlign: 'right', color: '#c0b8a9' }}>{money(a.valorUnitario)}</td>
                                 <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 700, color: '#b69462' }}>{money(a.valorParcial)}</td>
-                                <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                                <td style={{ padding: '10px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setApuEnEdicion({ itemId: a.id, descripcion: a.descripcion })}
+                                    style={{ background: 'none', border: 'none', color: '#8c8578', cursor: 'pointer', padding: 4, marginRight: 2 }}
+                                    title="Ver y editar el APU de esta actividad"
+                                    aria-label={`Editar APU de ${a.descripcion}`}
+                                  >
+                                    <FileSearch size={15} />
+                                  </button>
                                   <button type="button" onClick={() => eliminarActividad(a.id, a.descripcion)} style={{ background: 'none', border: 'none', color: '#ff6b6b', cursor: 'pointer', padding: 4 }} aria-label="Eliminar actividad">
                                     <Trash2 size={15} />
                                   </button>
@@ -248,6 +259,16 @@ export function PresupuestoObraPage() {
           </div>
         </div>
       </div>
+
+      {apuEnEdicion && (
+        <ModalEditarApu
+          projectId={projectId}
+          itemId={apuEnEdicion.itemId}
+          descripcionInicial={apuEnEdicion.descripcion}
+          onClose={() => setApuEnEdicion(null)}
+          onGuardado={() => { setApuEnEdicion(null); cargar(); }}
+        />
+      )}
 
       {modalPlantillas && (
         <ModalPlantillas
