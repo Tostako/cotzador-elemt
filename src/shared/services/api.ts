@@ -463,8 +463,28 @@ export const apiService = {
     }),
   getUsoInsumo: (supplyId: string) => api(`${PRESUP_BASE}/catalog/supplies/${supplyId}/usage`),
 
-  // Analítica — HU-17, HU-18
+  // Analítica — HU-17, HU-18, HU-19
   getAnalitica: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/analytics/summary`),
+  /** Consolidado por grupo: la lista de compras de la obra. */
+  getConsolidados: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/analytics/consolidated`),
+
+  // Plantillas de proyecto — HU-02
+  getPlantillas: () => api(`${PRESUP_BASE}/templates`),
+  /** `modo` es obligatorio si el presupuesto ya tiene actividades: el servidor
+   *  nunca decide por el usuario entre reemplazar y agregar. */
+  aplicarPlantilla: (projectId: string, templateId: string, modo: 'REEMPLAZAR' | 'AGREGAR') =>
+    api(`${PRESUP_BASE}/projects/${projectId}/apply-template`, {
+      method: 'POST',
+      body: JSON.stringify({ templateId, modo }),
+    }),
+
+  // APUs del catálogo — HU-10, HU-11, HU-12
+  createApu: (data: any) => api(`${PRESUP_BASE}/catalog/apus`, { method: 'POST', body: JSON.stringify(data) }),
+  updateApu: (id: string, data: any) => api(`${PRESUP_BASE}/catalog/apus/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  /** Proyectos y presupuestos que se verían afectados por editar el APU. */
+  getImpactoApu: (id: string) => api(`${PRESUP_BASE}/catalog/apus/${id}/impact`),
+  duplicarApu: (id: string, descripcion: string) =>
+    api(`${PRESUP_BASE}/catalog/apus/${id}/duplicate`, { method: 'POST', body: JSON.stringify({ descripcion }) }),
 
   // Documentos — HU-20, HU-21. Generación asíncrona: devuelve 202 + id y hay
   // que consultar el estado hasta que pase de GENERANDO a LISTO.

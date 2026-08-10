@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { HardHat, Plus, ChevronDown, ChevronRight, Trash2, Search, LayoutDashboard } from 'lucide-react';
+import { HardHat, Plus, ChevronDown, ChevronRight, Trash2, Search, LayoutDashboard, ClipboardList, LayoutTemplate } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { ResumenFinanciero } from './ResumenFinanciero';
 import { ExportarMenu } from './ExportarMenu';
+import { ModalPlantillas } from './ModalPlantillas';
 import { money, aNumero, AIU_POR_DEFECTO, type Aiu, type Apu, type Presupuesto, type Proyecto } from './types';
 import { aiuABackend, aiuDesdeBackend, proyectoDesdeBackend } from './mapeo';
 
@@ -25,6 +26,7 @@ export function PresupuestoObraPage() {
   const [guardandoAiu, setGuardandoAiu] = useState(false);
   const [aiuSinGuardar, setAiuSinGuardar] = useState(false);
   const [modalActividad, setModalActividad] = useState(false);
+  const [modalPlantillas, setModalPlantillas] = useState(false);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -136,6 +138,14 @@ export function PresupuestoObraPage() {
           <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate(`/obra/${projectId}/panel`)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <LayoutDashboard size={15} /> Panel
           </button>
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate(`/obra/${projectId}/consolidados`)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <ClipboardList size={15} /> Consolidados
+          </button>
+          {/* También con el presupuesto lleno: el modo "Reemplazar" de la
+              plantilla solo tiene sentido cuando ya hay algo que sustituir. */}
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => setModalPlantillas(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <LayoutTemplate size={15} /> Plantilla
+          </button>
           <ExportarMenu projectId={projectId} deshabilitado={vacio} />
           <button type="button" className="btn btn-small" onClick={() => setModalActividad(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Plus size={16} /> Agregar actividad
@@ -153,9 +163,15 @@ export function PresupuestoObraPage() {
             {vacio ? (
               <div className="card" style={{ textAlign: 'center', padding: 40 }}>
                 <p className="small" style={{ color: '#999' }}>El presupuesto está vacío.</p>
-                <button type="button" className="btn mt-2" onClick={() => setModalActividad(true)} style={{ width: 'auto' }}>
-                  Agregar la primera actividad
-                </button>
+                {/* Dos caminos para arrancar, en vez de dejar al usuario ante una tabla en blanco */}
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 16 }}>
+                  <button type="button" className="btn" onClick={() => setModalPlantillas(true)} style={{ width: 'auto' }}>
+                    Usar una plantilla
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setModalActividad(true)} style={{ width: 'auto' }}>
+                    Agregar la primera actividad
+                  </button>
+                </div>
               </div>
             ) : (
               capitulos.map((cap) => {
@@ -232,6 +248,15 @@ export function PresupuestoObraPage() {
           </div>
         </div>
       </div>
+
+      {modalPlantillas && (
+        <ModalPlantillas
+          projectId={projectId}
+          presupuestoTieneContenido={!vacio}
+          onClose={() => setModalPlantillas(false)}
+          onAplicada={() => { setModalPlantillas(false); cargar(); }}
+        />
+      )}
 
       {modalActividad && (
         <ModalAgregarActividad

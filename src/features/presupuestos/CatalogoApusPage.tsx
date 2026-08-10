@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Layers, Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { Layers, Search, ChevronDown, ChevronRight, Copy } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
+import { showNotification } from '../../shared/hooks/useNotifications';
 import { ETIQUETA_RECURSO, aNumero, money, type Apu, type Capitulo, type ComponenteApu, type GrupoRecurso } from './types';
 
 /**
@@ -18,6 +19,30 @@ export function CatalogoApusPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState<string | null>(null);
+  const [recarga, setRecarga] = useState(0);
+
+  // HU-12 · La copia exige un nombre distinto: dos APUs con la misma
+  // descripción son indistinguibles en el buscador del presupuesto.
+  const duplicar = async (a: Apu) => {
+    const propuesto = window.prompt('Nombre del APU duplicado:', `${a.descripcion} (copia)`);
+    if (propuesto === null) return;
+    const nombre = propuesto.trim();
+    if (!nombre) {
+      showNotification('Atención', 'warning', 'El duplicado necesita un nombre.');
+      return;
+    }
+    if (nombre.toLowerCase() === a.descripcion.trim().toLowerCase()) {
+      showNotification('Atención', 'warning', 'El nombre debe ser distinto al del APU original.');
+      return;
+    }
+    try {
+      await apiService.duplicarApu(a.id, nombre);
+      showNotification('Correcto', 'success', 'APU duplicado.');
+      setRecarga((n) => n + 1);
+    } catch (e: any) {
+      showNotification('Error', 'error', e?.message || 'No se pudo duplicar el APU.');
+    }
+  };
 
   useEffect(() => {
     let cancel = false;
@@ -52,7 +77,7 @@ export function CatalogoApusPage() {
       }
     }, 300);
     return () => { cancel = true; clearTimeout(t); };
-  }, [busqueda, capituloId]);
+  }, [busqueda, capituloId, recarga]);
 
   return (
     <main>
@@ -108,7 +133,13 @@ export function CatalogoApusPage() {
       ) : (
         <div style={{ display: 'grid', gap: 10 }}>
           {apus.map((a) => (
-            <FilaApu key={a.id} apu={a} abierto={abierto === a.id} onAlternar={() => setAbierto((x) => (x === a.id ? null : a.id))} />
+            <FilaApu
+              key={a.id}
+              apu={a}
+              abierto={abierto === a.id}
+              onAlternar={() => setAbierto((x) => (x === a.id ? null : a.id))}
+              onDuplicar={() => duplicar(a)}
+            />
           ))}
         </div>
       )}
@@ -117,7 +148,7 @@ export function CatalogoApusPage() {
 }
 
 /** Fila del catálogo; al desplegarla se carga la composición del APU. */
-function FilaApu({ apu, abierto, onAlternar }: { apu: Apu; abierto: boolean; onAlternar: () => void }) {
+function FilaApu({ apu, abierto, onAlternar, onDuplicar }: { apu: Apu; abierto: boolean; onAlternar: () => void; onDuplicar: () => void }) {
   const [detalle, setDetalle] = useState<Apu | null>(apu.componentes ? apu : null);
   const [cargando, setCargando] = useState(false);
 
@@ -163,6 +194,18 @@ function FilaApu({ apu, abierto, onAlternar }: { apu: Apu; abierto: boolean; onA
           <p className="small" style={{ color: '#8c8578' }}>{apu.capitulo?.nombre || '—'} · {apu.unidad}</p>
         </div>
         <span style={{ fontWeight: 700, color: '#b69462', whiteSpace: 'nowrap' }}>{money(apu.valorUnitario)}</span>
+        {/* HU-12: duplicar para crear una variante sin tocar el original */}
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); onDuplicar(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onDuplicar(); } }}
+          title="Duplicar este APU"
+          aria-label={`Duplicar ${apu.descripcion}`}
+          style={{ display: 'inline-flex', padding: 6, borderRadius: 8, color: '#8c8578', cursor: 'pointer', flexShrink: 0 }}
+        >
+          <Copy size={15} />
+        </span>
       </button>
 
       {abierto && (

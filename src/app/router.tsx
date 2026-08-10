@@ -10,6 +10,7 @@ const FeatureDetailPage = lazy(() => import('../features/landing/FeatureDetailPa
 const ObrasPage = lazy(() => import('../features/presupuestos/ObrasPage').then((m) => ({ default: m.ObrasPage })));
 const PresupuestoObraPage = lazy(() => import('../features/presupuestos/PresupuestoObraPage').then((m) => ({ default: m.PresupuestoObraPage })));
 const PanelObraPage = lazy(() => import('../features/presupuestos/PanelObraPage').then((m) => ({ default: m.PanelObraPage })));
+const ConsolidadosPage = lazy(() => import('../features/presupuestos/ConsolidadosPage').then((m) => ({ default: m.ConsolidadosPage })));
 const CatalogoApusPage = lazy(() => import('../features/presupuestos/CatalogoApusPage').then((m) => ({ default: m.CatalogoApusPage })));
 const InsumosObraPage = lazy(() => import('../features/presupuestos/InsumosPage').then((m) => ({ default: m.InsumosPage })));
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
@@ -79,6 +80,7 @@ export const router = createBrowserRouter([
   // se edita (DOC-04 §8).
   { path: '/obra', element: prot(<ObrasPage />) },
   { path: '/obra/:projectId/panel', element: prot(<PanelObraPage />) },
+  { path: '/obra/:projectId/consolidados', element: prot(<ConsolidadosPage />) },
   { path: '/catalogo/apus', element: prot(<CatalogoApusPage />) },
   { path: '/catalogo/insumos', element: prot(<InsumosObraPage />) },
   { path: '/obra/:projectId/presupuesto', element: prot(<PresupuestoObraPage />) },
