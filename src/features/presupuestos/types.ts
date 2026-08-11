@@ -89,6 +89,10 @@ export interface ActividadPresupuesto {
   /** Instantánea del APU congelada en el proyecto (H-07). */
   apuSnapshotId?: string;
   avisos?: Aviso[];
+  /** H-08 · La actividad tiene memoria de cálculo que sustenta el metrado. */
+  tieneMemoria?: boolean;
+  /** H-08 · La memoria gobierna la cantidad: el campo pasa a solo lectura. */
+  cantidadDesdeMemoria?: boolean;
 }
 
 export interface Totales {
@@ -168,6 +172,84 @@ export const AIU_POR_DEFECTO: Aiu = {
   ivaPct: 19,
   descuento: 0,
 };
+
+// ── Cotización a proveedores (H-22) ────────────────────────
+
+export type EstadoLinea = 'PENDIENTE' | 'COTIZADO' | 'APROBADO' | 'RECHAZADO';
+
+export const ETIQUETA_ESTADO_LINEA: Record<EstadoLinea, string> = {
+  PENDIENTE: 'Pendiente',
+  COTIZADO: 'Cotizado',
+  APROBADO: 'Aprobado',
+  RECHAZADO: 'Rechazado',
+};
+
+/** Color por estado; el mismo que usa el panel para no inventar semáforos nuevos. */
+export const COLOR_ESTADO_LINEA: Record<EstadoLinea, string> = {
+  PENDIENTE: '#8c8578',
+  COTIZADO: '#5aa9e6',
+  APROBADO: '#4ade80',
+  RECHAZADO: '#ff6b6b',
+};
+
+export interface LineaCotizacion {
+  id: string;
+  insumoId: string;
+  descripcion: string;
+  unidad: string;
+  cantidad: number;
+  /** Precio del insumo en el presupuesto: la referencia contra la que se compara. */
+  precioPresupuesto: Importe;
+  proveedor?: string;
+  /** Lo que ofrece el proveedor. Vacío mientras está PENDIENTE. */
+  precioCotizado?: Importe;
+  estado: EstadoLinea;
+  observacion?: string;
+}
+
+export interface Cotizacion {
+  id: string;
+  nombre: string;
+  creadaEn?: string;
+  lineas: LineaCotizacion[];
+}
+
+/** Diferencia de una línea contra el presupuesto. `null` si aún no hay precio. */
+export const diferenciaLinea = (l: LineaCotizacion) => {
+  if (l.precioCotizado === undefined || l.precioCotizado === '') return null;
+  const base = aNumero(l.precioPresupuesto) * (l.cantidad || 0);
+  const cotizado = aNumero(l.precioCotizado) * (l.cantidad || 0);
+  const absoluta = cotizado - base;
+  // Sin base no hay porcentaje posible: dividir por cero daría Infinity.
+  return { base, cotizado, absoluta, pct: base > 0 ? (absoluta / base) * 100 : null };
+};
+
+// ── Marca de la empresa (H-25) ─────────────────────────────
+
+export interface Marca {
+  nombreEmpresa: string;
+  nit?: string;
+  direccion?: string;
+  telefono?: string;
+  correo?: string;
+  sitioWeb?: string;
+  /** URL del logo ya subido, no el archivo. */
+  logoUrl?: string;
+  /** Limitado a la paleta validada por contraste: no es un selector libre. */
+  colorAcento: string;
+  plantillaDocumento?: string;
+}
+
+/** Paleta cerrada de acentos. Todos validados sobre el fondo oscuro de los
+ *  documentos, así que ninguna elección puede producir un PDF ilegible. */
+export const ACENTOS_MARCA: Array<{ valor: string; nombre: string }> = [
+  { valor: '#b69462', nombre: 'Arena' },
+  { valor: '#c0752f', nombre: 'Terracota' },
+  { valor: '#7a8b6f', nombre: 'Oliva' },
+  { valor: '#4a6fa5', nombre: 'Azul obra' },
+  { valor: '#8c6a9e', nombre: 'Ciruela' },
+  { valor: '#3f3f46', nombre: 'Grafito' },
+];
 
 // ── Analítica (panel principal) ────────────────────────────
 

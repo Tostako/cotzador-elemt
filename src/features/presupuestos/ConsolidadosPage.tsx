@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ClipboardList, Search } from 'lucide-react';
+import { ClipboardList, Search, Handshake } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { ETIQUETA_RECURSO, aNumero, money, type GrupoRecurso } from './types';
 
@@ -97,6 +97,11 @@ export function ConsolidadosPage() {
         </h1>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate(`/obra/${projectId}/presupuesto`)} style={{ width: 'auto' }}>← Presupuesto</button>
+          {/* El consolidado es justo lo que se le manda al proveedor: el paso
+              siguiente natural es pedirle precio. */}
+          <button type="button" className="btn btn-small" onClick={() => navigate(`/obra/${projectId}/cotizaciones`)} disabled={filas.length === 0} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Handshake size={15} /> Cotizar
+          </button>
         </div>
       </div>
       <p className="small" style={{ marginBottom: 16 }}>

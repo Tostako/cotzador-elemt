@@ -312,7 +312,38 @@ Una variación por encima del umbral obliga a confirmación reforzada.
 | GET · POST | `/costos/projects/:id/documents` | HU-20, HU-21 (asíncrono: 202 + id) |
 | GET | `/costos/documents/:docId` | Estado del documento |
 
-### 5.6 Fuera de alcance
+### 5.6 Memorias, cotizaciones, importación y marca — fase 3
+
+| Método | Ruta | Historia |
+|---|---|---|
+| GET · PUT | `/costos/projects/:id/budget/items/:itemId/memoria` | HU-08 |
+| GET · POST | `/costos/projects/:id/quotations` | HU-22 |
+| PATCH | `/costos/projects/:id/quotations/:quotationId` | HU-22 |
+| POST | `/costos/catalog/apus/import` | HU-13 |
+| POST | `/costos/catalog/supplies/import` | HU-13 |
+| GET | `/costos/catalog/imports/:jobId/errors` | HU-13 |
+| POST | `/costos/catalog/imports/:jobId/confirm` | HU-13 |
+| GET · PUT | `/costos/org/branding` | HU-25 |
+| GET | `/costos/org/document-templates` | HU-25 |
+
+Notas de contrato que el frontend da por supuestas:
+
+- **HU-08.** El `PUT` manda `{ partes[], nota, gobiernaCantidad, total }`. Si
+  `gobiernaCantidad` es cierto, el servidor debe fijar la cantidad de la
+  actividad al total y devolver `tieneMemoria` y `cantidadDesdeMemoria` en el
+  presupuesto: la tabla los usa para bloquear el campo y marcar las actividades
+  sin soporte.
+- **HU-13.** El `POST` de importación va con `{ filas[], dryRun: true }` y se
+  espera `{ jobId }`; el alta real ocurre en `/confirm`. Si la respuesta **no**
+  trae `jobId`, el frontend asume que la importación ya se aplicó de una vez y
+  no pide confirmación.
+- **HU-22.** El `PATCH` manda solo las líneas cambiadas: `{ lineas: [{ id, … }] }`.
+  Llevar un precio aprobado al maestro **no** va por aquí: reutiliza
+  `/catalog/supplies/:id/prices` con su patrón de dos fases.
+- **HU-25.** La marca es de la organización, no del proyecto, y no puede
+  repercutir en ningún cálculo.
+
+### 5.7 Fuera de alcance
 
 | Historia | Decisión |
 |---|---|
@@ -352,11 +383,18 @@ y no hace falta implementarlos.
 | APU de actividad (2 alcances) | 3 | ⏳ en desarrollo |
 | Catálogo de APUs e insumos | 11 | ⏳ en desarrollo |
 | AIU, analítica, plantillas y documentos | 9 | ⏳ en desarrollo |
-| **Subtotal** | **35** | |
+| Memorias, cotizaciones, importación y marca | 11 | ⏳ en desarrollo |
+| **Subtotal** | **46** | |
 
-**Estado de las fases:** 1 y 2 completas en el frontend (17 historias). Queda la
-fase 3 —papelera, deshacer, memorias de cálculo, importaciones Excel, cotización
-a proveedores y marca— menos HU-23 y HU-24, descartadas.
+**Estado de las fases:** las tres completas en el frontend (23 historias), menos
+HU-23 y HU-24, descartadas.
+
+Lo que queda pendiente no es de fase sino transversal:
+
+- **`If-Match`/ETag** para la concurrencia optimista de HU-05. Requiere que
+  `api()` exponga las cabeceras de respuesta, que hoy descarta.
+- **Importar `.xlsx` directamente.** Hoy se pide CSV; el lector de `.xlsx`
+  necesitaría una dependencia nueva en el bundle.
 
 > Ninguna pantalla del módulo se ha probado contra el backend real: todo se
 > verificó con respuestas simuladas según los contratos del DOC-05. Para

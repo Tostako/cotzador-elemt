@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Layers, Search, ChevronDown, ChevronRight, Copy, Plus } from 'lucide-react';
+import { Layers, Search, ChevronDown, ChevronRight, Copy, Plus, Upload, Download } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { ModalNuevoApu } from './ModalNuevoApu';
+import { ModalImportar } from './ModalImportar';
+import { descargarCsv } from './importacion';
 import { ETIQUETA_RECURSO, aNumero, money, type Apu, type Capitulo, type ComponenteApu, type GrupoRecurso } from './types';
 
 /**
@@ -22,6 +24,17 @@ export function CatalogoApusPage() {
   const [abierto, setAbierto] = useState<string | null>(null);
   const [recarga, setRecarga] = useState(0);
   const [modalNuevo, setModalNuevo] = useState(false);
+  const [modalImportar, setModalImportar] = useState(false);
+
+  // HU-13 · Se exporta lo que se está viendo, filtros incluidos: si el usuario
+  // acotó por capítulo, espera ese recorte, no el catálogo entero.
+  const exportar = () => {
+    if (apus.length === 0) return;
+    descargarCsv('apus', [
+      ['descripcion', 'unidad', 'capitulo', 'valorUnitario'],
+      ...apus.map((a) => [a.descripcion, a.unidad, a.capitulo?.nombre ?? '', aNumero(a.valorUnitario)]),
+    ]);
+  };
 
   // HU-12 · La copia exige un nombre distinto: dos APUs con la misma
   // descripción son indistinguibles en el buscador del presupuesto.
@@ -94,6 +107,12 @@ export function CatalogoApusPage() {
               {apus.length} APU{apus.length === 1 ? '' : 's'}{capituloId ? ' en el capítulo' : ' en el catálogo'}
             </span>
           )}
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => setModalImportar(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Upload size={15} /> Importar
+          </button>
+          <button type="button" className="btn btn-small btn-secondary" onClick={exportar} disabled={apus.length === 0} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Download size={15} /> Exportar
+          </button>
           <button type="button" className="btn btn-small" onClick={() => setModalNuevo(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Plus size={15} /> Nuevo APU
           </button>
@@ -155,6 +174,14 @@ export function CatalogoApusPage() {
         <ModalNuevoApu
           onClose={() => setModalNuevo(false)}
           onCreado={() => { setModalNuevo(false); setRecarga((n) => n + 1); }}
+        />
+      )}
+
+      {modalImportar && (
+        <ModalImportar
+          tipo="APUS"
+          onClose={() => setModalImportar(false)}
+          onImportado={() => { setModalImportar(false); setRecarga((n) => n + 1); }}
         />
       )}
     </main>

@@ -512,4 +512,31 @@ export const apiService = {
 
   // Deshacer — HU-07 (token válido 10 s)
   deshacer: (undoToken: string) => api(`${PRESUP_BASE}/undo/${undoToken}`, { method: 'POST' }),
+
+  // Memorias de cálculo — HU-08. Pertenecen a la actividad del proyecto, no al
+  // APU del catálogo: sustentan la cantidad de obra de ESTA obra.
+  getMemoria: (projectId: string, itemId: string) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/memoria`),
+  updateMemoria: (projectId: string, itemId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/memoria`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Cotización a proveedores — HU-22
+  getCotizaciones: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/quotations`),
+  crearCotizacion: (projectId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/quotations`, { method: 'POST', body: JSON.stringify(data) }),
+  updateCotizacion: (projectId: string, quotationId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/quotations/${quotationId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  // Importación / exportación Excel — HU-13. La importación es en dos pasos:
+  // se sube, se revisan los errores y solo entonces se confirma.
+  importarApus: (data: any) => api(`${PRESUP_BASE}/catalog/apus/import`, { method: 'POST', body: JSON.stringify(data) }),
+  importarInsumos: (data: any) => api(`${PRESUP_BASE}/catalog/supplies/import`, { method: 'POST', body: JSON.stringify(data) }),
+  erroresImportacion: (jobId: string) => api(`${PRESUP_BASE}/catalog/imports/${jobId}/errors`),
+  confirmarImportacion: (jobId: string) => api(`${PRESUP_BASE}/catalog/imports/${jobId}/confirm`, { method: 'POST' }),
+
+  // Marca — HU-25. Se guarda en el servidor y se asocia a la organización,
+  // no al navegador, y nunca afecta a cálculos ni presupuestos.
+  getMarca: () => api(`${PRESUP_BASE}/org/branding`),
+  updateMarca: (data: any) => api(`${PRESUP_BASE}/org/branding`, { method: 'PUT', body: JSON.stringify(data) }),
+  getPlantillasDocumento: () => api(`${PRESUP_BASE}/org/document-templates`),
 };

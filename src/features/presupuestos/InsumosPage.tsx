@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Boxes, Search, AlertTriangle } from 'lucide-react';
+import { Boxes, Search, AlertTriangle, Upload, Download } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
+import { ModalImportar } from './ModalImportar';
+import { descargarCsv } from './importacion';
 import { ETIQUETA_RECURSO, aNumero, money, type GrupoRecurso, type Insumo } from './types';
 
 /** Impacto que devuelve el dryRun antes de aplicar un cambio de precio. */
@@ -36,6 +38,17 @@ export function InsumosPage() {
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState<Insumo | null>(null);
   const [viendoUso, setViendoUso] = useState<Insumo | null>(null);
+  const [modalImportar, setModalImportar] = useState(false);
+
+  // HU-13 · Exporta el recorte visible; es también la plantilla de vuelta:
+  // el archivo que sale tiene exactamente las columnas que acepta la importación.
+  const exportar = () => {
+    if (insumos.length === 0) return;
+    descargarCsv('insumos', [
+      ['descripcion', 'unidad', 'grupo', 'valorUnitario'],
+      ...insumos.map((i) => [i.descripcion, i.unidad, i.grupo, aNumero(i.valorUnitario)]),
+    ]);
+  };
 
   const cargar = async () => {
     setCargando(true);
@@ -67,9 +80,17 @@ export function InsumosPage() {
         <h1 style={{ fontSize: 'clamp(22px, 6vw, 32px)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
           <Boxes size={28} color="#b69462" /> Insumos
         </h1>
-        {!cargando && !error && (
-          <span className="small" style={{ color: '#8c8578' }}>{insumos.length} insumo{insumos.length === 1 ? '' : 's'}</span>
-        )}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          {!cargando && !error && (
+            <span className="small" style={{ color: '#8c8578' }}>{insumos.length} insumo{insumos.length === 1 ? '' : 's'}</span>
+          )}
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => setModalImportar(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Upload size={15} /> Importar
+          </button>
+          <button type="button" className="btn btn-small btn-secondary" onClick={exportar} disabled={insumos.length === 0} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Download size={15} /> Exportar
+          </button>
+        </div>
       </div>
       <p className="small" style={{ marginBottom: 16 }}>
         Maestro único de precios. Al cambiar uno se recalculan todos los APUs que lo usan y los presupuestos en borrador.
@@ -149,6 +170,14 @@ export function InsumosPage() {
       )}
 
       {viendoUso && <ModalUsoInsumo insumo={viendoUso} onClose={() => setViendoUso(null)} />}
+
+      {modalImportar && (
+        <ModalImportar
+          tipo="INSUMOS"
+          onClose={() => setModalImportar(false)}
+          onImportado={() => { setModalImportar(false); cargar(); }}
+        />
+      )}
 
       {editando && (
         <ModalCambioPrecio

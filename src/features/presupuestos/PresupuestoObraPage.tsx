@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { HardHat, Plus, ChevronDown, ChevronRight, Trash2, Search, LayoutDashboard, ClipboardList, LayoutTemplate, FileSearch } from 'lucide-react';
+import { HardHat, Plus, ChevronDown, ChevronRight, Trash2, Search, LayoutDashboard, ClipboardList, LayoutTemplate, FileSearch, Calculator, Lock, Handshake } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
@@ -8,11 +8,19 @@ import { ResumenFinanciero } from './ResumenFinanciero';
 import { ExportarMenu } from './ExportarMenu';
 import { ModalPlantillas } from './ModalPlantillas';
 import { ModalEditarApu } from './ModalEditarApu';
+import { ModalMemoria } from './ModalMemoria';
 import { AvisoDeshacer } from './AvisoDeshacer';
-import { money, aNumero, AIU_POR_DEFECTO, type Aiu, type Apu, type Presupuesto, type Proyecto } from './types';
+import { money, aNumero, AIU_POR_DEFECTO, type Aiu, type ActividadPresupuesto, type Apu, type Presupuesto, type Proyecto } from './types';
 import { aiuABackend, aiuDesdeBackend, proyectoDesdeBackend } from './mapeo';
 
 const AIU_INICIAL: Aiu = { ...AIU_POR_DEFECTO, costoDirecto: '0' };
+
+/** El presupuesto llega sin normalizar y el servidor mezcla convenciones de
+ *  nombres, así que las banderas de memoria se leen en las dos formas. */
+const tieneMemoria = (a: ActividadPresupuesto) =>
+  !!((a as any).tieneMemoria ?? (a as any).tiene_memoria);
+const memoriaGobierna = (a: ActividadPresupuesto) =>
+  !!((a as any).cantidadDesdeMemoria ?? (a as any).cantidad_desde_memoria);
 
 /** HU-04, HU-05, HU-06, HU-16 · Presupuesto de obra por capítulos. */
 export function PresupuestoObraPage() {
@@ -30,6 +38,7 @@ export function PresupuestoObraPage() {
   const [modalActividad, setModalActividad] = useState(false);
   const [modalPlantillas, setModalPlantillas] = useState(false);
   const [apuEnEdicion, setApuEnEdicion] = useState<{ itemId: string; descripcion: string } | null>(null);
+  const [memoriaAbierta, setMemoriaAbierta] = useState<ActividadPresupuesto | null>(null);
   const [deshacer, setDeshacer] = useState<{ token: string; expiraEn?: string; mensaje: string } | null>(null);
 
   const cargar = useCallback(async () => {
@@ -152,6 +161,9 @@ export function PresupuestoObraPage() {
           <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate(`/obra/${projectId}/consolidados`)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <ClipboardList size={15} /> Consolidados
           </button>
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => navigate(`/obra/${projectId}/cotizaciones`)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Handshake size={15} /> Cotizaciones
+          </button>
           {/* También con el presupuesto lleno: el modo "Reemplazar" de la
               plantilla solo tiene sentido cuando ya hay algo que sustituir. */}
           <button type="button" className="btn btn-small btn-secondary" onClick={() => setModalPlantillas(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -216,27 +228,60 @@ export function PresupuestoObraPage() {
                           <tbody>
                             {(cap.actividades ?? []).map((a) => (
                               <tr key={a.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                                <td style={{ padding: '10px 8px' }}>{a.descripcion}</td>
+                                <td style={{ padding: '10px 8px' }}>
+                                  {a.descripcion}
+                                  {/* RN-08.5 · Sin memoria, la cantidad no tiene soporte:
+                                      se marca para que se vea de un vistazo cuáles faltan. */}
+                                  {!tieneMemoria(a) && (
+                                    <span
+                                      title="Sin memoria de cálculo"
+                                      style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#ff9500', marginLeft: 7, verticalAlign: 'middle' }}
+                                    />
+                                  )}
+                                </td>
                                 <td style={{ padding: '10px 8px', textAlign: 'center', color: '#8c8578' }}>{a.unidad}</td>
                                 <td style={{ padding: '10px 8px', textAlign: 'right' }}>
-                                  <input
-                                    className="input"
-                                    type="number"
-                                    min={0}
-                                    step={0.01}
-                                    defaultValue={aNumero(a.cantidad)}
-                                    onBlur={(e) => {
-                                      const v = parseFloat(e.target.value);
-                                      if (v !== aNumero(a.cantidad)) cambiarCantidad(a.id, v);
-                                    }}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                                    style={{ width: 90, padding: '6px 8px', textAlign: 'right' }}
-                                    aria-label={`Cantidad de ${a.descripcion}`}
-                                  />
+                                  {/* RN-08.3 · Si la memoria gobierna, la cantidad se edita
+                                      en la memoria, no aquí. */}
+                                  {memoriaGobierna(a) ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setMemoriaAbierta(a)}
+                                      title="La cantidad viene de la memoria de cálculo. Ábrela para cambiarla."
+                                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: 'inherit', font: 'inherit', cursor: 'pointer', padding: '6px 0' }}
+                                    >
+                                      <Lock size={12} color="#8c8578" />
+                                      {aNumero(a.cantidad).toLocaleString('es-CO')}
+                                    </button>
+                                  ) : (
+                                    <input
+                                      className="input"
+                                      type="number"
+                                      min={0}
+                                      step={0.01}
+                                      defaultValue={aNumero(a.cantidad)}
+                                      onBlur={(e) => {
+                                        const v = parseFloat(e.target.value);
+                                        if (v !== aNumero(a.cantidad)) cambiarCantidad(a.id, v);
+                                      }}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                                      style={{ width: 90, padding: '6px 8px', textAlign: 'right' }}
+                                      aria-label={`Cantidad de ${a.descripcion}`}
+                                    />
+                                  )}
                                 </td>
                                 <td style={{ padding: '10px 8px', textAlign: 'right', color: '#c0b8a9' }}>{money(a.valorUnitario)}</td>
                                 <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 700, color: '#b69462' }}>{money(a.valorParcial)}</td>
                                 <td style={{ padding: '10px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setMemoriaAbierta(a)}
+                                    style={{ background: 'none', border: 'none', color: tieneMemoria(a) ? '#b69462' : '#8c8578', cursor: 'pointer', padding: 4, marginRight: 2 }}
+                                    title={tieneMemoria(a) ? 'Ver la memoria de cálculo' : 'Agregar memoria de cálculo'}
+                                    aria-label={`Memoria de cálculo de ${a.descripcion}`}
+                                  >
+                                    <Calculator size={15} />
+                                  </button>
                                   <button
                                     type="button"
                                     onClick={() => setApuEnEdicion({ itemId: a.id, descripcion: a.descripcion })}
@@ -276,6 +321,18 @@ export function PresupuestoObraPage() {
           descripcionInicial={apuEnEdicion.descripcion}
           onClose={() => setApuEnEdicion(null)}
           onGuardado={() => { setApuEnEdicion(null); cargar(); }}
+        />
+      )}
+
+      {memoriaAbierta && (
+        <ModalMemoria
+          projectId={projectId}
+          itemId={memoriaAbierta.id}
+          descripcion={memoriaAbierta.descripcion}
+          unidad={memoriaAbierta.unidad}
+          cantidadActual={aNumero(memoriaAbierta.cantidad)}
+          onClose={() => setMemoriaAbierta(null)}
+          onGuardado={() => { setMemoriaAbierta(null); cargar(); }}
         />
       )}
 
