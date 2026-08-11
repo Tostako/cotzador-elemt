@@ -391,10 +391,22 @@ HU-23 y HU-24, descartadas.
 
 Lo que queda pendiente no es de fase sino transversal:
 
-- **`If-Match`/ETag** para la concurrencia optimista de HU-05. Requiere que
-  `api()` exponga las cabeceras de respuesta, que hoy descarta.
 - **Importar `.xlsx` directamente.** Hoy se pide CSV; el lector de `.xlsx`
   necesitaría una dependencia nueva en el bundle.
+
+**Descartado a propósito:** `If-Match`/ETag para la concurrencia optimista del
+presupuesto. Un presupuesto de obra lo lleva una sola persona, así que dos
+ediciones simultáneas del mismo proyecto no es un escenario real. El campo
+`Proyecto.version` se queda declarado por si eso cambia, pero nada lo rellena.
+Si algún día hiciera falta, el trabajo es: que `api()` pueda devolver las
+cabeceras de respuesta (hoy las descarta en `return await response.json()`),
+arrastrar la versión al escribir y tratar el 409.
+
+## 7. Datos de prueba
+
+En [`datos-prueba/`](datos-prueba/) hay tres CSV para probar la importación del
+catálogo (HU-13), y [`semilla-obra.js`](semilla-obra.js) crea un proyecto
+completo desde la consola del navegador. Ver [`datos-prueba/README.md`](datos-prueba/README.md).
 
 > Ninguna pantalla del módulo se ha probado contra el backend real: todo se
 > verificó con respuestas simuladas según los contratos del DOC-05. Para
