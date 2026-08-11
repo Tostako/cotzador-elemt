@@ -417,6 +417,9 @@ export const apiService = {
   /** Borrado lógico: mueve el proyecto a la papelera (H-09). */
   deleteObraProyecto: (id: string) => api(`${PRESUP_BASE}/projects/${id}`, { method: 'DELETE' }),
   restaurarObraProyecto: (id: string) => api(`${PRESUP_BASE}/projects/${id}/restaurar`, { method: 'POST' }),
+  /** HU-03 · Copia presupuesto, cantidades y parámetros de AIU. */
+  duplicarObraProyecto: (id: string, nombre?: string) =>
+    api(`${PRESUP_BASE}/projects/${id}/duplicate`, { method: 'POST', body: JSON.stringify(nombre ? { nombre } : {}) }),
   // Ojo: el backend escribe la ruta "paperera", no "papelera".
   getObraPapelera: () => api(`${PRESUP_BASE}/projects/paperera`),
 
