@@ -11,7 +11,7 @@ import { ModalEditarApu } from './ModalEditarApu';
 import { ModalMemoria } from './ModalMemoria';
 import { AvisoDeshacer } from './AvisoDeshacer';
 import { money, aNumero, AIU_POR_DEFECTO, type Aiu, type ActividadPresupuesto, type Apu, type Presupuesto, type Proyecto } from './types';
-import { aiuABackend, aiuDesdeBackend, proyectoDesdeBackend } from './mapeo';
+import { actividadABackend, aiuABackend, aiuDesdeBackend, apusDesdeBackend, proyectoDesdeBackend } from './mapeo';
 
 const AIU_INICIAL: Aiu = { ...AIU_POR_DEFECTO, costoDirecto: '0' };
 
@@ -403,7 +403,7 @@ function ModalAgregarActividad({
       setCargando(true);
       try {
         const data = extractData(await apiService.getApus({ q: busqueda || undefined, limit: 50 }));
-        if (!cancel) setApus(Array.isArray(data) ? data : []);
+        if (!cancel) setApus(apusDesdeBackend(data));
       } catch {
         if (!cancel) setApus([]);
       } finally {
@@ -422,7 +422,8 @@ function ModalAgregarActividad({
     }
     setAgregando(true);
     try {
-      await apiService.addActividad(projectId, { apuId: seleccionado.id, cantidad: cant, siExiste: 'SUMAR' });
+      // El DTO espera `apu_id`; la traducción vive en mapeo.ts.
+      await apiService.addActividad(projectId, actividadABackend({ apuId: seleccionado.id, cantidad: cant }));
       showNotification('Correcto', 'success', 'Actividad agregada al presupuesto.');
       onAgregada();
     } catch (e: any) {

@@ -128,6 +128,8 @@ export interface Apu {
   id: string;
   descripcion: string;
   unidad: string;
+  /** Obligatorio al crear (máx. 30 caracteres). */
+  codigo?: string;
   capitulo?: Capitulo;
   valorUnitario: Importe;
   componentes?: ComponenteApu[];

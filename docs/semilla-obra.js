@@ -378,7 +378,9 @@
     for (const [descripcion, cantidad] of PRESUPUESTO) {
       const apuId = apus.get(clave(descripcion));
       if (!apuId) { console.warn(`  ⚠️ sin APU para "${descripcion}"`); continue; }
-      await pedir('POST', `${PRE}/projects/${pid}/budget/items`, { apuId, cantidad, siExiste: 'SUMAR' });
+      // AddItemDto: `apu_id` en snake_case y con un UUID v4. Mandar `apuId`
+      // deja el campo indefinido y el error habla del formato del id.
+      await pedir('POST', `${PRE}/projects/${pid}/budget/items`, { apu_id: apuId, cantidad });
       agregadas++;
     }
     console.log(`  presupuesto: ${agregadas} actividad(es)`);
@@ -433,6 +435,6 @@
   };
 
   // El sello de versión evita la duda de "¿pegué la copia nueva o la vieja?".
-  console.log('%cSemilla v6 cargada.', 'font-weight:bold',
+  console.log('%cSemilla v7 cargada.', 'font-weight:bold',
     'Ejecuta:  await sembrar()   ·   Si falla por el grupo:  await probarGrupos()');
 })();

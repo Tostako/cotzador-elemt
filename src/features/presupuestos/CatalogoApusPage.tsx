@@ -5,7 +5,7 @@ import { showNotification } from '../../shared/hooks/useNotifications';
 import { ModalNuevoApu } from './ModalNuevoApu';
 import { ModalImportar } from './ModalImportar';
 import { descargarCsv } from './importacion';
-import { capitulosDesdeBackend } from './mapeo';
+import { apusDesdeBackend, capitulosDesdeBackend } from './mapeo';
 import { ETIQUETA_RECURSO, aNumero, money, type Apu, type Capitulo, type ComponenteApu, type GrupoRecurso } from './types';
 
 /**
@@ -85,7 +85,7 @@ export function CatalogoApusPage() {
           capituloId: capituloId || undefined,
           limit: 100,
         }));
-        if (!cancel) setApus(Array.isArray(data) ? data : []);
+        if (!cancel) setApus(apusDesdeBackend(data));
       } catch (e: any) {
         if (!cancel) { setApus([]); setError(e?.message || 'No se pudo cargar el catálogo.'); }
       } finally {

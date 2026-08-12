@@ -1,4 +1,4 @@
-import { AIU_POR_DEFECTO, type Aiu, type Capitulo, type GrupoRecurso, type Insumo, type NuevoProyecto, type Proyecto, type TipoObra } from './types';
+import { AIU_POR_DEFECTO, type Aiu, type Apu, type Capitulo, type GrupoRecurso, type Insumo, type NuevoProyecto, type Proyecto, type TipoObra } from './types';
 
 /**
  * Traducción entre el modelo de la interfaz y el contrato del backend.
@@ -138,6 +138,50 @@ export function apuABackend(a: {
 /** Marcas diacríticas combinantes. Se construye con escapes ASCII a propósito:
  *  el rango escrito literal se corrompe al pasar por algunas herramientas. */
 const DIACRITICOS = new RegExp('[\\u0300-\\u036f]', 'g');
+
+/**
+ * APU del catálogo → interfaz.
+ *
+ * El valor unitario se busca por varios nombres a propósito: con los insumos
+ * el precio venía en `precio_vigente` y leerlo como `valorUnitario` dejó toda
+ * la columna en cero sin dar un solo error. Aquí el riesgo es el mismo.
+ */
+export function apuDesdeBackend(d: any): Apu {
+  const cap = campo(d, 'capitulo', 'chapter');
+  return {
+    ...d,
+    id: String(campo(d, 'id') ?? ''),
+    descripcion: campo(d, 'descripcion', 'nombre') ?? '',
+    unidad: campo(d, 'unidad') ?? '',
+    codigo: campo(d, 'codigo') ?? undefined,
+    capitulo: cap && typeof cap === 'object'
+      ? { id: String(campo(cap, 'id') ?? ''), nombre: campo(cap, 'nombre', 'name') ?? '' }
+      : campo(d, 'capitulo_nombre', 'capituloNombre')
+        ? { id: String(campo(d, 'capitulo_id', 'capituloId') ?? ''), nombre: campo(d, 'capitulo_nombre', 'capituloNombre') }
+        : undefined,
+    valorUnitario: String(
+      campo(d, 'valorUnitario', 'valor_unitario', 'precioUnitario', 'precio_unitario', 'costo_unitario', 'total') ?? '0'
+    ),
+  };
+}
+
+export const apusDesdeBackend = (d: any): Apu[] => listaDesdeBackend(d).map(apuDesdeBackend);
+
+/**
+ * Actividad nueva del presupuesto → backend.
+ *
+ * `AddItemDto` espera **`apu_id`** en snake_case con un UUID v4, y `cantidad`.
+ * Mandar `apuId` deja el campo indefinido y el servidor responde «Apu_id no
+ * tiene un formato válido», que suena a id mal formado y no a nombre de campo
+ * equivocado — que es lo que realmente pasa.
+ */
+export function actividadABackend(a: { apuId: string; cantidad: number; capituloId?: string }) {
+  return {
+    apu_id: a.apuId,
+    cantidad: a.cantidad,
+    ...(a.capituloId ? { chapter_id: a.capituloId } : {}),
+  };
+}
 
 /** Código a partir de la descripción, para no pedírselo al usuario dos veces. */
 export function codigoSugerido(descripcion: string, maximo = 30): string {

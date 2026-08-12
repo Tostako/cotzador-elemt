@@ -284,7 +284,7 @@ servidor desde el maestro de insumos.
 
 | Método | Ruta | Uso |
 |---|---|---|
-| GET | `/costos/catalog/apus` | Buscar (`?q=` `?capituloId=` `?limit=`) |
+| GET | `/costos/catalog/apus` | Buscar (`?q=` `?capituloId=` `?limit=`) — responde `{ items, total, … }` |
 | GET | `/costos/catalog/apus/:id` | Detalle con composición |
 | POST | `/costos/catalog/apus` | Crear APU (origen Personalizado) |
 | PATCH | `/costos/catalog/apus/:id` | Editar el catálogo (admin) |
@@ -385,6 +385,16 @@ al no verlo en la spec.
 `BadRequestException` (`catalog.service.ts:104`). Lo único que lo separa de un
 fallo de validación es `codigo: "CAPITULO_EN_USO"`, así que la pantalla se guía
 por ese campo y no por el estado HTTP.
+
+⚠️ **`AddItemDto` (agregar actividad al presupuesto) espera `apu_id`**, no
+`apuId`, con un **UUID v4** sacado del campo `id` del catálogo —nunca del
+`codigo` ni de un snapshot—. `chapter_id` es opcional y también UUID v4. Con el
+nombre equivocado el servidor responde «`Apu_id no tiene un formato válido`»,
+que suena a id mal construido y no a campo ausente.
+
+```json
+{ "apu_id": "1d3c8e2a-5f1b-4a7c-9f0e-9a2b4c5d6e7f", "cantidad": 300 }
+```
 
 ⚠️ **`CreateApuDto` tiene dos exigencias que no se ven venir:**
 
