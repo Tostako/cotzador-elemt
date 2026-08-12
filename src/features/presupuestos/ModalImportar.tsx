@@ -4,19 +4,21 @@ import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { GRUPOS_VALIDOS, detectarSeparador, leerNumero, partirLineaCsv } from './importacion';
-import { esGrupoValido, grupoABackend, grupoDesdeBackend } from './mapeo';
+import { capitulosDesdeBackend, codigoSugerido, esGrupoValido, grupoABackend, grupoDesdeBackend } from './mapeo';
 
 export type TipoImportacion = 'APUS' | 'INSUMOS';
 
 /** Columnas esperadas por tipo. El orden no importa: se busca por encabezado. */
-const COLUMNAS: Record<TipoImportacion, { requeridas: string[]; ejemplo: string }> = {
+const COLUMNAS: Record<TipoImportacion, { requeridas: string[]; ejemplo: string; nota?: string }> = {
   INSUMOS: {
     requeridas: ['descripcion', 'unidad', 'grupo', 'valorUnitario'],
     ejemplo: 'descripcion;unidad;grupo;valorUnitario\nCemento gris 50 kg;bulto;MATERIALES;32000',
   },
   APUS: {
     requeridas: ['descripcion', 'unidad', 'capitulo'],
-    ejemplo: 'descripcion;unidad;capitulo;valorUnitario\nMampostería bloque n.º 5;m2;Estructura;86000',
+    ejemplo: 'codigo;descripcion;unidad;capitulo\nEST-01;Mampostería bloque n.º 5;m2;Estructura',
+    nota: 'La columna «codigo» es opcional: si falta se genera desde la descripción. '
+      + 'El capítulo se escribe por nombre o por código y debe existir ya en el catálogo.',
   },
 };
 
@@ -77,6 +79,30 @@ export function ModalImportar({
       return;
     }
 
+    // Los APUs referencian el capítulo por UUID, no por nombre. Se resuelve
+    // aquí para poder rechazar la fila con un motivo entendible —«ese capítulo
+    // no existe»— en vez de dejar que el servidor conteste que el id no es un
+    // UUID válido, que no le dice nada a quien escribió el CSV.
+    let porCapitulo = new Map<string, string>();
+    if (tipo === 'APUS') {
+      try {
+        const caps = capitulosDesdeBackend(extractData(await apiService.getCapitulos()));
+        if (caps.length === 0) {
+          setFallo('No hay capítulos en el catálogo. Créalos antes de importar APUs.');
+          return;
+        }
+        // Se admite tanto el nombre como el código: en un CSV se escribe
+        // indistintamente «Estructura» o «EST».
+        for (const c of caps) {
+          porCapitulo.set(c.nombre.trim().toLowerCase(), c.id);
+          if (c.codigo) porCapitulo.set(c.codigo.trim().toLowerCase(), c.id);
+        }
+      } catch (e: any) {
+        setFallo(e?.message || 'No se pudieron cargar los capítulos para validar el archivo.');
+        return;
+      }
+    }
+
     const buenas: Record<string, string>[] = [];
     const malas: ErrorFila[] = [];
     for (let i = 1; i < lineas.length; i++) {
@@ -105,6 +131,25 @@ export function ModalImportar({
         // Se guarda ya normalizado a la convención de la interfaz; la
         // traducción al backend se hace al enviar.
         fila.grupo = grupoDesdeBackend(fila.grupo);
+      } else {
+        const capituloId = porCapitulo.get(fila.capitulo.trim().toLowerCase());
+        if (!capituloId) {
+          malas.push({
+            fila: i + 1,
+            motivo: `El capítulo "${fila.capitulo}" no existe en el catálogo`,
+          });
+          continue;
+        }
+        fila.__capitulo_id = capituloId;
+        // `codigo` es obligatorio para el servidor (máx. 30). Si el CSV no
+        // trae la columna, se deriva de la descripción en vez de rechazar
+        // el archivo entero por un dato que se puede deducir.
+        const propuesto = (fila.codigo || '').trim() || codigoSugerido(fila.descripcion);
+        if (propuesto.length > 30) {
+          malas.push({ fila: i + 1, motivo: `El código "${propuesto}" pasa de 30 caracteres` });
+          continue;
+        }
+        fila.codigo = propuesto;
       }
       buenas.push(fila);
     }
@@ -120,7 +165,15 @@ export function ModalImportar({
       const cuerpo = {
         filas: filas.map((f) => (tipo === 'INSUMOS'
           ? { descripcion: f.descripcion, unidad: f.unidad, grupo: grupoABackend(f.grupo), valorUnitario: f.valorunitario }
-          : { descripcion: f.descripcion, unidad: f.unidad, capitulo: f.capitulo, valorUnitario: f.valorunitario })),
+          // El capítulo viaja como UUID en las dos convenciones, igual que en
+          // el alta de APU, y `codigo` es obligatorio.
+          : {
+            codigo: f.codigo,
+            descripcion: f.descripcion,
+            unidad: f.unidad,
+            capitulo_id: f.__capitulo_id,
+            capituloId: f.__capitulo_id,
+          })),
         dryRun: true,
       };
       const res = extractData(tipo === 'INSUMOS'
@@ -201,6 +254,9 @@ export function ModalImportar({
         <span className="small" style={{ color: '#8c8578' }}>
           Columnas: {esperadas.join(', ')}
         </span>
+        {COLUMNAS[tipo].nota && (
+          <span className="small" style={{ color: '#6f6a5f', maxWidth: 380 }}>{COLUMNAS[tipo].nota}</span>
+        )}
         <input
           type="file"
           accept=".csv,text/csv,.xlsx,.xls"

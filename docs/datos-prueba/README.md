@@ -56,6 +56,22 @@ En Base de APUs y en Insumos, botón **Importar**.
 | [`apus.csv`](apus.csv) | 12 filas, todas válidas |
 | [`insumos-con-errores.csv`](insumos-con-errores.csv) | 10 filas: 4 entran, 6 se rechazan |
 
+**Columnas de cada tipo:**
+
+| Tipo | Columnas |
+|---|---|
+| Insumos | `descripcion`, `unidad`, `grupo`, `valorUnitario` — todas obligatorias |
+| APUs | `descripcion`, `unidad`, `capitulo` obligatorias; `codigo` opcional |
+
+En los APUs, el **capítulo se escribe por nombre o por código** (`Estructura` o
+`EST`) y tiene que existir ya en el catálogo: la app lo traduce al UUID que
+espera el servidor y rechaza la fila si no lo encuentra. El `codigo` del APU es
+obligatorio para el servidor (máx. 30 caracteres); si el CSV no trae esa
+columna se genera desde la descripción.
+
+Los APUs importados así entran **sin composición**: quedan creados y hay que
+abrirlos para añadirles insumos y rendimientos.
+
 El de errores sirve para ver que el rechazo funciona. Debería marcar:
 
 | Fila | Motivo |
