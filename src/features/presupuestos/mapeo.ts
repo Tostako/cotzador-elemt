@@ -29,9 +29,13 @@ const num = (v: any, porDefecto = 0) => {
 // ── Grupo de recurso ───────────────────────────────────────
 
 /**
- * El backend nombra los grupos en singular y con espacio —`MATERIAL`,
- * `MANO OBRA`, `EQUIPO`, `TRANSPORTE`— y la interfaz en plural con guion bajo.
- * Mandar el nombre de la interfaz devuelve un 400 del validador.
+ * El backend usa el singular en materiales y equipos: `MATERIAL`, `MANO_OBRA`,
+ * `EQUIPO`, `TRANSPORTE`. La interfaz usa el plural.
+ *
+ * ⚠️ El mensaje de error del validador **no** es fiable como referencia: dice
+ * «must be one of: MATERIAL, MANO OBRA, …» con un espacio, pero mandar
+ * `MANO OBRA` se rechaza y `MANO_OBRA` se acepta. Los valores de aquí están
+ * comprobados contra el servidor, no copiados del mensaje.
  *
  * La traducción vive aquí y no en las pantallas: si el contrato cambia otra
  * vez, se toca un sitio. Y `grupoDesdeBackend` acepta las dos convenciones a
@@ -42,7 +46,7 @@ const num = (v: any, porDefecto = 0) => {
  */
 const GRUPO_A_BACKEND: Record<GrupoRecurso, string> = {
   MATERIALES: 'MATERIAL',
-  MANO_OBRA: 'MANO OBRA',
+  MANO_OBRA: 'MANO_OBRA',
   EQUIPOS: 'EQUIPO',
   TRANSPORTE: 'TRANSPORTE',
 };

@@ -154,13 +154,14 @@
   const clave = (s) => String(s ?? '').trim().toLowerCase();
 
   /**
-   * El backend nombra los grupos en singular y con espacio. La tabla de abajo
-   * usa la convención de la interfaz (plural, guion bajo) y se traduce aquí,
-   * igual que hace mapeo.ts en la app.
+   * Valores comprobados contra el servidor con probarGrupos().
+   *
+   * OJO: el mensaje de error del validador dice «MANO OBRA» con espacio, pero
+   * ese valor lo rechaza; el bueno es `MANO_OBRA`. No copiar del mensaje.
    */
   const GRUPO_BACKEND = {
     MATERIALES: 'MATERIAL',
-    MANO_OBRA: 'MANO OBRA',
+    MANO_OBRA: 'MANO_OBRA',
     EQUIPOS: 'EQUIPO',
     TRANSPORTE: 'TRANSPORTE',
   };
@@ -270,14 +271,23 @@
     let creados = 0;
     for (const [descripcion, unidad, grupo, valorUnitario] of INSUMOS) {
       if (mapa.has(clave(descripcion))) continue;
+      // CreateSupplyDto no lleva precio: mandarlo aquí no da error, se ignora
+      // sin más, y el insumo quedaría en cero. El precio va aparte.
       const nuevo = await pedir('POST', `${PRE}/catalog/supplies`, {
-        descripcion, unidad, grupo: GRUPO_BACKEND[grupo] ?? grupo, valorUnitario,
+        descripcion, unidad, grupo: GRUPO_BACKEND[grupo] ?? grupo,
       });
       if (!nuevo?.id) throw new Error(`El servidor no devolvió id al crear el insumo "${descripcion}".`);
-      mapa.set(clave(descripcion), String(nuevo.id));
+      const id = String(nuevo.id);
+      // Segunda llamada: el precio es una serie histórica con su propio
+      // endpoint, y `valor` es el único campo obligatorio de CreatePriceDto.
+      await pedir('POST', `${PRE}/catalog/supplies/${id}/prices`, {
+        valor: valorUnitario,
+        motivo: 'Carga inicial de datos de prueba',
+      });
+      mapa.set(clave(descripcion), id);
       creados++;
     }
-    console.log(`  insumos: ${creados} creados, ${INSUMOS.length - creados} ya existían`);
+    console.log(`  insumos: ${creados} creados con precio, ${INSUMOS.length - creados} ya existían`);
     return mapa;
   }
 

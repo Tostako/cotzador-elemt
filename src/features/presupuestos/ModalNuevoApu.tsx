@@ -118,10 +118,18 @@ export function ModalNuevoApu({ onClose, onCreado }: { onClose: () => void; onCr
       const creado = extractData(await apiService.createInsumo({
         descripcion: nuevoInsumo.descripcion.trim(),
         unidad: nuevoInsumo.unidad,
-        // El validador del backend usa MATERIAL / MANO OBRA / EQUIPO.
+        // Comprobado contra el servidor: MATERIAL / MANO_OBRA / EQUIPO.
         grupo: grupoABackend(nuevoInsumo.grupo),
-        valorUnitario: nuevoInsumo.valorUnitario,
       }));
+      // El precio no cabe en el alta: `CreateSupplyDto` no lo lleva y mandarlo
+      // ahí no falla, se ignora — el insumo quedaría en cero. Va aparte, a la
+      // serie histórica de precios.
+      if (creado?.id && nuevoInsumo.valorUnitario > 0) {
+        await apiService.setPrecioInsumo(String(creado.id), {
+          valor: nuevoInsumo.valorUnitario,
+          motivo: 'Precio inicial',
+        });
+      }
       showNotification('Correcto', 'success', 'Insumo creado en el maestro.');
       // Queda en el maestro y disponible para cualquier otro APU.
       if (creado?.id) {

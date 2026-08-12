@@ -354,10 +354,27 @@ Dos trampas, las dos silenciosas — no dan error, solo datos mal puestos:
 - `per_page` es **20** por defecto. Sin pedir más, el maestro se veía truncado
   sin ningún aviso. El frontend pide 200 y contrasta con `total`.
 
-⚠️ **El enum de `grupo` no coincide con el de la interfaz.** El validador del
-backend acepta **`MATERIAL`, `MANO OBRA`, `EQUIPO`, `TRANSPORTE`** —singular, y
-con espacio en «MANO OBRA»—; la interfaz usa `MATERIALES`, `MANO_OBRA`,
-`EQUIPOS`, `TRANSPORTE`. Mandar el nombre de la interfaz devuelve **400**.
+⚠️ **El enum de `grupo` no coincide con el de la interfaz**, y **el mensaje de
+error miente**.
+
+El validador responde «*must be one of the following values: MATERIAL, **MANO
+OBRA**, EQUIPO, TRANSPORTE*», pero mandar `MANO OBRA` con espacio se rechaza.
+Los valores reales, comprobados uno a uno contra el servidor:
+
+| Interfaz | Backend |
+|---|---|
+| `MATERIALES` | `MATERIAL` |
+| `MANO_OBRA` | `MANO_OBRA` ← guion bajo, **no** el espacio del mensaje |
+| `EQUIPOS` | `EQUIPO` |
+| `TRANSPORTE` | `TRANSPORTE` |
+
+No copiar los valores del mensaje de error: se perdieron dos rondas mandando
+exactamente lo que pedía.
+
+⚠️ **`CreateSupplyDto` no lleva precio.** Mandar `valorUnitario` en el alta no
+da error —se ignora en silencio— y el insumo queda sin precio. El precio va
+después, por `POST .../prices` con `{ valor }`. `unidad` **no** es un enum:
+solo se valida que no esté vacía.
 
 La traducción vive en [`mapeo.ts`](../src/features/presupuestos/mapeo.ts)
 (`grupoABackend` / `grupoDesdeBackend`) y se aplica en los seis sitios donde el
