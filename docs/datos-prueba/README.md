@@ -50,17 +50,22 @@ multiplica rendimiento × precio o en cómo suma la cascada — no en los datos.
 
 En Base de APUs y en Insumos, botón **Importar**.
 
-| Archivo | Para qué |
-|---|---|
-| [`insumos.csv`](insumos.csv) | 30 filas, todas válidas |
-| [`apus.csv`](apus.csv) | 12 filas, todas válidas |
-| [`insumos-con-errores.csv`](insumos-con-errores.csv) | 10 filas: 4 entran, 6 se rechazan |
+Usa los **`.xlsx`**: son los que acepta el servidor, ya con la hoja y las
+cabeceras correctas. Se suben tal cual, sin tocar nada.
 
-⚠️ **El servidor importa XLSX, no CSV.** Estos `.csv` son la plantilla: ábrelos
-en Excel y usa «Guardar como → Libro de Excel (.xlsx)». Hay que **renombrar la
-hoja** para que coincida con lo que el servidor busca.
+| Archivo | Hoja | Para qué |
+|---|---|---|
+| [`insumos.xlsx`](insumos.xlsx) | `Insumos` | 30 filas, todas válidas |
+| [`apus.xlsx`](apus.xlsx) | `APUs` | 10 APUs con su composición |
+| [`insumos-con-errores.xlsx`](insumos-con-errores.xlsx) | `Insumos` | 10 filas: 4 entran, 6 se rechazan |
 
-| Tipo | Hoja | Cabeceras exactas |
+Los `.csv` del mismo nombre son la **fuente legible**: se leen y se comparan en
+git, que un binario no permite. Si cambias uno, hay que regenerar el `.xlsx`
+correspondiente.
+
+**Cabeceras exactas que espera el servidor:**
+
+| Tipo | Hoja | Columnas |
 |---|---|---|
 | APUs | `APUs` | `codigo` · `descripcion` · `unidad` · `capitulo` · `componentes` |
 | Insumos | `Insumos` | `descripcion` · `unidad` · `grupo` · `valorUnitario` |
@@ -73,17 +78,19 @@ Cemento gris uso general 50 kg:0.35;Oficial de construcción:0.28
 ```
 
 El nombre tiene que coincidir **exactamente** con la descripción del insumo en
-el maestro, así que importa primero `insumos.csv` y después `apus.csv`. Los 50
-componentes de la plantilla están comprobados contra `insumos.csv`.
+el maestro, así que importa primero `insumos.xlsx` y después `apus.xlsx`. Los
+50 componentes están comprobados uno a uno contra el maestro.
 
-En el CSV esa celda va entrecomillada, porque su `;` interno chocaría con el
-separador de columnas. Al pasar a XLSX el problema desaparece: es una celda.
+En el `.csv` esa celda va entrecomillada, porque su `;` interno chocaría con el
+separador de columnas. En el `.xlsx` no hay problema: es una celda.
 
 > El de insumos no está confirmado: el endpoint comparte controlador, pero no
 > tengo documentadas su hoja ni sus cabeceras. Si falla, el error del servidor
 > dirá qué espera.
 
-El de errores sirve para ver que el rechazo funciona. Debería marcar:
+El de errores sirve para ver que el rechazo funciona. El servidor debería
+marcarlas, aunque la numeración de filas puede no coincidir exactamente con la
+del archivo:
 
 | Fila | Motivo |
 |---|---|
