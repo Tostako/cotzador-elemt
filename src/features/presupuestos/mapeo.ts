@@ -72,15 +72,41 @@ export function esGrupoValido(v: unknown): boolean {
   return /^(MATERIAL(ES)?|MANO( DE)? OBRA|EQUIPO(S)?|TRANSPORTE(S)?)$/.test(normalizar(v));
 }
 
-/** Insumo del maestro con el grupo ya traducido a la convención de la interfaz. */
+/**
+ * Insumo del maestro.
+ *
+ * El precio llega como `precio_vigente`, no como `valorUnitario`: leerlo por el
+ * nombre equivocado no da error, deja toda la columna de precios en cero. Se
+ * aceptan los dos nombres para no depender de que el contrato no cambie.
+ */
 export const insumoDesdeBackend = (d: any): Insumo => ({
   ...d,
   id: String(d?.id ?? ''),
+  descripcion: d?.descripcion ?? '',
+  unidad: d?.unidad ?? '',
   grupo: grupoDesdeBackend(d?.grupo),
+  valorUnitario: String(campo(d, 'precio_vigente', 'precioVigente', 'valorUnitario', 'valor_unitario') ?? '0'),
+  usoEnApus: campo(d, 'usoEnApus', 'uso_en_apus', 'apus'),
 });
 
 export const insumosDesdeBackend = (d: any): Insumo[] =>
   (Array.isArray(d) ? d : (d?.items ?? d?.data ?? [])).map(insumoDesdeBackend);
+
+/**
+ * Página del maestro de insumos.
+ *
+ * La respuesta es `{ items, total, page, per_page, total_pages }`. Quedarse
+ * solo con `items` hace que el contador de la pantalla muestre el tamaño de la
+ * página —20— en vez del total real del catálogo.
+ */
+export function paginaInsumosDesdeBackend(d: any): { items: Insumo[]; total: number; paginas: number } {
+  const items = insumosDesdeBackend(d);
+  return {
+    items,
+    total: Number(campo(d, 'total') ?? items.length) || items.length,
+    paginas: Number(campo(d, 'total_pages', 'totalPages') ?? 1) || 1,
+  };
+}
 
 // ── AIU ────────────────────────────────────────────────────
 

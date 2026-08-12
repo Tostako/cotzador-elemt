@@ -4,7 +4,7 @@ import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { ModalImportar } from './ModalImportar';
-import { grupoABackend, insumosDesdeBackend } from './mapeo';
+import { grupoABackend, paginaInsumosDesdeBackend } from './mapeo';
 import { descargarCsv } from './importacion';
 import { ETIQUETA_RECURSO, aNumero, money, type GrupoRecurso, type Insumo } from './types';
 
@@ -46,6 +46,7 @@ export function InsumosPage() {
   const [editando, setEditando] = useState<Insumo | null>(null);
   const [viendoUso, setViendoUso] = useState<Insumo | null>(null);
   const [modalImportar, setModalImportar] = useState(false);
+  const [total, setTotal] = useState(0);
 
   // HU-13 · Exporta el recorte visible; es también la plantilla de vuelta:
   // el archivo que sale tiene exactamente las columnas que acepta la importación.
@@ -61,12 +62,17 @@ export function InsumosPage() {
     setCargando(true);
     setError(null);
     try {
-      // El filtro también viaja con el nombre del backend, no con el de la interfaz.
+      // El filtro también viaja con el nombre del backend, no con el de la
+      // interfaz. Y se pide una página grande: con las 20 por defecto el
+      // maestro se veía truncado sin ningún aviso.
       const data = extractData(await apiService.getInsumos({
         q: busqueda || undefined,
         grupo: grupo ? grupoABackend(grupo) : undefined,
+        perPage: 200,
       }));
-      setInsumos(insumosDesdeBackend(data));
+      const pagina = paginaInsumosDesdeBackend(data);
+      setInsumos(pagina.items);
+      setTotal(pagina.total);
     } catch (e: any) {
       setInsumos([]);
       setError(e?.message || 'No se pudo cargar el maestro de insumos.');
@@ -93,7 +99,13 @@ export function InsumosPage() {
         </h1>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           {!cargando && !error && (
-            <span className="small" style={{ color: '#8c8578' }}>{insumos.length} insumo{insumos.length === 1 ? '' : 's'}</span>
+            <span className="small" style={{ color: '#8c8578' }}>
+              {/* Si el total supera lo cargado hay que decirlo, no dejar creer
+                  que el catálogo se acaba en lo que se ve. */}
+              {total > insumos.length
+                ? `${insumos.length} de ${total} insumos`
+                : `${insumos.length} insumo${insumos.length === 1 ? '' : 's'}`}
+            </span>
           )}
           <button type="button" className="btn btn-small btn-secondary" onClick={() => setModalImportar(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Upload size={15} /> Importar

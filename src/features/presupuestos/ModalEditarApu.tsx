@@ -39,7 +39,10 @@ function impactoDesdeBackend(d: any): ImpactoPromocion {
     presupuestosBorrador: num(leer('presupuestosBorrador', 'presupuestos_borrador')),
     presupuestosAprobados: num(leer('presupuestosAprobados', 'presupuestos_aprobados')),
     variacionUnitaria: leer('variacionUnitaria', 'variacion_unitaria'),
-    confirmationToken: d?.confirmationToken ?? d?.confirmation_token ?? d?.token,
+    // El servicio lo llama `confirmation_token`; los otros nombres son red de
+    // seguridad. Es un JSON base64url firmado, con 5 min de vida: si el
+    // usuario se demora entre analizar y publicar, hay que volver a analizar.
+    confirmationToken: d?.confirmation_token ?? d?.confirmationToken ?? d?.token,
     sinCambios: !!(d?.sin_cambios ?? d?.sinCambios),
   };
 }
@@ -236,7 +239,15 @@ export function ModalEditarApu({
       setImpacto(null);
       onGuardado();
     } catch (e: any) {
-      showNotification('Error', 'error', e?.message || 'No se pudo promover al catálogo.');
+      // El token vive 5 minutos. Un 422 aquí casi siempre es que caducó, no
+      // que falte confirmar: mandar a "volver a analizar" ahorra el atasco.
+      if (e?.status === 422) {
+        setImpacto(null);
+        showNotification('Confirmación caducada', 'warning',
+          'La confirmación vence a los 5 minutos. Vuelve a calcular el impacto y publica de seguido.');
+      } else {
+        showNotification('Error', 'error', e?.message || 'No se pudo promover al catálogo.');
+      }
     } finally {
       setPromoviendo(false);
     }

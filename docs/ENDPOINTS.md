@@ -291,7 +291,7 @@ servidor desde el maestro de insumos.
 | GET | `/costos/catalog/apus/:id/impact` | A quién afectaría editarlo |
 | POST | `/costos/catalog/apus/:id/duplicate` | Duplicar (nombre distinto obligatorio) |
 | GET | `/costos/catalog/chapters` | Capítulos |
-| GET | `/costos/catalog/supplies` | Insumos (`?q=` `?grupo=`) |
+| GET | `/costos/catalog/supplies` | Insumos (`?q=` `?grupo=` `?page=` `?per_page=`) |
 | POST | `/costos/catalog/supplies` | Alta de insumo |
 | POST | `/costos/catalog/supplies/:id/prices` | Nuevo precio — **escribe siempre** |
 | GET | `/costos/catalog/supplies/:id/prices` | Serie histórica de precios |
@@ -327,8 +327,32 @@ Mandar el token en el cuerpo —como se hacía— no llega al `@Headers()` y el
 servicio responde **422 `CONFIRMACION_REQUERIDA`**.
 
 El servicio devuelve el impacto **esparcido en la raíz**
-(`{ dry_run, ...impacto, confirmado }`), no anidado bajo `impacto`. Si el APU
-ya coincide con el global responde `sin_cambios` y no escribe.
+(`{ dry_run, ...impacto, confirmado }`), no anidado bajo `impacto`, y el token
+en el campo **`confirmation_token`**. Si el APU ya coincide con el global
+responde `sin_cambios` y no escribe.
+
+El token es un JSON base64url firmado con `JWT_SECRET`, **sin estado y con 5
+minutos de vida**. Si el usuario se demora entre analizar y publicar caduca y
+el servicio responde 422: la pantalla lo trata como «vuelve a calcular el
+impacto», no como un error genérico.
+
+**Forma de la respuesta del maestro de insumos** (confirmada contra el
+servidor). Todo va envuelto en `{ data: … }` por el interceptor global, y la
+lista además está paginada:
+
+```json
+{ "data": { "items": [ { "id": "…", "descripcion": "Cemento gris x50kg",
+  "unidad": "UN", "grupo": "MATERIAL", "precio_vigente": "42000.00",
+  "usa_precio_historico": false } ],
+  "total": 5, "page": 1, "per_page": 20, "total_pages": 1 } }
+```
+
+Dos trampas, las dos silenciosas — no dan error, solo datos mal puestos:
+
+- El precio es **`precio_vigente`**, no `valorUnitario`. Leerlo por el nombre
+  equivocado dejaba **toda la columna de precios en $0**.
+- `per_page` es **20** por defecto. Sin pedir más, el maestro se veía truncado
+  sin ningún aviso. El frontend pide 200 y contrasta con `total`.
 
 ⚠️ **El enum de `grupo` no coincide con el de la interfaz.** El validador del
 backend acepta **`MATERIAL`, `MANO OBRA`, `EQUIPO`, `TRANSPORTE`** —singular, y

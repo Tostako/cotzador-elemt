@@ -513,10 +513,17 @@ export const apiService = {
   },
   getApu: (id: string) => api(`${PRESUP_BASE}/catalog/apus/${id}`),
   getCapitulos: () => api(`${PRESUP_BASE}/catalog/chapters`),
-  getInsumos: (params?: { q?: string; grupo?: string }) => {
+  /**
+   * Maestro de insumos. Responde paginado:
+   * `{ items, total, page, per_page, total_pages }` con `per_page` 20 por
+   * defecto, así que sin pedir más solo llegan los primeros veinte.
+   */
+  getInsumos: (params?: { q?: string; grupo?: string; page?: number; perPage?: number }) => {
     const qs = new URLSearchParams();
     if (params?.q) qs.set('q', params.q);
     if (params?.grupo) qs.set('grupo', params.grupo);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.perPage) qs.set('per_page', String(params.perPage));
     const s = qs.toString();
     return api(`${PRESUP_BASE}/catalog/supplies${s ? `?${s}` : ''}`);
   },
