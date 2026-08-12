@@ -314,10 +314,21 @@ Ahora la vista previa se arma con `/usage` (una lectura) y el umbral de
 variación se evalúa en el cliente (25 %); el cambio se escribe una sola vez, al
 confirmar.
 
-🔍 **Sin verificar:** `POST /projects/:id/budget/items/:itemId/apu/promote`
-sigue asumiendo `?dryRun=true` + `confirmationToken`. Si ahí pasa lo mismo, el
-botón de analizar publicaría el APU en el catálogo global sin confirmación.
-Hay que contrastarlo con el controlador.
+✅ **`apu/promote` sí implementa las dos fases** (verificado en
+`budget.controller.ts:58` y `budget.service.ts:484`), pero **no por el cuerpo**:
+el controlador no tiene `@Body()`.
+
+| Dato | Cómo viaja |
+|---|---|
+| `dryRun` | query — `?dryRun=true` (también acepta `1`) |
+| Token | cabecera **`x-confirmation-token`** |
+
+Mandar el token en el cuerpo —como se hacía— no llega al `@Headers()` y el
+servicio responde **422 `CONFIRMACION_REQUERIDA`**.
+
+El servicio devuelve el impacto **esparcido en la raíz**
+(`{ dry_run, ...impacto, confirmado }`), no anidado bajo `impacto`. Si el APU
+ya coincide con el global responde `sin_cambios` y no escribe.
 
 ⚠️ **El enum de `grupo` no coincide con el de la interfaz.** El validador del
 backend acepta **`MATERIAL`, `MANO OBRA`, `EQUIPO`, `TRANSPORTE`** —singular, y

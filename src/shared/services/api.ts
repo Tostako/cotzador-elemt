@@ -480,10 +480,21 @@ export const apiService = {
     api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/apu`, { method: 'PUT', body: JSON.stringify(data) }),
   /** HU-11 · Alcance de CATÁLOGO: publica la versión del proyecto como versión
    *  nueva del APU global. Acción distinta, permiso distinto (admin_catalogo). */
-  promoverApu: (projectId: string, itemId: string, body?: any, dryRun = false) =>
-    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/apu/promote${dryRun ? '?dryRun=true' : ''}`, {
+  /**
+   * Promueve el APU de la actividad al catálogo global.
+   *
+   * El controlador no tiene `@Body()`: `dryRun` va por query y el token de
+   * confirmación por la cabecera `x-confirmation-token`. Mandarlo en el cuerpo
+   * —como se hacía antes— no llega al `@Headers()` y el servicio responde 422
+   * CONFIRMACION_REQUERIDA.
+   *
+   * Con `dryRun` el servicio devuelve el análisis y no escribe. Si el APU no
+   * difiere del global, responde `sin_cambios` sin tocar nada.
+   */
+  promoverApu: (projectId: string, itemId: string, opciones?: { dryRun?: boolean; confirmationToken?: string }) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/apu/promote${opciones?.dryRun ? '?dryRun=true' : ''}`, {
       method: 'POST',
-      body: JSON.stringify(body ?? {}),
+      headers: opciones?.confirmationToken ? { 'x-confirmation-token': opciones.confirmationToken } : undefined,
     }),
 
   // Cierre financiero — HU-16

@@ -8,13 +8,40 @@ import { ETIQUETA_RECURSO, aNumero, money, type ComponenteApu, type GrupoRecurso
 
 /** Impacto que devuelve el dryRun de promover al catálogo. */
 interface ImpactoPromocion {
-  impacto: {
-    proyectosActivos: number;
-    presupuestosBorrador: number;
-    presupuestosAprobados: number;
-    variacionUnitaria: string;
+  proyectosActivos: number;
+  presupuestosBorrador: number;
+  presupuestosAprobados: number;
+  variacionUnitaria?: string;
+  /** Va en la cabecera `x-confirmation-token` al publicar. */
+  confirmationToken?: string;
+  /** El APU no difiere del global: no hay nada que publicar. */
+  sinCambios: boolean;
+}
+
+/**
+ * El servicio responde `{ dry_run, ...impacto, confirmado }`, o sea con los
+ * campos del impacto en la raíz, y mezcla convenciones de nombres. Se leen las
+ * dos formas —anidada y plana, snake y camel— para no quedarnos con ceros si
+ * el contrato no es exactamente el que suponemos.
+ */
+function impactoDesdeBackend(d: any): ImpactoPromocion {
+  const i = d?.impacto ?? d ?? {};
+  const leer = (...nombres: string[]) => {
+    for (const n of nombres) {
+      if (i?.[n] !== undefined && i?.[n] !== null) return i[n];
+      if (d?.[n] !== undefined && d?.[n] !== null) return d[n];
+    }
+    return undefined;
   };
-  confirmationToken: string;
+  const num = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  return {
+    proyectosActivos: num(leer('proyectosActivos', 'proyectos_activos')),
+    presupuestosBorrador: num(leer('presupuestosBorrador', 'presupuestos_borrador')),
+    presupuestosAprobados: num(leer('presupuestosAprobados', 'presupuestos_aprobados')),
+    variacionUnitaria: leer('variacionUnitaria', 'variacion_unitaria'),
+    confirmationToken: d?.confirmationToken ?? d?.confirmation_token ?? d?.token,
+    sinCambios: !!(d?.sin_cambios ?? d?.sinCambios),
+  };
 }
 
 /** Fila editable: del APU solo se cambia el rendimiento, nunca el precio. */
@@ -174,19 +201,17 @@ export function ModalEditarApu({
     }
   };
 
-  /**
-   * Paso 1 de la promoción: consultar a quién afectaría.
-   *
-   * ⚠️ SIN VERIFICAR contra el backend. Esto da por hecho que `?dryRun=true`
-   * simula. En el endpoint de precios esa suposición resultó falsa —el
-   * parámetro se ignoraba y la petición escribía—, y aquí el efecto sería
-   * peor: publicaría el APU en el catálogo global sin que nadie confirme.
-   * Hay que contrastarlo con el controlador antes de fiarse.
-   */
+  /** Paso 1: consultar a quién afectaría. Con dryRun el servicio no escribe. */
   const analizarPromocion = async () => {
     setPromoviendo(true);
     try {
-      setImpacto(extractData(await apiService.promoverApu(projectId, itemId, {}, true)));
+      const d = impactoDesdeBackend(extractData(await apiService.promoverApu(projectId, itemId, { dryRun: true })));
+      if (d.sinCambios) {
+        // El servicio corta antes de escribir cuando no hay diferencia.
+        showNotification('Sin cambios', 'info', 'Este APU ya es igual al del catálogo: no hay nada que publicar.');
+        return;
+      }
+      setImpacto(d);
     } catch (e: any) {
       // 403 = no tiene permiso de administración de catálogo.
       showNotification('Error', 'error', e?.message || 'No se pudo calcular el impacto.');
@@ -195,9 +220,15 @@ export function ModalEditarApu({
     }
   };
 
-  /** Paso 2: publicar de verdad, con el token que devolvió el análisis. */
+  /** Paso 2: publicar, con el token que devolvió el análisis en la cabecera. */
   const promover = async () => {
     if (!impacto) return;
+    if (!impacto.confirmationToken) {
+      // Sin token el servicio responde 422; mejor decir por qué que dejarlo fallar.
+      showNotification('Falta la confirmación', 'error',
+        'El análisis no devolvió el token de confirmación. Vuelve a calcular el impacto.');
+      return;
+    }
     setPromoviendo(true);
     try {
       await apiService.promoverApu(projectId, itemId, { confirmationToken: impacto.confirmationToken });
@@ -355,15 +386,15 @@ export function ModalEditarApu({
                 <strong style={{ fontSize: 14 }}>Esto cambia el catálogo global</strong>
               </div>
               <ul style={{ listStyle: 'none', display: 'grid', gap: 6, margin: 0, padding: 0 }}>
-                <li className="small">Afecta a <strong>{impacto.impacto?.proyectosActivos ?? 0}</strong> proyecto(s) activo(s)</li>
-                <li className="small">Recalcula <strong>{impacto.impacto?.presupuestosBorrador ?? 0}</strong> presupuesto(s) en borrador</li>
-                {(impacto.impacto?.presupuestosAprobados ?? 0) > 0 && (
+                <li className="small">Afecta a <strong>{impacto.proyectosActivos}</strong> proyecto(s) activo(s)</li>
+                <li className="small">Recalcula <strong>{impacto.presupuestosBorrador}</strong> presupuesto(s) en borrador</li>
+                {impacto.presupuestosAprobados > 0 && (
                   <li className="small" style={{ color: '#8c8578' }}>
-                    {impacto.impacto.presupuestosAprobados} aprobado(s) no se recalculan: solo reciben aviso de versión nueva
+                    {impacto.presupuestosAprobados} aprobado(s) no se recalculan: solo reciben aviso de versión nueva
                   </li>
                 )}
-                {impacto.impacto?.variacionUnitaria && (
-                  <li className="small">Variación unitaria: <strong>{impacto.impacto.variacionUnitaria}</strong></li>
+                {impacto.variacionUnitaria && (
+                  <li className="small">Variación unitaria: <strong>{impacto.variacionUnitaria}</strong></li>
                 )}
               </ul>
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
