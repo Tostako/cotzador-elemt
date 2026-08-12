@@ -63,6 +63,11 @@ Los `.csv` del mismo nombre son la **fuente legible**: se leen y se comparan en
 git, que un binario no permite. Si cambias uno, hay que regenerar el `.xlsx`
 correspondiente.
 
+> El botón **Exportar** de Insumos y de Base de APUs produce ya un `.xlsx` con
+> esta misma hoja y estas mismas columnas, así que lo que exportas se puede
+> reimportar tal cual. Es la vía para editar precios en masa: exportas, tocas
+> la columna `precio` en Excel y vuelves a importar.
+
 **Cabeceras exactas que espera el servidor:**
 
 | Tipo | Hoja | Columnas |

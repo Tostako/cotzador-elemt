@@ -5,7 +5,7 @@ import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { ModalImportar } from './ModalImportar';
 import { grupoABackend, paginaInsumosDesdeBackend } from './mapeo';
-import { descargarCsv } from './importacion';
+import { descargarXlsx } from './exportarXlsx';
 import { ETIQUETA_RECURSO, aNumero, money, type GrupoRecurso, type Insumo } from './types';
 
 /** Qué se va a mover al cambiar el precio. Se arma en el cliente. */
@@ -48,13 +48,22 @@ export function InsumosPage() {
   const [modalImportar, setModalImportar] = useState(false);
   const [total, setTotal] = useState(0);
 
-  // HU-13 · Exporta el recorte visible; es también la plantilla de vuelta:
-  // el archivo que sale tiene exactamente las columnas que acepta la importación.
+  /**
+   * HU-13 · Exporta el recorte visible en el **mismo formato que acepta la
+   * importación**: hoja «Insumos», columnas exactas y el grupo en la
+   * convención del backend. Así el archivo que sale se puede reimportar tal
+   * cual, que es como se editan precios en masa desde Excel.
+   */
   const exportar = () => {
     if (insumos.length === 0) return;
-    descargarCsv('insumos', [
-      ['descripcion', 'unidad', 'grupo', 'valorUnitario'],
-      ...insumos.map((i) => [i.descripcion, i.unidad, i.grupo, aNumero(i.valorUnitario)]),
+    descargarXlsx('insumos', 'Insumos', [
+      ['descripcion', 'unidad', 'grupo', 'precio'],
+      ...insumos.map((i) => {
+        const precio = aNumero(i.valorUnitario);
+        // Un insumo sin precio sale con la celda vacía, no con un cero: al
+        // reimportar, vacío lo deja como está y 0 lo pondría a cero.
+        return [i.descripcion, i.unidad, grupoABackend(i.grupo), precio > 0 ? precio : ''];
+      }),
     ]);
   };
 

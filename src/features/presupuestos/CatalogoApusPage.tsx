@@ -4,8 +4,8 @@ import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { ModalNuevoApu } from './ModalNuevoApu';
 import { ModalImportar } from './ModalImportar';
-import { descargarCsv } from './importacion';
-import { apusDesdeBackend, capitulosDesdeBackend } from './mapeo';
+import { descargarXlsx } from './exportarXlsx';
+import { apuDesdeBackend, apusDesdeBackend, capitulosDesdeBackend, codigoSugerido } from './mapeo';
 import { ETIQUETA_RECURSO, aNumero, money, type Apu, type Capitulo, type ComponenteApu, type GrupoRecurso } from './types';
 
 /**
@@ -26,15 +26,57 @@ export function CatalogoApusPage() {
   const [recarga, setRecarga] = useState(0);
   const [modalNuevo, setModalNuevo] = useState(false);
   const [modalImportar, setModalImportar] = useState(false);
+  const [exportando, setExportando] = useState(false);
 
-  // HU-13 · Se exporta lo que se está viendo, filtros incluidos: si el usuario
-  // acotó por capítulo, espera ese recorte, no el catálogo entero.
-  const exportar = () => {
-    if (apus.length === 0) return;
-    descargarCsv('apus', [
-      ['descripcion', 'unidad', 'capitulo', 'valorUnitario'],
-      ...apus.map((a) => [a.descripcion, a.unidad, a.capitulo?.nombre ?? '', aNumero(a.valorUnitario)]),
-    ]);
+  /**
+   * HU-13 · Exporta lo que se está viendo —filtros incluidos— en el mismo
+   * formato que acepta la importación, para que el archivo se pueda reimportar.
+   *
+   * La composición no viene en el listado: cada fila la pide al desplegarse.
+   * Así que hay que traer el detalle de cada APU, en tandas para no lanzar cien
+   * peticiones a la vez.
+   */
+  const exportar = async () => {
+    if (apus.length === 0 || exportando) return;
+    setExportando(true);
+    try {
+      const detalles: Apu[] = [];
+      const TANDA = 6;
+      for (let i = 0; i < apus.length; i += TANDA) {
+        const tanda = await Promise.all(apus.slice(i, i + TANDA).map(async (a) => {
+          if (a.componentes) return a;
+          try {
+            return apuDesdeBackend(extractData(await apiService.getApu(a.id)));
+          } catch {
+            // Si falla el detalle se exporta el APU sin componentes, que es
+            // válido al reimportar, en vez de tumbar la exportación entera.
+            return a;
+          }
+        }));
+        detalles.push(...tanda);
+      }
+
+      const sinComposicion = detalles.filter((a) => !(a.componentes?.length)).length;
+      descargarXlsx('apus', 'APUs', [
+        ['codigo', 'descripcion', 'unidad', 'capitulo', 'componentes'],
+        ...detalles.map((a) => [
+          a.codigo ?? codigoSugerido(a.descripcion),
+          a.descripcion,
+          a.unidad,
+          a.capitulo?.nombre ?? '',
+          // «descripcionExacta:rendimiento» separados por ';', que es como lo
+          // lee el importador.
+          (a.componentes ?? []).map((c) => `${c.descripcion}:${aNumero(c.cantidad)}`).join(';'),
+        ]),
+      ]);
+
+      if (sinComposicion > 0) {
+        showNotification('Exportado con avisos', 'warning',
+          `${sinComposicion} APU(s) salieron sin componentes. Al reimportarlos quedarían sin composición.`);
+      }
+    } finally {
+      setExportando(false);
+    }
   };
 
   // HU-12 · La copia exige un nombre distinto: dos APUs con la misma
@@ -111,8 +153,8 @@ export function CatalogoApusPage() {
           <button type="button" className="btn btn-small btn-secondary" onClick={() => setModalImportar(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Upload size={15} /> Importar
           </button>
-          <button type="button" className="btn btn-small btn-secondary" onClick={exportar} disabled={apus.length === 0} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <Download size={15} /> Exportar
+          <button type="button" className="btn btn-small btn-secondary" onClick={exportar} disabled={apus.length === 0 || exportando} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Download size={15} /> {exportando ? 'Exportando…' : 'Exportar'}
           </button>
           <button type="button" className="btn btn-small" onClick={() => setModalNuevo(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Plus size={15} /> Nuevo APU

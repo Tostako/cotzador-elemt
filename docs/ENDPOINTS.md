@@ -479,6 +479,13 @@ Notas de contrato que el frontend da por supuestas:
 
   El preview devuelve además `con_precio`, y `confirm` devuelve `precios`.
 
+  **La exportación del frontend produce exactamente este formato**, para que el
+  archivo que sale se pueda reimportar sin tocarlo. El XLSX lo escribe
+  `exportarXlsx.ts`, unas cien líneas sobre `fflate`: la librería habitual de
+  hojas de cálculo pesa 309 KB comprimidos —una cuarta parte del bundle— para
+  una acción puntual. En APUs hay que pedir el detalle de cada uno, porque el
+  listado no trae la composición.
+
   **APUs:** `codigo` obligatorio y único en el archivo; `capitulo` se resuelve
   por nombre y es opcional —si no existe, el APU queda sin capítulo—;
   `componentes` es `descripcionExacta:rendimiento` separado por `;`, con

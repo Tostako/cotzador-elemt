@@ -4,7 +4,7 @@ import { Handshake, Plus, Download, TrendingDown, TrendingUp } from 'lucide-reac
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
-import { descargarCsv } from './importacion';
+import { descargarCsv } from './exportarCsv';
 import { grupoDesdeBackend } from './mapeo';
 import {
   aNumero, money, diferenciaLinea,

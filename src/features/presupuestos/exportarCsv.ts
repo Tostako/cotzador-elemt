@@ -1,8 +1,9 @@
 /**
- * HU-13 · Exportación a hoja de cálculo.
+ * Exportación a CSV.
  *
- * Solo salida. La importación no pasa por aquí: el archivo se sube tal cual y
- * lo parsea el servidor, así que no hay nada que leer en el cliente.
+ * Para lo que se manda fuera y no vuelve —la cotización que se le pasa a un
+ * proveedor—. El catálogo se exporta en XLSX (`exportarXlsx.ts`), porque ese
+ * sí se reimporta y tiene que salir en el formato que acepta el servidor.
  */
 
 /** Escapa un campo para CSV: comillas dobladas y todo el valor entrecomillado. */
