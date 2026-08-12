@@ -31,6 +31,16 @@
     return;
   }
 
+  /** Aplana el cuerpo de error: NestJS devuelve `message` como array y
+   *  quedarse con el primero esconde el resto de los motivos. */
+  const motivos = (bruto) => {
+    if (!bruto) return [];
+    const m = bruto.message ?? bruto.error ?? bruto;
+    if (Array.isArray(m)) return m.map(String);
+    if (typeof m === 'string') return [m];
+    return [JSON.stringify(m)];
+  };
+
   const pedir = async (metodo, ruta, cuerpo) => {
     const res = await fetch(BASE + ruta, {
       method: metodo,
@@ -42,11 +52,76 @@
     try { datos = await res.json(); } catch { /* sin cuerpo */ }
     const d = datos && typeof datos === 'object' && 'data' in datos ? datos.data : datos;
     if (!res.ok) {
-      const e = new Error(d?.error || d?.message || `HTTP ${res.status} en ${metodo} ${ruta}`);
+      const lista = motivos(d);
+      const e = new Error(lista.join(' · ') || `HTTP ${res.status} en ${metodo} ${ruta}`);
       e.status = res.status;
+      e.motivos = lista;
+      e.cuerpoEnviado = cuerpo;
+      e.respuesta = d;
+      // Sin esto solo se ve el mensaje resumido y hay que adivinar el resto.
+      if (cuerpo) {
+        console.groupCollapsed(`%c↳ ${metodo} ${ruta} → ${res.status}`, 'color:#ff6b6b');
+        console.log('enviado:', cuerpo);
+        console.log('respuesta cruda:', d);
+        console.groupEnd();
+      }
       throw e;
     }
     return d;
+  };
+
+  /**
+   * Averigua qué espera el validador para el grupo, sin llegar a crear nada.
+   *
+   * El truco: se manda el candidato junto con una descripción vacía y un valor
+   * no numérico, dos motivos de rechazo seguros. Así la petición falla siempre
+   * —no se guarda ningún insumo— y basta con mirar si entre los motivos sigue
+   * apareciendo una queja sobre el grupo. Si desaparece, ese candidato vale.
+   *
+   * Se prueban dos cosas, porque el mensaje dice «Grupo» con mayúscula y eso
+   * apunta a que el campo del DTO no se llama `grupo`: si el nombre no
+   * coincide, el valor llega indefinido y el rechazo es el mismo mandes lo que
+   * mandes. Por eso primero se busca el NOMBRE del campo y luego el VALOR.
+   */
+  const quejaDeGrupo = (motivos) => (motivos || []).some((m) => /grupo/i.test(m));
+
+  /** Manda un cuerpo condenado a fallar y dice si el grupo sigue estorbando. */
+  const sondear = async (cuerpo) => {
+    try {
+      await pedir('POST', `${PRE}/catalog/supplies`, cuerpo);
+      return { ok: false, nota: '⚠️ se creó, revísalo en el maestro' };
+    } catch (e) {
+      return quejaDeGrupo(e.motivos)
+        ? { ok: false, nota: '❌ ' + (e.motivos || []).find((m) => /grupo/i.test(m)) }
+        : { ok: true, nota: '✅ sin queja de grupo' };
+    }
+  };
+
+  window.probarGrupos = async () => {
+    const base = { descripcion: '', unidad: '', valorUnitario: 'x' };
+
+    console.log('%c1) Nombre del campo (valor fijo MATERIAL)', 'font-weight:bold');
+    const campos = ['grupo', 'Grupo', 'tipo', 'tipoRecurso', 'tipo_recurso', 'grupoRecurso', 'grupo_recurso'];
+    const porCampo = [];
+    for (const campo of campos) {
+      const r = await sondear({ ...base, [campo]: 'MATERIAL' });
+      porCampo.push({ campo, resultado: r.nota });
+    }
+    console.table(porCampo);
+
+    const campoBueno = campos.find((c, i) => porCampo[i].resultado.startsWith('✅')) || 'grupo';
+    console.log(`%c2) Valor (campo "${campoBueno}")`, 'font-weight:bold');
+    const valores = ['MATERIAL', 'MATERIALES', 'Material', 'material',
+                     'MANO OBRA', 'MANO_OBRA', 'EQUIPO', 'EQUIPOS', 'TRANSPORTE'];
+    const porValor = [];
+    for (const valor of valores) {
+      const r = await sondear({ ...base, [campoBueno]: valor });
+      porValor.push({ valor, resultado: r.nota });
+    }
+    console.table(porValor);
+
+    console.log('Pásame las dos tablas. Los ✅ son lo que el backend admite.');
+    return { campo: campoBueno, porCampo, porValor };
   };
 
   const lista = (d) => (Array.isArray(d) ? d : (d?.items ?? d?.data ?? d?.results ?? []));
@@ -286,5 +361,7 @@
     delete window.__proyectoSemilla;
   };
 
-  console.log('%cSemilla cargada.', 'font-weight:bold', 'Ejecuta:  await sembrar()');
+  // El sello de versión evita la duda de "¿pegué la copia nueva o la vieja?".
+  console.log('%cSemilla v4 cargada.', 'font-weight:bold',
+    'Ejecuta:  await sembrar()   ·   Si falla por el grupo:  await probarGrupos()');
 })();
