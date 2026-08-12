@@ -462,13 +462,22 @@ Notas de contrato que el frontend da por supuestas:
   | Tipo | Hoja | Columnas |
   |---|---|---|
   | APUs | `APUs` o la primera | `codigo` · `descripcion` · `unidad` · `capitulo` · `componentes` |
-  | Insumos | `Insumos` o la primera | `descripcion` · `unidad` · `grupo` |
+  | Insumos | `Insumos` o la primera | `descripcion` · `unidad` · `grupo` · `precio` |
 
   **Insumos:** `grupo` con el enum del backend —`MATERIAL`, `MANO_OBRA`,
   `EQUIPO`, `TRANSPORTE`, en singular—; tolera minúsculas pero no `MATERIALES`,
   `EQUIPOS` ni `MANO DE OBRA`. `descripcion` y `unidad` obligatorias, sin
-  descripciones repetidas dentro del archivo. **No hay columna de precio:** los
-  insumos entran sin valor y hay que fijarlo aparte.
+  descripciones repetidas dentro del archivo.
+
+  `precio` es **opcional**, número ≥ 0, y admite coma decimal (`12500,5`).
+  Vacío crea el insumo sin precio. Si coincide con el vigente no se duplica
+  —reimportar el mismo archivo devuelve `precios: 0`—; si difiere, entra como
+  vigente con origen `IMPORTACION` y el anterior pasa al historial. Un precio
+  inválido marca esa fila con error (`LOTE_CON_ERRORES`, detalle en `/errors`)
+  sin tumbar el resto, y si la importación falla se revierten también los
+  precios insertados.
+
+  El preview devuelve además `con_precio`, y `confirm` devuelve `precios`.
 
   **APUs:** `codigo` obligatorio y único en el archivo; `capitulo` se resuelve
   por nombre y es opcional —si no existe, el APU queda sin capítulo—;

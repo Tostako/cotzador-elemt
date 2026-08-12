@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, AlertTriangle, CheckCircle2, FileSpreadsheet, RefreshCw } from 'lucide-react';
+import { Upload, AlertTriangle, CheckCircle2, FileSpreadsheet, RefreshCw, Tag } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
@@ -13,11 +13,9 @@ const FORMATO: Record<TipoImportacion, { hoja: string; columnas: string[]; ejemp
     columnas: ['codigo', 'descripcion', 'unidad', 'capitulo', 'componentes'],
     ejemplo: 'Cemento gris x50kg:0.02;Operario oficial:0.01',
   },
-  // Sin confirmar: el endpoint de insumos comparte controlador y patrón, pero
-  // no tenemos su hoja ni sus cabeceras documentadas.
   INSUMOS: {
     hoja: 'Insumos',
-    columnas: ['descripcion', 'unidad', 'grupo', 'valorUnitario'],
+    columnas: ['descripcion', 'unidad', 'grupo', 'precio'],
   },
 };
 
@@ -32,6 +30,8 @@ interface Resumen {
   nuevos: number;
   actualizados: number;
   conError: number;
+  /** Filas que además traen precio (solo insumos). */
+  conPrecio?: number;
   expiraEn?: string;
 }
 
@@ -94,11 +94,13 @@ export function ModalImportar({
         onImportado();
         return;
       }
+      const conPrecio = d?.con_precio ?? d?.conPrecio;
       setResumen({
         jobId: String(jobId),
         nuevos: Number(d?.nuevos ?? 0),
         actualizados: Number(d?.actualizados ?? 0),
         conError: Number(d?.con_error ?? d?.conError ?? 0),
+        conPrecio: conPrecio === undefined ? undefined : Number(conPrecio),
         expiraEn: d?.expira_en ?? d?.expiraEn,
       });
 
@@ -129,7 +131,12 @@ export function ModalImportar({
     try {
       const d: any = extractData(await apiService.confirmarImportacion(resumen.jobId));
       const n = d?.importadas ?? d?.creadas ?? (resumen.nuevos + resumen.actualizados);
-      showNotification('Importado', 'success', `${n} registro(s) aplicados al catálogo.`);
+      // `precios` son los registros de precio que entraron. Puede ser 0 aunque
+      // se importen filas: si el precio ya era el vigente, no se duplica.
+      const precios = d?.precios;
+      showNotification('Importado', 'success',
+        `${n} registro(s) aplicados al catálogo.`
+        + (precios !== undefined ? ` ${precios} precio(s) nuevos.` : ''));
       onImportado();
     } catch (e: any) {
       setFallo(e?.message || 'No se pudo confirmar la importación.');
@@ -196,6 +203,11 @@ export function ModalImportar({
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#5aa9e6' }}>
               <RefreshCw size={15} /> {resumen.actualizados} actualizado(s)
             </span>
+            {resumen.conPrecio !== undefined && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#b69462' }}>
+                <Tag size={15} /> {resumen.conPrecio} con precio
+              </span>
+            )}
             {resumen.conError > 0 && (
               <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#ff9500' }}>
                 <AlertTriangle size={15} /> {resumen.conError} con error
@@ -241,6 +253,18 @@ export function ModalImportar({
                 {' '}<code>nombre:rendimiento</code>. El nombre debe coincidir exactamente con el del maestro.
               </p>
               <pre style={{ margin: '6px 0', overflowX: 'auto', fontSize: 11 }}>{formato.ejemplo}</pre>
+            </>
+          )}
+          {tipo === 'INSUMOS' && (
+            <>
+              <p style={{ marginTop: 8 }}>
+                <strong>grupo</strong>: <code>MATERIAL</code>, <code>MANO_OBRA</code>, <code>EQUIPO</code>
+                {' '}o <code>TRANSPORTE</code>. En singular.
+              </p>
+              <p style={{ marginTop: 6 }}>
+                <strong>precio</strong>: opcional. Vacío deja el insumo sin precio. Si coincide con el
+                vigente no se duplica; si cambia, entra como precio nuevo y el anterior pasa al historial.
+              </p>
             </>
           )}
         </div>

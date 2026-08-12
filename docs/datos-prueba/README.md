@@ -68,7 +68,7 @@ correspondiente.
 | Tipo | Hoja | Columnas |
 |---|---|---|
 | APUs | `APUs` (o la primera) | `codigo` · `descripcion` · `unidad` · `capitulo` · `componentes` |
-| Insumos | `Insumos` (o la primera) | `descripcion` · `unidad` · `grupo` |
+| Insumos | `Insumos` (o la primera) | `descripcion` · `unidad` · `grupo` · `precio` |
 
 ⚠️ **El `grupo` va en la convención del backend, no en la de la app**:
 `MATERIAL`, `MANO_OBRA`, `EQUIPO`, `TRANSPORTE` — en **singular** para
@@ -76,14 +76,24 @@ materiales y equipos. Tolera minúsculas, pero no `MATERIALES`, ni `EQUIPOS`, ni
 `MANO DE OBRA`. Dentro de la app esa traducción la hace `mapeo.ts` al enviar;
 el XLSX va directo al servidor y tiene que llevarla ya hecha.
 
-⚠️ **La importación de insumos no trae precios**: la hoja no tiene columna de
-valor, así que los insumos entran a $0 y hay que ponérselos después desde el
-maestro. Si quieres catálogo con precios, usa la semilla, que hace las dos
-llamadas.
+**`precio` es opcional** y admite coma decimal (`12500,5`). Su comportamiento:
+
+| Caso | Resultado |
+|---|---|
+| Vacío | el insumo se crea sin precio |
+| Igual al vigente | no se duplica — reimportar el mismo archivo da `precios: 0` |
+| Distinto | entra como nuevo precio vigente (origen `IMPORTACION`) y el anterior pasa al historial |
+| Inválido | esa fila sale con error; el resto sigue |
+
+Si la importación falla, se revierten también los precios insertados.
 
 Otras reglas: `descripcion` y `unidad` son obligatorias; una descripción
 repetida **dentro del archivo** es un error; y si la descripción ya existe en
 el shop, esa fila cuenta como *actualizada* en vez de nueva.
+
+Los 30 precios de `insumos.xlsx` son los mismos que usa la semilla, así que
+importar este archivo deja el maestro **idéntico** al que produce `sembrar()` —
+y los totales de la tabla de arriba deberían cuadrar igual.
 
 La columna **`componentes`** lleva los insumos separados por `;`, cada uno como
 `nombre:rendimiento`:
@@ -117,12 +127,15 @@ numeración puede no coincidir con la del archivo:
 | 5 | rechazar | sin descripción |
 | 6 | rechazar | sin unidad |
 | 7 | **entrar** | grupo `material` en minúsculas — sí se tolera |
-| 8 | entrar | correcta |
+| 8 | **entrar** | precio vacío: el insumo se crea sin precio |
 | 9 | rechazar | grupo `MAQUINARIA` no existe |
-| 10 y 11 | rechazar una | descripción duplicada dentro del archivo |
+| 10 | rechazar | precio `abc` no es un número |
+| 11 | rechazar | precio negativo |
+| 12 | **entrar** | precio `32500,75` con coma decimal — sí se acepta |
+| 13 y 14 | rechazar una | descripción duplicada dentro del archivo |
 
-La fila 7 es la interesante: comprueba que las minúsculas **sí** pasan, para no
-confundir «estricto con el nombre» con «estricto con las mayúsculas».
+Las filas 7, 8 y 12 son las interesantes: comprueban lo que **sí** debe pasar.
+Sin ellas, un importador demasiado estricto parecería correcto.
 
 Ojo con el orden: primero importa los insumos, luego los APUs. Y los capítulos
 del `apus.csv` (`PRELIMINARES`, `ESTRUCTURA`, `ACABADOS`, `INSTALACIONES`)
