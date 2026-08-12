@@ -5,6 +5,7 @@ import { showNotification } from '../../shared/hooks/useNotifications';
 import { ModalNuevoApu } from './ModalNuevoApu';
 import { ModalImportar } from './ModalImportar';
 import { descargarCsv } from './importacion';
+import { capitulosDesdeBackend } from './mapeo';
 import { ETIQUETA_RECURSO, aNumero, money, type Apu, type Capitulo, type ComponenteApu, type GrupoRecurso } from './types';
 
 /**
@@ -64,7 +65,7 @@ export function CatalogoApusPage() {
     (async () => {
       try {
         const data = extractData(await apiService.getCapitulos());
-        if (!cancel) setCapitulos(Array.isArray(data) ? data : []);
+        if (!cancel) setCapitulos(capitulosDesdeBackend(data));
       } catch {
         /* el filtro por capítulo queda vacío; la búsqueda sigue sirviendo */
       }

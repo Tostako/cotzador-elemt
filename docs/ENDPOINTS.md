@@ -290,7 +290,9 @@ servidor desde el maestro de insumos.
 | PATCH | `/costos/catalog/apus/:id` | Editar el catálogo (admin) |
 | GET | `/costos/catalog/apus/:id/impact` | A quién afectaría editarlo |
 | POST | `/costos/catalog/apus/:id/duplicate` | Duplicar (nombre distinto obligatorio) |
-| GET | `/costos/catalog/chapters` | Capítulos |
+| GET · POST | `/costos/catalog/chapters` | Capítulos — listar y crear |
+| PATCH | `/costos/catalog/chapters/:id` | Editar `nombre`, `codigo`, `orden` |
+| DELETE | `/costos/catalog/chapters/:id` | Borrar (**409** si tiene APUs) |
 | GET | `/costos/catalog/supplies` | Insumos (`?q=` `?grupo=` `?page=` `?per_page=`) |
 | POST | `/costos/catalog/supplies` | Alta de insumo |
 | POST | `/costos/catalog/supplies/:id/prices` | Nuevo precio — **escribe siempre** |
@@ -370,6 +372,16 @@ Los valores reales, comprobados uno a uno contra el servidor:
 
 No copiar los valores del mensaje de error: se perdieron dos rondas mandando
 exactamente lo que pedía.
+
+**Capítulos.** El CRUD está completo, pero **no figura en la spec de OpenAPI**
+(se sirvió a raíz del 404 del front, commit `8903120`). Está en uso, así que
+conviene oficializarlo antes de que alguien lo dé por muerto al no verlo en la
+spec.
+
+El frontend solo consume el `GET`: no hay pantalla para crear ni editar
+capítulos, y como un APU los exige, un servidor sin capítulos deja el catálogo
+bloqueado. Mientras no exista esa pantalla, `semilla-obra.js` crea los cuatro
+que necesita (`PRELIMINARES`, `ESTRUCTURA`, `ACABADOS`, `INSTALACIONES`).
 
 ⚠️ **`CreateSupplyDto` no lleva precio.** Mandar `valorUnitario` en el alta no
 da error —se ignora en silencio— y el insumo queda sin precio. El precio va

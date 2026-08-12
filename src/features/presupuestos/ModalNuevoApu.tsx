@@ -3,7 +3,7 @@ import { AlertTriangle, Trash2, Plus, Search } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
-import { grupoABackend, grupoDesdeBackend, insumosDesdeBackend } from './mapeo';
+import { capitulosDesdeBackend, grupoABackend, grupoDesdeBackend, insumosDesdeBackend } from './mapeo';
 import { ETIQUETA_RECURSO, aNumero, money, type Capitulo, type GrupoRecurso, type Insumo } from './types';
 
 /** Componente en composición: el usuario aporta el rendimiento, nunca el precio. */
@@ -53,7 +53,7 @@ export function ModalNuevoApu({ onClose, onCreado }: { onClose: () => void; onCr
     (async () => {
       try {
         const d = extractData(await apiService.getCapitulos());
-        if (!cancel) setCapitulos(Array.isArray(d) ? d : []);
+        if (!cancel) setCapitulos(capitulosDesdeBackend(d));
       } catch {
         /* el selector queda vacío; se avisa al intentar guardar */
       }

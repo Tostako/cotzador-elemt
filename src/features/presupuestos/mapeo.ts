@@ -1,4 +1,4 @@
-import { AIU_POR_DEFECTO, type Aiu, type GrupoRecurso, type Insumo, type NuevoProyecto, type Proyecto, type TipoObra } from './types';
+import { AIU_POR_DEFECTO, type Aiu, type Capitulo, type GrupoRecurso, type Insumo, type NuevoProyecto, type Proyecto, type TipoObra } from './types';
 
 /**
  * Traducción entre el modelo de la interfaz y el contrato del backend.
@@ -74,6 +74,29 @@ export function grupoDesdeBackend(v: unknown): GrupoRecurso {
 /** ¿Este texto nombra un grupo real? Lo usa la importación para rechazar filas. */
 export function esGrupoValido(v: unknown): boolean {
   return /^(MATERIAL(ES)?|MANO( DE)? OBRA|EQUIPO(S)?|TRANSPORTE(S)?)$/.test(normalizar(v));
+}
+
+/**
+ * Lista que puede llegar pelada o envuelta en paginación.
+ *
+ * `supplies` responde `{ items, total, … }` y otras rutas devuelven el array
+ * directo. Un `Array.isArray(d) ? d : []` deja la lista vacía sin avisar
+ * cuando acierta la forma equivocada — y una lista vacía parece un catálogo
+ * sin datos, no un error de lectura.
+ */
+export const listaDesdeBackend = (d: any): any[] =>
+  Array.isArray(d) ? d : (d?.items ?? d?.data ?? d?.results ?? []);
+
+/** Capítulos del catálogo, ordenados por `orden` si el servidor lo manda. */
+export function capitulosDesdeBackend(d: any): Capitulo[] {
+  const items = listaDesdeBackend(d).map((c: any) => ({
+    id: String(campo(c, 'id') ?? ''),
+    nombre: campo(c, 'nombre', 'name') ?? '',
+    orden: num(campo(c, 'orden', 'order'), Number.MAX_SAFE_INTEGER),
+  }));
+  // El orden de los capítulos no es cosmético: es el del presupuesto impreso.
+  items.sort((a, b) => a.orden - b.orden);
+  return items.map(({ id, nombre }) => ({ id, nombre }));
 }
 
 /**

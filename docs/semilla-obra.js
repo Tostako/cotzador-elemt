@@ -291,12 +291,33 @@
     return mapa;
   }
 
-  /** Los capítulos son del servidor: aquí solo se emparejan por nombre. */
+  /** Los cuatro que necesitan los APUs, en el orden del presupuesto impreso. */
+  const CAPITULOS = [
+    ['PRELIMINARES', 1],
+    ['ESTRUCTURA', 2],
+    ['ACABADOS', 3],
+    ['INSTALACIONES', 4],
+  ];
+
+  /**
+   * Empareja los capítulos por nombre y crea los que falten.
+   *
+   * Antes esto abortaba si el servidor no tenía ninguno, y como la app no
+   * ofrece dónde crearlos, era un callejón sin salida.
+   */
   async function mapaCapitulos() {
     const caps = lista(await pedir('GET', `${PRE}/catalog/chapters`));
-    if (caps.length === 0) throw new Error('El servidor no tiene capítulos. Créalos antes de sembrar los APUs.');
-    console.log(`  capítulos disponibles: ${caps.map((c) => c.nombre).join(', ')}`);
-    return new Map(caps.map((c) => [clave(c.nombre), String(c.id)]));
+    const mapa = new Map(caps.map((c) => [clave(c.nombre), String(c.id)]));
+    let creados = 0;
+    for (const [nombre, orden] of CAPITULOS) {
+      if (mapa.has(clave(nombre))) continue;
+      const nuevo = await pedir('POST', `${PRE}/catalog/chapters`, { nombre, orden });
+      if (!nuevo?.id) throw new Error(`El servidor no devolvió id al crear el capítulo "${nombre}".`);
+      mapa.set(clave(nombre), String(nuevo.id));
+      creados++;
+    }
+    console.log(`  capítulos: ${creados} creados, ${CAPITULOS.length - creados} ya existían`);
+    return mapa;
   }
 
   async function sembrarApus(insumos, capitulos) {
