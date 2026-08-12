@@ -475,9 +475,10 @@ function ModalNuevaCotizacion({
 /**
  * RN-22.5 · Actualizar el precio maestro desde una línea aprobada.
  *
- * Usa el mismo patrón de dos fases que el cambio de precio en el maestro de
- * insumos: primero se pide el impacto con dryRun y solo se aplica cuando el
- * usuario ve a cuántos APUs y proyectos afecta.
+ * El impacto se consulta con `/usage`, que es una lectura. Antes esto llamaba
+ * al endpoint de precios con `?dryRun=true` creyendo que simulaba, pero el
+ * backend no conoce ese parámetro: abrir el diálogo ya cambiaba el precio
+ * maestro, sin que nadie hubiera confirmado nada.
  */
 function ModalLlevarAlMaestro({
   linea,
@@ -488,18 +489,23 @@ function ModalLlevarAlMaestro({
   onClose: () => void;
   onAplicado: () => void;
 }) {
-  const [impacto, setImpacto] = useState<any>(null);
+  const [apus, setApus] = useState<number | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [fallo, setFallo] = useState<string | null>(null);
   const [aplicando, setAplicando] = useState(false);
 
   useEffect(() => {
     let cancel = false;
     (async () => {
       try {
-        const d = extractData(await apiService.setPrecioInsumo(linea.insumoId, { valorUnitario: linea.precioCotizado }, true));
-        if (!cancel) setImpacto(d);
+        const uso: any = extractData(await apiService.getUsoInsumo(linea.insumoId));
+        const lista = uso?.apus ?? uso?.items ?? uso;
+        if (!cancel) {
+          if (Array.isArray(lista)) setApus(lista.length);
+          else if (typeof uso?.apus === 'number') setApus(uso.apus);
+        }
       } catch {
-        if (!cancel) setImpacto(null);
+        if (!cancel) setApus(null);
       } finally {
         if (!cancel) setCargando(false);
       }
@@ -509,24 +515,21 @@ function ModalLlevarAlMaestro({
 
   const aplicar = async () => {
     setAplicando(true);
+    setFallo(null);
     try {
+      // Solo los campos de CreatePriceDto: `valor` y `motivo`.
       await apiService.setPrecioInsumo(linea.insumoId, {
-        valorUnitario: linea.precioCotizado,
-        // El token de la fase de simulación, si el servidor lo exigió.
-        confirmationToken: impacto?.confirmationToken,
+        valor: aNumero(linea.precioCotizado),
         motivo: `Cotización aprobada${linea.proveedor ? ` · ${linea.proveedor}` : ''}`,
       });
       showNotification('Actualizado', 'success', `El precio maestro de "${linea.descripcion}" quedó en ${money(linea.precioCotizado)}.`);
       onAplicado();
     } catch (e: any) {
-      showNotification('Error', 'error', e?.message || 'No se pudo actualizar el precio maestro.');
+      setFallo(e?.message || 'No se pudo actualizar el precio maestro.');
     } finally {
       setAplicando(false);
     }
   };
-
-  const apus = impacto?.apusAfectados ?? impacto?.apus_afectados;
-  const proyectos = impacto?.proyectosAfectados ?? impacto?.proyectos_afectados;
 
   return (
     <FormModal
@@ -556,13 +559,17 @@ function ModalLlevarAlMaestro({
       </div>
 
       {cargando ? (
-        <p className="small" style={{ color: '#999' }}>Calculando el impacto…</p>
+        <p className="small" style={{ color: '#999' }}>Consultando dónde se usa…</p>
       ) : (
         <p className="small" style={{ color: '#d8cbb4' }}>
-          {apus != null || proyectos != null
-            ? `Este cambio afecta a ${apus ?? '—'} APU(s) y ${proyectos ?? '—'} proyecto(s) del catálogo.`
-            : 'El precio quedará como valor vigente del insumo en el maestro. Los proyectos ya aprobados conservan su instantánea.'}
+          {apus != null && `Este cambio afecta a ${apus} APU(s) del catálogo. `}
+          El precio se añade a la serie histórica del insumo. Los presupuestos aprobados
+          conservan su instantánea; los que estén en borrador se recalculan.
         </p>
+      )}
+
+      {fallo && (
+        <p className="small" style={{ color: '#ff6b6b', marginTop: 10, wordBreak: 'break-word' }}>{fallo}</p>
       )}
     </FormModal>
   );

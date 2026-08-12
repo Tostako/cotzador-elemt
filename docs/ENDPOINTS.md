@@ -293,12 +293,31 @@ servidor desde el maestro de insumos.
 | GET | `/costos/catalog/chapters` | Capítulos |
 | GET | `/costos/catalog/supplies` | Insumos (`?q=` `?grupo=`) |
 | POST | `/costos/catalog/supplies` | Alta de insumo |
-| POST | `/costos/catalog/supplies/:id/prices` | Nuevo precio (`?dryRun=true` primero) |
+| POST | `/costos/catalog/supplies/:id/prices` | Nuevo precio — **escribe siempre** |
+| GET | `/costos/catalog/supplies/:id/prices` | Serie histórica de precios |
 | GET | `/costos/catalog/supplies/:id/usage` | Dónde se usa |
 
-**Patrón de dos fases** (precios y promoción de APU): primero `?dryRun=true`
-devuelve el impacto y un `confirmationToken`; la operación real exige ese token.
-Una variación por encima del umbral obliga a confirmación reforzada.
+⚠️ **El patrón de dos fases del DOC-05 no existe en el backend real.**
+
+`CreatePriceDto` acepta `{ valor }` obligatorio y `vigente_desde`, `usuario`,
+`motivo`, `origen` opcionales. **No hay `dryRun` ni `confirmationToken`.**
+
+Consecuencias, ya corregidas en el frontend:
+
+- Llamar con `?dryRun=true` **no simulaba: creaba el precio.** El botón «Ver
+  impacto» del maestro aplicaba el cambio, y el diálogo «Llevar al maestro» de
+  cotizaciones lo aplicaba **con solo abrirse**, antes de confirmar nada.
+- Mandar `confirmationToken` es un campo fuera del DTO: con
+  `forbidNonWhitelisted` activo, 400.
+
+Ahora la vista previa se arma con `/usage` (una lectura) y el umbral de
+variación se evalúa en el cliente (25 %); el cambio se escribe una sola vez, al
+confirmar.
+
+🔍 **Sin verificar:** `POST /projects/:id/budget/items/:itemId/apu/promote`
+sigue asumiendo `?dryRun=true` + `confirmationToken`. Si ahí pasa lo mismo, el
+botón de analizar publicaría el APU en el catálogo global sin confirmación.
+Hay que contrastarlo con el controlador.
 
 ⚠️ **El enum de `grupo` no coincide con el de la interfaz.** El validador del
 backend acepta **`MATERIAL`, `MANO OBRA`, `EQUIPO`, `TRANSPORTE`** —singular, y

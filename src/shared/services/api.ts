@@ -197,6 +197,46 @@ function refreshAccessToken(): Promise<string | null> {
   return _refreshPromise;
 }
 
+/** Error de la API con el estado a mano, para distinguir "no existe" de "lo rechazó". */
+export interface ApiError extends Error {
+  status: number;
+  /** Motivos de validación tal cual los devolvió el servidor. */
+  motivos: string[];
+}
+
+/**
+ * Construye el mensaje a partir del cuerpo de error.
+ *
+ * NestJS responde `{ message: [...detalles...], error: 'Bad Request' }`. Antes
+ * se leía `error` primero, así que el usuario veía "Bad Request" y los motivos
+ * reales —el campo que falla y por qué— se perdían. Aquí manda `message`, que
+ * es lo único que permite corregir el problema; `error` queda de reserva.
+ */
+function construirError(status: number, path: string, cuerpo: any): ApiError {
+  const bruto = cuerpo?.message ?? cuerpo?.error;
+  const motivos = Array.isArray(bruto)
+    ? bruto.map(String)
+    : typeof bruto === 'string' && bruto
+      ? [bruto]
+      : [];
+
+  let mensaje = motivos.join(' · ');
+  // Un 404 sin cuerpo útil es casi siempre una ruta que aún no existe: decirlo
+  // ahorra buscar el fallo en el formulario.
+  if (!mensaje) {
+    mensaje = status === 404
+      ? `El servidor no tiene la ruta ${path} (404).`
+      : `Error HTTP ${status}`;
+  } else if (status === 404) {
+    mensaje += ` (404 en ${path})`;
+  }
+
+  const e = new Error(mensaje) as ApiError;
+  e.status = status;
+  e.motivos = motivos;
+  return e;
+}
+
 async function api(path: string, options: RequestInit = {}) {
   const isAuthRoute = path.startsWith('/auth/') || path.startsWith('/public/');
   let token = getToken();
@@ -255,8 +295,8 @@ async function api(path: string, options: RequestInit = {}) {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: `Error HTTP ${response.status}` }));
-      console.error('[API ERROR]', response.status, error);
-      throw new Error(error.error || error.message || `Error HTTP ${response.status}`);
+      console.error('[API ERROR]', response.status, path, error);
+      throw construirError(response.status, path, error);
     }
 
     if (response.status === 204) return null; // sin contenido (p. ej. logout)
@@ -469,12 +509,21 @@ export const apiService = {
     const s = qs.toString();
     return api(`${PRESUP_BASE}/catalog/supplies${s ? `?${s}` : ''}`);
   },
-  /** dryRun=true devuelve el impacto sin aplicar el cambio (patrón de dos fases). */
-  setPrecioInsumo: (supplyId: string, data: any, dryRun = false) =>
-    api(`${PRESUP_BASE}/catalog/supplies/${supplyId}/prices${dryRun ? '?dryRun=true' : ''}`, {
+  /**
+   * Añade un precio a la serie histórica del insumo. **Escribe siempre.**
+   *
+   * `CreatePriceDto` acepta `{ valor }` obligatorio y `vigente_desde`,
+   * `usuario`, `motivo`, `origen` opcionales. Cualquier otro campo lo rechaza
+   * el ValidationPipe. No hay `dryRun`: el DOC-05 lo preveía pero el backend
+   * no lo implementa, y pasarlo no simulaba nada — creaba el precio.
+   */
+  setPrecioInsumo: (supplyId: string, data: { valor: number; motivo?: string; origen?: string; usuario?: string; vigente_desde?: string }) =>
+    api(`${PRESUP_BASE}/catalog/supplies/${supplyId}/prices`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  /** Serie histórica de precios del insumo. */
+  getPreciosInsumo: (supplyId: string) => api(`${PRESUP_BASE}/catalog/supplies/${supplyId}/prices`),
   getUsoInsumo: (supplyId: string) => api(`${PRESUP_BASE}/catalog/supplies/${supplyId}/usage`),
   /** Alta de insumo. Se usa también desde la composición de un APU: el insumo
    *  queda en el maestro, no dentro del APU (RN-10.3). */

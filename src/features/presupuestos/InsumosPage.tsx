@@ -8,28 +8,34 @@ import { grupoABackend, insumosDesdeBackend } from './mapeo';
 import { descargarCsv } from './importacion';
 import { ETIQUETA_RECURSO, aNumero, money, type GrupoRecurso, type Insumo } from './types';
 
-/** Impacto que devuelve el dryRun antes de aplicar un cambio de precio. */
+/** Qué se va a mover al cambiar el precio. Se arma en el cliente. */
 interface Impacto {
-  valorActual: string;
-  valorPropuesto: string;
+  valorActual: number;
+  valorPropuesto: number;
   variacionPct: number;
   superaUmbral: boolean;
-  impacto: {
-    apus: number;
-    presupuestosBorrador: number;
-    presupuestosAprobados: number;
-    variacionTotalEstimada: string;
-  };
-  confirmationToken: string;
+  /** APUs que usan el insumo, según /catalog/supplies/:id/usage. */
+  apus: number;
+  /** El endpoint de uso puede no existir todavía; entonces no se sabe. */
+  usoDesconocido: boolean;
 }
+
+/** Por encima de esto se pide confirmación reforzada: un salto así casi
+ *  siempre es un dedazo (un cero de más) y no una subida real. */
+const UMBRAL_VARIACION_PCT = 25;
 
 /**
  * HU-14 · Maestro de insumos con precio propagable.
  *
- * El precio no es un campo que se sobrescribe: es una serie histórica. Antes de
- * aplicar el cambio se pide el impacto con dryRun y se muestra a cuántos APUs y
- * presupuestos afecta; la aplicación real exige el confirmationToken que
- * devuelve ese análisis (decisión H-08).
+ * El precio no se sobrescribe: cada cambio añade un registro a la serie
+ * histórica (`POST .../prices` con `{ valor, motivo }`).
+ *
+ * El impacto se calcula aquí, no en el servidor. El DOC-05 preveía un `dryRun`
+ * que devolvía el impacto y un `confirmationToken`, pero el backend real no lo
+ * implementa: `CreatePriceDto` solo acepta `valor`, `vigente_desde`, `usuario`,
+ * `motivo` y `origen`. Llamarlo con `?dryRun=true` no simulaba nada — creaba el
+ * precio. Así que la vista previa se arma con `/usage` (una lectura) y el
+ * cambio se aplica en una sola escritura, cuando el usuario confirma.
  */
 export function InsumosPage() {
   const [busqueda, setBusqueda] = useState('');
@@ -281,6 +287,9 @@ function ModalCambioPrecio({ insumo, onClose, onAplicado }: { insumo: Insumo; on
   const [analizando, setAnalizando] = useState(false);
   const [aplicando, setAplicando] = useState(false);
   const [confirmacionReforzada, setConfirmacionReforzada] = useState('');
+  // El aviso flotante se va solo y deja al usuario sin saber qué pasó; el
+  // motivo del rechazo se queda escrito en el modal.
+  const [fallo, setFallo] = useState<{ mensaje: string; status?: number } | null>(null);
 
   const nuevoValor = parseFloat(valor);
   const valido = Number.isFinite(nuevoValor) && nuevoValor >= 0;
@@ -291,29 +300,47 @@ function ModalCambioPrecio({ insumo, onClose, onAplicado }: { insumo: Insumo; on
       return;
     }
     setAnalizando(true);
+    setFallo(null);
+    const actual = aNumero(insumo.valorUnitario);
+    // Solo lectura: mirar el impacto no puede cambiar nada.
+    let apus = insumo.usoEnApus ?? 0;
+    let usoDesconocido = insumo.usoEnApus === undefined;
     try {
-      const res = extractData(await apiService.setPrecioInsumo(insumo.id, { valor: nuevoValor, motivo: motivo.trim() || undefined }, true));
-      setImpacto(res);
-    } catch (e: any) {
-      showNotification('Error', 'error', e?.message || 'No se pudo calcular el impacto.');
-    } finally {
-      setAnalizando(false);
+      const uso: any = extractData(await apiService.getUsoInsumo(insumo.id));
+      const lista = uso?.apus ?? uso?.items ?? uso;
+      if (Array.isArray(lista)) { apus = lista.length; usoDesconocido = false; }
+      else if (typeof uso?.apus === 'number') { apus = uso.apus; usoDesconocido = false; }
+    } catch {
+      // Sin /usage no se puede decir a cuántos APUs afecta, pero el cambio de
+      // precio sigue siendo posible: se avisa en vez de bloquear.
     }
+    const variacionPct = actual > 0 ? ((nuevoValor - actual) / actual) * 100 : 0;
+    setImpacto({
+      valorActual: actual,
+      valorPropuesto: nuevoValor,
+      variacionPct,
+      superaUmbral: Math.abs(variacionPct) > UMBRAL_VARIACION_PCT,
+      apus,
+      usoDesconocido,
+    });
+    setAnalizando(false);
   };
 
   const aplicar = async () => {
     if (!impacto) return;
     setAplicando(true);
+    setFallo(null);
     try {
+      // Solo lo que acepta CreatePriceDto: un campo de más lo rechaza el
+      // ValidationPipe con 400 si tiene forbidNonWhitelisted.
       await apiService.setPrecioInsumo(insumo.id, {
         valor: nuevoValor,
         motivo: motivo.trim() || undefined,
-        confirmationToken: impacto.confirmationToken,
       });
       showNotification('Correcto', 'success', 'Precio actualizado y propagado.');
       onAplicado();
     } catch (e: any) {
-      showNotification('Error', 'error', e?.message || 'No se pudo aplicar el cambio.');
+      setFallo({ mensaje: e?.message || 'No se pudo aplicar el cambio.', status: e?.status });
     } finally {
       setAplicando(false);
     }
@@ -376,6 +403,21 @@ function ModalCambioPrecio({ insumo, onClose, onAplicado }: { insumo: Insumo; on
           </p>
         </div>
 
+        {fallo && (
+          <div style={{ display: 'flex', gap: 9, padding: '11px 13px', borderRadius: 11, background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.28)' }}>
+            <AlertTriangle size={16} color="#ff6b6b" style={{ flexShrink: 0, marginTop: 1 }} />
+            <div style={{ minWidth: 0 }}>
+              <p className="small" style={{ color: '#ffb4b4', wordBreak: 'break-word' }}>{fallo.mensaje}</p>
+              {fallo.status === 404 && (
+                <p className="small" style={{ color: '#8c8578', marginTop: 5 }}>
+                  El backend todavía no tiene <code>POST /costos/catalog/supplies/:id/prices</code>.
+                  No es un problema del formulario: no hay dónde guardar el cambio.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {impacto && (
           <div
             style={{
@@ -390,21 +432,24 @@ function ModalCambioPrecio({ insumo, onClose, onAplicado }: { insumo: Insumo; on
               <strong style={{ fontSize: 14 }}>
                 {money(impacto.valorActual)} → {money(impacto.valorPropuesto)}{' '}
                 <span style={{ color: impacto.variacionPct >= 0 ? '#34d399' : '#ff6b6b' }}>
-                  ({impacto.variacionPct >= 0 ? '+' : ''}{impacto.variacionPct?.toFixed(2)} %)
+                  ({impacto.variacionPct >= 0 ? '+' : ''}{impacto.variacionPct.toFixed(2)} %)
                 </span>
               </strong>
             </div>
             <ul style={{ listStyle: 'none', display: 'grid', gap: 6, margin: 0, padding: 0 }}>
-              <li className="small">Afecta a <strong>{impacto.impacto?.apus ?? 0}</strong> APU(s) del catálogo</li>
-              <li className="small">Recalcula <strong>{impacto.impacto?.presupuestosBorrador ?? 0}</strong> presupuesto(s) en borrador</li>
-              {(impacto.impacto?.presupuestosAprobados ?? 0) > 0 && (
+              {impacto.usoDesconocido ? (
                 <li className="small" style={{ color: '#8c8578' }}>
-                  {impacto.impacto.presupuestosAprobados} presupuesto(s) aprobado(s) conservan su precio congelado
+                  No se pudo consultar en cuántos APUs se usa este insumo.
                 </li>
+              ) : (
+                <li className="small">Afecta a <strong>{impacto.apus}</strong> APU(s) del catálogo</li>
               )}
-              {impacto.impacto?.variacionTotalEstimada && (
-                <li className="small">Variación estimada: <strong>{money(impacto.impacto.variacionTotalEstimada)}</strong></li>
-              )}
+              <li className="small" style={{ color: '#8c8578' }}>
+                Los presupuestos en borrador se recalculan; los aprobados conservan su precio congelado.
+              </li>
+              <li className="small" style={{ color: '#8c8578' }}>
+                Se añade a la serie histórica: el precio anterior no se borra.
+              </li>
             </ul>
 
             {necesitaRefuerzo && (

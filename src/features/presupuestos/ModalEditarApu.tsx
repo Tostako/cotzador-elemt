@@ -174,7 +174,15 @@ export function ModalEditarApu({
     }
   };
 
-  /** Paso 1 de la promoción: consultar a quién afectaría. */
+  /**
+   * Paso 1 de la promoción: consultar a quién afectaría.
+   *
+   * ⚠️ SIN VERIFICAR contra el backend. Esto da por hecho que `?dryRun=true`
+   * simula. En el endpoint de precios esa suposición resultó falsa —el
+   * parámetro se ignoraba y la petición escribía—, y aquí el efecto sería
+   * peor: publicaría el APU en el catálogo global sin que nadie confirme.
+   * Hay que contrastarlo con el controlador antes de fiarse.
+   */
   const analizarPromocion = async () => {
     setPromoviendo(true);
     try {
