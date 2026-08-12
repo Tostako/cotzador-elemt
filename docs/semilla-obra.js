@@ -41,7 +41,7 @@
     return [JSON.stringify(m)];
   };
 
-  const pedir = async (metodo, ruta, cuerpo) => {
+  const pedir = async (metodo, ruta, cuerpo, silencioso) => {
     const res = await fetch(BASE + ruta, {
       method: metodo,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -59,7 +59,8 @@
       e.cuerpoEnviado = cuerpo;
       e.respuesta = d;
       // Sin esto solo se ve el mensaje resumido y hay que adivinar el resto.
-      if (cuerpo) {
+      // La sonda lo silencia: son 16 peticiones y el ruido tapa el resultado.
+      if (cuerpo && !silencioso) {
         console.groupCollapsed(`%c↳ ${metodo} ${ruta} → ${res.status}`, 'color:#ff6b6b');
         console.log('enviado:', cuerpo);
         console.log('respuesta cruda:', d);
@@ -88,40 +89,65 @@
   /** Manda un cuerpo condenado a fallar y dice si el grupo sigue estorbando. */
   const sondear = async (cuerpo) => {
     try {
-      await pedir('POST', `${PRE}/catalog/supplies`, cuerpo);
-      return { ok: false, nota: '⚠️ se creó, revísalo en el maestro' };
+      await pedir('POST', `${PRE}/catalog/supplies`, cuerpo, true);
+      return { ok: false, nota: 'SE CREO - revisalo en el maestro', motivos: [] };
     } catch (e) {
-      return quejaDeGrupo(e.motivos)
-        ? { ok: false, nota: '❌ ' + (e.motivos || []).find((m) => /grupo/i.test(m)) }
-        : { ok: true, nota: '✅ sin queja de grupo' };
+      const queja = (e.motivos || []).find((m) => /grupo/i.test(m));
+      return queja
+        ? { ok: false, nota: 'rechazado: ' + queja, motivos: e.motivos || [] }
+        : { ok: true, nota: 'OK - sin queja de grupo', motivos: e.motivos || [] };
     }
   };
 
+  /**
+   * Todo el resultado en UN bloque de texto plano.
+   *
+   * Antes salía con console.table, que en Chrome no se copia: solo se podían
+   * pegar las trazas de los 400, que es justo lo que no aporta nada. Ahora se
+   * imprime una sola cadena, y además queda en `window.__grupos` para poder
+   * hacer `copy(__grupos)`.
+   */
   window.probarGrupos = async () => {
     const base = { descripcion: '', unidad: '', valorUnitario: 'x' };
-
-    console.log('%c1) Nombre del campo (valor fijo MATERIAL)', 'font-weight:bold');
+    const lineas = [];
     const campos = ['grupo', 'Grupo', 'tipo', 'tipoRecurso', 'tipo_recurso', 'grupoRecurso', 'grupo_recurso'];
+    const valores = ['MATERIAL', 'MATERIALES', 'Material', 'material',
+                     'MANO OBRA', 'MANO_OBRA', 'EQUIPO', 'EQUIPOS', 'TRANSPORTE'];
+
+    // Lo primero y más útil: TODOS los motivos de una sola petición. Ahí se ve
+    // de golpe qué otros campos rechaza el DTO, no solo el grupo.
+    const primera = await sondear({ ...base, grupo: 'MATERIAL' });
+    lineas.push('=== MOTIVOS COMPLETOS de POST /catalog/supplies ===');
+    lineas.push('enviado: { descripcion:"", unidad:"", valorUnitario:"x", grupo:"MATERIAL" }');
+    if (primera.motivos.length) primera.motivos.forEach((m, i) => lineas.push(`  ${i + 1}. ${m}`));
+    else lineas.push('  (sin motivos en la respuesta)');
+
+    lineas.push('', '=== 1) NOMBRE DEL CAMPO (valor fijo MATERIAL) ===');
     const porCampo = [];
     for (const campo of campos) {
       const r = await sondear({ ...base, [campo]: 'MATERIAL' });
-      porCampo.push({ campo, resultado: r.nota });
+      porCampo.push({ campo, ok: r.ok });
+      lineas.push(`  ${campo.padEnd(16)} ${r.nota}`);
     }
-    console.table(porCampo);
 
-    const campoBueno = campos.find((c, i) => porCampo[i].resultado.startsWith('✅')) || 'grupo';
-    console.log(`%c2) Valor (campo "${campoBueno}")`, 'font-weight:bold');
-    const valores = ['MATERIAL', 'MATERIALES', 'Material', 'material',
-                     'MANO OBRA', 'MANO_OBRA', 'EQUIPO', 'EQUIPOS', 'TRANSPORTE'];
+    const campoBueno = porCampo.find((c) => c.ok)?.campo || 'grupo';
+    lineas.push('', `=== 2) VALOR (campo "${campoBueno}") ===`);
     const porValor = [];
     for (const valor of valores) {
       const r = await sondear({ ...base, [campoBueno]: valor });
-      porValor.push({ valor, resultado: r.nota });
+      porValor.push({ valor, ok: r.ok });
+      lineas.push(`  ${valor.padEnd(16)} ${r.nota}`);
     }
-    console.table(porValor);
 
-    console.log('Pásame las dos tablas. Los ✅ son lo que el backend admite.');
-    return { campo: campoBueno, porCampo, porValor };
+    lineas.push('', '=== RESUMEN ===');
+    lineas.push(`campo aceptado : ${porCampo.filter((c) => c.ok).map((c) => c.campo).join(', ') || 'NINGUNO'}`);
+    lineas.push(`valores válidos: ${porValor.filter((v) => v.ok).map((v) => v.valor).join(', ') || 'NINGUNO'}`);
+
+    const texto = lineas.join('\n');
+    window.__grupos = texto;
+    console.log(texto);
+    console.log('%cCopia el bloque de arriba, o ejecuta:  copy(__grupos)', 'font-weight:bold');
+    return texto;
   };
 
   const lista = (d) => (Array.isArray(d) ? d : (d?.items ?? d?.data ?? d?.results ?? []));
@@ -362,6 +388,6 @@
   };
 
   // El sello de versión evita la duda de "¿pegué la copia nueva o la vieja?".
-  console.log('%cSemilla v4 cargada.', 'font-weight:bold',
+  console.log('%cSemilla v5 cargada.', 'font-weight:bold',
     'Ejecuta:  await sembrar()   ·   Si falla por el grupo:  await probarGrupos()');
 })();
