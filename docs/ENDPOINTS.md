@@ -457,11 +457,25 @@ Notas de contrato que el frontend da por supuestas:
   devuelve `ARCHIVO_REQUERIDO`. Y **el Content-Type no se fija a mano** — lo
   pone el navegador con su `boundary`, o Multer no encuentra el archivo.
 
-  El servidor parsea **XLSX**, no CSV. Para APUs espera una hoja llamada
-  `APUs` con las cabeceras `codigo | descripcion | unidad | capitulo |
-  componentes`, donde `componentes` es una cadena
-  `nombreInsumo:rendimiento` separada por `;` y el insumo se empareja por
-  **descripción exacta**.
+  El servidor parsea **XLSX**, no CSV. Fila 1 = encabezados, que se saltan.
+
+  | Tipo | Hoja | Columnas |
+  |---|---|---|
+  | APUs | `APUs` o la primera | `codigo` · `descripcion` · `unidad` · `capitulo` · `componentes` |
+  | Insumos | `Insumos` o la primera | `descripcion` · `unidad` · `grupo` |
+
+  **Insumos:** `grupo` con el enum del backend —`MATERIAL`, `MANO_OBRA`,
+  `EQUIPO`, `TRANSPORTE`, en singular—; tolera minúsculas pero no `MATERIALES`,
+  `EQUIPOS` ni `MANO DE OBRA`. `descripcion` y `unidad` obligatorias, sin
+  descripciones repetidas dentro del archivo. **No hay columna de precio:** los
+  insumos entran sin valor y hay que fijarlo aparte.
+
+  **APUs:** `codigo` obligatorio y único en el archivo; `capitulo` se resuelve
+  por nombre y es opcional —si no existe, el APU queda sin capítulo—;
+  `componentes` es `descripcionExacta:rendimiento` separado por `;`, con
+  `rendimiento > 0`. El insumo debe existir ya en el maestro: el emparejamiento
+  ignora mayúsculas pero **no** acentos, espacios ni cifras. Celda vacía = APU
+  sin componentes, que es válido.
 
   La previsualización responde `{ job_id, nuevos, actualizados, con_error,
   expira_en }` sin escribir nada; `/imports/:jobId/confirm` aplica el lote.

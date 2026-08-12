@@ -67,8 +67,23 @@ correspondiente.
 
 | Tipo | Hoja | Columnas |
 |---|---|---|
-| APUs | `APUs` | `codigo` · `descripcion` · `unidad` · `capitulo` · `componentes` |
-| Insumos | `Insumos` | `descripcion` · `unidad` · `grupo` · `valorUnitario` |
+| APUs | `APUs` (o la primera) | `codigo` · `descripcion` · `unidad` · `capitulo` · `componentes` |
+| Insumos | `Insumos` (o la primera) | `descripcion` · `unidad` · `grupo` |
+
+⚠️ **El `grupo` va en la convención del backend, no en la de la app**:
+`MATERIAL`, `MANO_OBRA`, `EQUIPO`, `TRANSPORTE` — en **singular** para
+materiales y equipos. Tolera minúsculas, pero no `MATERIALES`, ni `EQUIPOS`, ni
+`MANO DE OBRA`. Dentro de la app esa traducción la hace `mapeo.ts` al enviar;
+el XLSX va directo al servidor y tiene que llevarla ya hecha.
+
+⚠️ **La importación de insumos no trae precios**: la hoja no tiene columna de
+valor, así que los insumos entran a $0 y hay que ponérselos después desde el
+maestro. Si quieres catálogo con precios, usa la semilla, que hace las dos
+llamadas.
+
+Otras reglas: `descripcion` y `unidad` son obligatorias; una descripción
+repetida **dentro del archivo** es un error; y si la descripción ya existe en
+el shop, esa fila cuenta como *actualizada* en vez de nueva.
 
 La columna **`componentes`** lleva los insumos separados por `;`, cada uno como
 `nombre:rendimiento`:
@@ -77,32 +92,37 @@ La columna **`componentes`** lleva los insumos separados por `;`, cada uno como
 Cemento gris uso general 50 kg:0.35;Oficial de construcción:0.28
 ```
 
-El nombre tiene que coincidir **exactamente** con la descripción del insumo en
-el maestro, así que importa primero `insumos.xlsx` y después `apus.xlsx`. Los
-50 componentes están comprobados uno a uno contra el maestro.
+El emparejamiento no distingue mayúsculas, pero **sí acentos, espacios y
+cifras**: «Cemento gris x50kg» y «Cemento gris x50 kg» son insumos distintos.
+Por eso hay que importar **primero `insumos.xlsx`, confirmar, y después
+`apus.xlsx`**. Los 50 componentes están comprobados uno a uno contra el
+maestro. Una celda vacía es válida: el APU queda sin componentes.
+
+El `capitulo` se resuelve por nombre y es opcional — si no existe, el APU queda
+sin capítulo en lugar de rechazarse.
 
 En el `.csv` esa celda va entrecomillada, porque su `;` interno chocaría con el
 separador de columnas. En el `.xlsx` no hay problema: es una celda.
 
-> El de insumos no está confirmado: el endpoint comparte controlador, pero no
-> tengo documentadas su hoja ni sus cabeceras. Si falla, el error del servidor
-> dirá qué espera.
+### El archivo de errores
 
-El de errores sirve para ver que el rechazo funciona. El servidor debería
-marcarlas, aunque la numeración de filas puede no coincidir exactamente con la
-del archivo:
+Sirve para ver que el rechazo por filas funciona sin bloquear al resto. La
+numeración puede no coincidir con la del archivo:
 
-| Fila | Motivo |
-|---|---|
-| 3 | grupo `MATERIALS` no válido |
-| 4 | valor unitario `abc` no es un número |
-| 5 | sin descripción |
-| 6 | sin valor unitario |
-| 9 | valor negativo |
-| 10 | grupo `MAQUINARIA` no válido |
+| Fila | Debería | Por qué |
+|---|---|---|
+| 2 | entrar | correcta |
+| 3 | rechazar | grupo `MATERIALES` (plural) |
+| 4 | rechazar | grupo `MANO DE OBRA` (con espacios) |
+| 5 | rechazar | sin descripción |
+| 6 | rechazar | sin unidad |
+| 7 | **entrar** | grupo `material` en minúsculas — sí se tolera |
+| 8 | entrar | correcta |
+| 9 | rechazar | grupo `MAQUINARIA` no existe |
+| 10 y 11 | rechazar una | descripción duplicada dentro del archivo |
 
-Y la fila 11 **sí** debe entrar, con valor `72500`: `72.500` se lee como setenta
-y dos mil quinientos, que es como se escribe en Colombia, no como 72 con 5.
+La fila 7 es la interesante: comprueba que las minúsculas **sí** pasan, para no
+confundir «estricto con el nombre» con «estricto con las mayúsculas».
 
 Ojo con el orden: primero importa los insumos, luego los APUs. Y los capítulos
 del `apus.csv` (`PRELIMINARES`, `ESTRUCTURA`, `ACABADOS`, `INSTALACIONES`)

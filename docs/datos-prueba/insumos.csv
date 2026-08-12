@@ -1,31 +1,31 @@
-descripcion;unidad;grupo;valorUnitario
-Cemento gris uso general 50 kg;bulto;MATERIALES;34500
-Arena de río lavada;m3;MATERIALES;95000
-"Triturado 3/4""";m3;MATERIALES;118000
-"Bloque n.º 5 perforado, 12x20x40";und;MATERIALES;2450
-Ladrillo tolete común;und;MATERIALES;1150
-Acero de refuerzo 60000 PSI;kg;MATERIALES;5800
-Alambre negro n.º 18;kg;MATERIALES;7200
-"Porcelanato 60x60, tráfico alto";m2;MATERIALES;62000
-Cerámica pared 30x60;m2;MATERIALES;38500
-Adhesivo para porcelanato 25 kg;bulto;MATERIALES;42000
-Boquilla premium color;kg;MATERIALES;9800
-Estuco plástico;galón;MATERIALES;38000
-Pintura vinilo tipo 1;galón;MATERIALES;89000
-Guardaescoba MDF 10 cm;ml;MATERIALES;12400
-"Tubería PVC sanitaria 4""";ml;MATERIALES;28500
-Cable THHN n.º 12;ml;MATERIALES;3900
-Tomacorriente doble con polo a tierra;und;MATERIALES;12800
-Impermeabilizante integral;kg;MATERIALES;8600
-Oficial de construcción;día;MANO_OBRA;98000
-Ayudante de construcción;día;MANO_OBRA;68000
-Maestro de obra;día;MANO_OBRA;145000
-Oficial enchapador;día;MANO_OBRA;115000
-Oficial pintor;día;MANO_OBRA;92000
-Oficial electricista;día;MANO_OBRA;125000
-Mezcladora de concreto 1 saco;día;EQUIPOS;85000
-Andamio certificado (cuerpo);día;EQUIPOS;18000
-Pulidora con disco diamantado;día;EQUIPOS;32000
-Herramienta menor;global;EQUIPOS;5500
-Volqueta 5 m3;viaje;TRANSPORTE;180000
-Acarreo vertical de materiales;m3;TRANSPORTE;22000
+descripcion;unidad;grupo
+Cemento gris uso general 50 kg;bulto;MATERIAL
+Arena de río lavada;m3;MATERIAL
+"Triturado 3/4""";m3;MATERIAL
+"Bloque n.º 5 perforado, 12x20x40";und;MATERIAL
+Ladrillo tolete común;und;MATERIAL
+Acero de refuerzo 60000 PSI;kg;MATERIAL
+Alambre negro n.º 18;kg;MATERIAL
+"Porcelanato 60x60, tráfico alto";m2;MATERIAL
+Cerámica pared 30x60;m2;MATERIAL
+Adhesivo para porcelanato 25 kg;bulto;MATERIAL
+Boquilla premium color;kg;MATERIAL
+Estuco plástico;galón;MATERIAL
+Pintura vinilo tipo 1;galón;MATERIAL
+Guardaescoba MDF 10 cm;ml;MATERIAL
+"Tubería PVC sanitaria 4""";ml;MATERIAL
+Cable THHN n.º 12;ml;MATERIAL
+Tomacorriente doble con polo a tierra;und;MATERIAL
+Impermeabilizante integral;kg;MATERIAL
+Oficial de construcción;día;MANO_OBRA
+Ayudante de construcción;día;MANO_OBRA
+Maestro de obra;día;MANO_OBRA
+Oficial enchapador;día;MANO_OBRA
+Oficial pintor;día;MANO_OBRA
+Oficial electricista;día;MANO_OBRA
+Mezcladora de concreto 1 saco;día;EQUIPO
+Andamio certificado (cuerpo);día;EQUIPO
+Pulidora con disco diamantado;día;EQUIPO
+Herramienta menor;global;EQUIPO
+Volqueta 5 m3;viaje;TRANSPORTE
+Acarreo vertical de materiales;m3;TRANSPORTE

@@ -1,11 +1,11 @@
-descripcion;unidad;grupo;valorUnitario
-Varilla corrugada n.º 4;kg;MATERIALES;5900
-Soldadura E6013;kg;MATERIALS;18500
-Malla electrosoldada;m2;MATERIALES;abc
-;m2;MATERIALES;12000
-Lámina de drywall 1/2;und;MATERIALES;
-Perfilería drywall;ml;MATERIALES;4200
-Oficial drywallero;día;MANO_OBRA;105000
-Grúa telescópica;día;EQUIPOS;-450000
-Retroexcavadora;día;MAQUINARIA;620000
-"Anclaje químico, cartucho 300 ml";und;MATERIALES;72.500
+descripcion;unidad;grupo
+Varilla corrugada n.º 4;kg;MATERIAL
+Soldadura E6013;kg;MATERIALES
+Malla electrosoldada;m2;MANO DE OBRA
+;m2;MATERIAL
+Lámina de drywall 1/2;;MATERIAL
+Perfilería drywall;ml;material
+Oficial drywallero;día;MANO_OBRA
+Grúa telescópica;día;MAQUINARIA
+Andamio colgante;día;EQUIPO
+Andamio colgante;día;EQUIPO
