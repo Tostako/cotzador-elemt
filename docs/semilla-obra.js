@@ -293,10 +293,10 @@
 
   /** Los cuatro que necesitan los APUs, en el orden del presupuesto impreso. */
   const CAPITULOS = [
-    ['PRELIMINARES', 1],
-    ['ESTRUCTURA', 2],
-    ['ACABADOS', 3],
-    ['INSTALACIONES', 4],
+    ['PRELIMINARES', 'PRE', 1],
+    ['ESTRUCTURA', 'EST', 2],
+    ['ACABADOS', 'ACA', 3],
+    ['INSTALACIONES', 'INS', 4],
   ];
 
   /**
@@ -309,9 +309,9 @@
     const caps = lista(await pedir('GET', `${PRE}/catalog/chapters`));
     const mapa = new Map(caps.map((c) => [clave(c.nombre), String(c.id)]));
     let creados = 0;
-    for (const [nombre, orden] of CAPITULOS) {
+    for (const [nombre, codigo, orden] of CAPITULOS) {
       if (mapa.has(clave(nombre))) continue;
-      const nuevo = await pedir('POST', `${PRE}/catalog/chapters`, { nombre, orden });
+      const nuevo = await pedir('POST', `${PRE}/catalog/chapters`, { nombre, codigo, orden });
       if (!nuevo?.id) throw new Error(`El servidor no devolvió id al crear el capítulo "${nombre}".`);
       mapa.set(clave(nombre), String(nuevo.id));
       creados++;
@@ -327,16 +327,30 @@
     const mapa = new Map(existentes);
     let creados = 0;
     const omitidos = [];
+    // Código correlativo por capítulo: PRE-01, EST-01… El DTO lo exige y como
+    // mucho admite 30 caracteres.
+    const contador = new Map();
     for (const [descripcion, unidad, capitulo, componentes] of APUS) {
       if (mapa.has(clave(descripcion))) continue;
       const capituloId = capitulos.get(clave(capitulo));
       if (!capituloId) { omitidos.push(`${descripcion} (falta el capítulo "${capitulo}")`); continue; }
+      const n = (contador.get(capitulo) ?? 0) + 1;
+      contador.set(capitulo, n);
+      const codigo = `${capitulo.slice(0, 3)}-${String(n).padStart(2, '0')}`;
+
+      const componentesDto = componentes.map(([insumo, rendimiento]) => {
+        const id = insumos.get(clave(insumo));
+        // Un id ausente daría «insumo_id must be a UUID», un error que apunta
+        // al formato y no a la causa real: el insumo no está en el maestro.
+        if (!id) throw new Error(`No encuentro el insumo "${insumo}" (lo usa el APU "${descripcion}").`);
+        return { insumo_id: id, rendimiento };
+      });
+
       const nuevo = await pedir('POST', `${PRE}/catalog/apus`, {
-        descripcion, unidad, capituloId,
+        descripcion, unidad, codigo, capituloId, capitulo_id: capituloId,
         // Solo rendimientos: los precios los pone el servidor desde el maestro.
-        componentes: componentes.map(([insumo, rendimiento]) => ({
-          insumoId: insumos.get(clave(insumo)), rendimiento,
-        })),
+        // OJO: el componente va con `insumo_id`, no `insumoId`.
+        componentes: componentesDto,
       });
       if (!nuevo?.id) throw new Error(`El servidor no devolvió id al crear el APU "${descripcion}".`);
       mapa.set(clave(descripcion), String(nuevo.id));
@@ -419,6 +433,6 @@
   };
 
   // El sello de versión evita la duda de "¿pegué la copia nueva o la vieja?".
-  console.log('%cSemilla v5 cargada.', 'font-weight:bold',
+  console.log('%cSemilla v6 cargada.', 'font-weight:bold',
     'Ejecuta:  await sembrar()   ·   Si falla por el grupo:  await probarGrupos()');
 })();

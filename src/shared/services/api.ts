@@ -202,6 +202,8 @@ export interface ApiError extends Error {
   status: number;
   /** Motivos de validación tal cual los devolvió el servidor. */
   motivos: string[];
+  /** Código de negocio del filtro global: NOT_FOUND, CAPITULO_EN_USO… */
+  codigo?: string;
 }
 
 /**
@@ -234,6 +236,10 @@ function construirError(status: number, path: string, cuerpo: any): ApiError {
   const e = new Error(mensaje) as ApiError;
   e.status = status;
   e.motivos = motivos;
+  // El filtro global manda un `codigo` de negocio. Importa porque el estado
+  // HTTP no siempre lo distingue: borrar un capítulo en uso responde 400,
+  // no 409, y solo el codigo lo separa de un fallo de validación.
+  e.codigo = typeof cuerpo?.codigo === 'string' ? cuerpo.codigo : undefined;
   return e;
 }
 
@@ -512,7 +518,17 @@ export const apiService = {
     return api(`${PRESUP_BASE}/catalog/apus${s ? `?${s}` : ''}`);
   },
   getApu: (id: string) => api(`${PRESUP_BASE}/catalog/apus/${id}`),
+  // Capítulos — CRUD completo. Devuelve el array directo dentro de `data`.
+  // No figura en la spec de OpenAPI, pero está servido y en uso.
   getCapitulos: () => api(`${PRESUP_BASE}/catalog/chapters`),
+  /** `nombre` obligatorio; `codigo` y `orden` opcionales. */
+  createCapitulo: (data: { nombre: string; codigo?: string; orden?: number }) =>
+    api(`${PRESUP_BASE}/catalog/chapters`, { method: 'POST', body: JSON.stringify(data) }),
+  updateCapitulo: (id: string, data: { nombre?: string; codigo?: string; orden?: number }) =>
+    api(`${PRESUP_BASE}/catalog/chapters/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  /** Con APUs activos responde **400** con `codigo: CAPITULO_EN_USO`, no 409. */
+  deleteCapitulo: (id: string) =>
+    api(`${PRESUP_BASE}/catalog/chapters/${id}`, { method: 'DELETE' }),
   /**
    * Maestro de insumos. Responde paginado:
    * `{ items, total, page, per_page, total_pages }` con `per_page` 20 por
@@ -563,6 +579,10 @@ export const apiService = {
     }),
 
   // APUs del catálogo — HU-10, HU-11, HU-12
+  /**
+   * Alta de APU. `codigo` es **obligatorio** (máx. 30 caracteres) y los
+   * componentes llevan **`insumo_id`** en snake_case, no `insumoId`.
+   */
   createApu: (data: any) => api(`${PRESUP_BASE}/catalog/apus`, { method: 'POST', body: JSON.stringify(data) }),
   updateApu: (id: string, data: any) => api(`${PRESUP_BASE}/catalog/apus/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   /** Proyectos y presupuestos que se verían afectados por editar el APU. */

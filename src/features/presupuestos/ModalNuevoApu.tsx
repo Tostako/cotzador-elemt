@@ -3,7 +3,7 @@ import { AlertTriangle, Trash2, Plus, Search } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
-import { capitulosDesdeBackend, grupoABackend, grupoDesdeBackend, insumosDesdeBackend } from './mapeo';
+import { apuABackend, capitulosDesdeBackend, codigoSugerido, grupoABackend, grupoDesdeBackend, insumosDesdeBackend } from './mapeo';
 import { ETIQUETA_RECURSO, aNumero, money, type Capitulo, type GrupoRecurso, type Insumo } from './types';
 
 /** Componente en composición: el usuario aporta el rendimiento, nunca el precio. */
@@ -34,6 +34,10 @@ export function ModalNuevoApu({ onClose, onCreado }: { onClose: () => void; onCr
   const [descripcion, setDescripcion] = useState('');
   const [unidad, setUnidad] = useState('M2');
   const [capituloId, setCapituloId] = useState('');
+  // El DTO lo exige (máx. 30). Se propone desde la descripción y se puede
+  // cambiar; `tocado` evita pisar lo que el usuario haya escrito a mano.
+  const [codigo, setCodigo] = useState('');
+  const [codigoTocado, setCodigoTocado] = useState(false);
   const [capitulos, setCapitulos] = useState<Capitulo[]>([]);
   const [filas, setFilas] = useState<FilaNueva[]>([]);
   const [guardando, setGuardando] = useState(false);
@@ -143,9 +147,13 @@ export function ModalNuevoApu({ onClose, onCreado }: { onClose: () => void; onCr
     }
   };
 
+  // Si el usuario no lo tocó, se propone desde la descripción.
+  const codigoFinal = (codigoTocado ? codigo : codigoSugerido(descripcion)).trim().slice(0, 30);
+
   const guardar = async () => {
     // RN-10.1: descripción, unidad y capítulo son obligatorios.
     if (!descripcion.trim()) return showNotification('Falta la descripción', 'warning', 'El APU necesita una descripción.');
+    if (!codigoFinal) return showNotification('Falta el código', 'warning', 'El APU necesita un código de hasta 30 caracteres.');
     if (!unidad) return showNotification('Falta la unidad', 'warning', 'Indica la unidad de medida del APU.');
     if (!capituloId) return showNotification('Falta el capítulo', 'warning', 'Elige el capítulo al que pertenece.');
     if (filas.length === 0) return showNotification('Sin componentes', 'warning', 'Agrega al menos un insumo.');
@@ -163,13 +171,16 @@ export function ModalNuevoApu({ onClose, onCreado }: { onClose: () => void; onCr
 
     setGuardando(true);
     try {
-      await apiService.createApu({
+      // apuABackend traduce lo que el DTO exige: `codigo` recortado a 30 y los
+      // componentes con `insumo_id` en snake_case.
+      await apiService.createApu(apuABackend({
         descripcion: descripcion.trim(),
         unidad,
+        codigo: codigoFinal,
         capituloId,
         // Solo rendimientos: el precio lo pone el servidor desde el maestro.
         componentes: filas.map((f) => ({ insumoId: f.insumoId, rendimiento: f.rendimiento })),
-      });
+      }));
       showNotification('Correcto', 'success', 'APU creado en el catálogo con origen Personalizado.');
       onCreado();
     } catch (e: any) {
@@ -203,6 +214,19 @@ export function ModalNuevoApu({ onClose, onCreado }: { onClose: () => void; onCr
           <input className="input" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Cielo raso en drywall" autoFocus />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 12 }}>
+          <div>
+            <label className="small" style={{ display: 'block', marginBottom: 4 }}>Código</label>
+            <input
+              className="input"
+              value={codigoTocado ? codigo : codigoSugerido(descripcion)}
+              onChange={(e) => { setCodigoTocado(true); setCodigo(e.target.value.slice(0, 30)); }}
+              placeholder="CIELO-DRYWALL"
+              maxLength={30}
+            />
+            <p className="small" style={{ color: '#8c8578', marginTop: 4 }}>
+              Se propone desde la descripción. Máx. 30 caracteres.
+            </p>
+          </div>
           <div>
             <label className="small" style={{ display: 'block', marginBottom: 4 }}>Unidad de medida</label>
             <select className="select" value={unidad} onChange={(e) => setUnidad(e.target.value)}>

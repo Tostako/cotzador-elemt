@@ -14,6 +14,7 @@ const ConsolidadosPage = lazy(() => import('../features/presupuestos/Consolidado
 const CotizacionesPage = lazy(() => import('../features/presupuestos/CotizacionesPage').then((m) => ({ default: m.CotizacionesPage })));
 const MarcaPage = lazy(() => import('../features/presupuestos/MarcaPage').then((m) => ({ default: m.MarcaPage })));
 const CatalogoApusPage = lazy(() => import('../features/presupuestos/CatalogoApusPage').then((m) => ({ default: m.CatalogoApusPage })));
+const CapitulosPage = lazy(() => import('../features/presupuestos/CapitulosPage').then((m) => ({ default: m.CapitulosPage })));
 const InsumosObraPage = lazy(() => import('../features/presupuestos/InsumosPage').then((m) => ({ default: m.InsumosPage })));
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('../features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })));
@@ -85,6 +86,7 @@ export const router = createBrowserRouter([
   { path: '/obra/:projectId/consolidados', element: prot(<ConsolidadosPage />) },
   { path: '/obra/:projectId/cotizaciones', element: prot(<CotizacionesPage />) },
   { path: '/catalogo/apus', element: prot(<CatalogoApusPage />) },
+  { path: '/catalogo/capitulos', element: prot(<CapitulosPage />) },
   { path: '/catalogo/insumos', element: prot(<InsumosObraPage />) },
   { path: '/catalogo/marca', element: prot(<MarcaPage />) },
   { path: '/obra/:projectId/presupuesto', element: prot(<PresupuestoObraPage />) },

@@ -65,6 +65,10 @@ export interface NuevoProyecto {
 export interface Capitulo {
   id: string;
   nombre: string;
+  /** Código corto («PRE»). `null` en el servidor si no se dio. */
+  codigo?: string;
+  /** Posición en el presupuesto impreso. */
+  orden?: number;
   /** Solo en el presupuesto: suma de las actividades del capítulo. */
   subtotal?: Importe;
 }

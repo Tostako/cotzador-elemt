@@ -92,11 +92,59 @@ export function capitulosDesdeBackend(d: any): Capitulo[] {
   const items = listaDesdeBackend(d).map((c: any) => ({
     id: String(campo(c, 'id') ?? ''),
     nombre: campo(c, 'nombre', 'name') ?? '',
-    orden: num(campo(c, 'orden', 'order'), Number.MAX_SAFE_INTEGER),
+    // `codigo` llega null si no se dio: se normaliza a undefined para que las
+    // pantallas puedan usar `?? '—'` sin que salga «null».
+    codigo: campo(c, 'codigo', 'code') ?? undefined,
+    orden: campo(c, 'orden', 'order') ?? undefined,
   }));
   // El orden de los capítulos no es cosmético: es el del presupuesto impreso.
-  items.sort((a, b) => a.orden - b.orden);
-  return items.map(({ id, nombre }) => ({ id, nombre }));
+  // Los que no lo traen van al final, y entre ellos por nombre.
+  return items.sort((a, b) => {
+    const oa = a.orden ?? Number.MAX_SAFE_INTEGER;
+    const ob = b.orden ?? Number.MAX_SAFE_INTEGER;
+    return oa !== ob ? oa - ob : a.nombre.localeCompare(b.nombre, 'es');
+  });
+}
+
+/**
+ * APU nuevo → backend.
+ *
+ * Dos exigencias del DTO que no se ven venir: `codigo` es obligatorio y como
+ * mucho 30 caracteres, y los componentes llevan **`insumo_id`** en snake_case
+ * aunque el resto del cuerpo vaya en camelCase.
+ */
+export function apuABackend(a: {
+  descripcion: string;
+  unidad: string;
+  codigo: string;
+  capituloId: string;
+  componentes: Array<{ insumoId: string; rendimiento: number }>;
+}) {
+  return {
+    descripcion: a.descripcion,
+    unidad: a.unidad,
+    codigo: a.codigo.slice(0, 30),
+    // Se mandan las dos convenciones del capítulo: el DTO se queda con la que
+    // conoce y descarta la otra, que es como trata los campos de más.
+    capituloId: a.capituloId,
+    capitulo_id: a.capituloId,
+    componentes: a.componentes.map((c) => ({
+      insumo_id: c.insumoId,
+      rendimiento: c.rendimiento,
+    })),
+  };
+}
+
+/** Marcas diacríticas combinantes. Se construye con escapes ASCII a propósito:
+ *  el rango escrito literal se corrompe al pasar por algunas herramientas. */
+const DIACRITICOS = new RegExp('[\\u0300-\\u036f]', 'g');
+
+/** Código a partir de la descripción, para no pedírselo al usuario dos veces. */
+export function codigoSugerido(descripcion: string, maximo = 30): string {
+  const limpio = descripcion
+    .normalize('NFD').replace(DIACRITICOS, '')
+    .toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return limpio.slice(0, maximo).replace(/-+$/, '') || 'APU';
 }
 
 /**

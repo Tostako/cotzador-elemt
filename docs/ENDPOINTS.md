@@ -373,15 +373,25 @@ Los valores reales, comprobados uno a uno contra el servidor:
 No copiar los valores del mensaje de error: se perdieron dos rondas mandando
 exactamente lo que pedía.
 
-**Capítulos.** El CRUD está completo, pero **no figura en la spec de OpenAPI**
-(se sirvió a raíz del 404 del front, commit `8903120`). Está en uso, así que
-conviene oficializarlo antes de que alguien lo dé por muerto al no verlo en la
-spec.
+**Capítulos.** CRUD completo, consumido desde `/catalogo/capitulos`. Devuelve
+el array **directo** dentro de `data` (no paginado), con `codigo` a `null` si
+no se dio y `created_at`/`updated_at` como cadenas ISO.
 
-El frontend solo consume el `GET`: no hay pantalla para crear ni editar
-capítulos, y como un APU los exige, un servidor sin capítulos deja el catálogo
-bloqueado. Mientras no exista esa pantalla, `semilla-obra.js` crea los cuatro
-que necesita (`PRELIMINARES`, `ESTRUCTURA`, `ACABADOS`, `INSTALACIONES`).
+⚠️ **No figura en la spec de OpenAPI** (se sirvió a raíz del 404 del front,
+commit `8903120`). Conviene oficializarlo antes de que alguien lo dé por muerto
+al no verlo en la spec.
+
+⚠️ **Borrar un capítulo en uso responde 400, no 409.** El servicio lanza
+`BadRequestException` (`catalog.service.ts:104`). Lo único que lo separa de un
+fallo de validación es `codigo: "CAPITULO_EN_USO"`, así que la pantalla se guía
+por ese campo y no por el estado HTTP.
+
+⚠️ **`CreateApuDto` tiene dos exigencias que no se ven venir:**
+
+- `codigo` es **obligatorio**, cadena no vacía de **máx. 30 caracteres**.
+- Los componentes llevan **`insumo_id`** en snake_case, no `insumoId` — aunque
+  el resto del cuerpo vaya en camelCase. Con el nombre equivocado el error es
+  «`insumo_id must be a UUID`», que apunta al formato y no a la causa.
 
 ⚠️ **`CreateSupplyDto` no lleva precio.** Mandar `valorUnitario` en el alta no
 da error —se ignora en silencio— y el insumo queda sin precio. El precio va
