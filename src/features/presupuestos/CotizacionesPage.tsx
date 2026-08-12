@@ -5,6 +5,7 @@ import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { descargarCsv } from './importacion';
+import { grupoDesdeBackend } from './mapeo';
 import {
   aNumero, money, diferenciaLinea,
   COLOR_ESTADO_LINEA, ETIQUETA_ESTADO_LINEA,
@@ -367,7 +368,7 @@ function ModalNuevaCotizacion({
           unidad: i.unidad ?? '',
           cantidad: aNumero(i.cantidadTotal ?? i.cantidad_total ?? i.cantidad),
           valorUnitario: String(i.valorUnitario ?? i.valor_unitario ?? '0'),
-          grupo: String(i.grupo ?? i.tipo ?? 'MATERIALES'),
+          grupo: grupoDesdeBackend(i.grupo ?? i.tipo),
         }));
         if (!cancel) {
           setFilas(fs);

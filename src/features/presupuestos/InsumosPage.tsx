@@ -4,6 +4,7 @@ import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { ModalImportar } from './ModalImportar';
+import { grupoABackend, insumosDesdeBackend } from './mapeo';
 import { descargarCsv } from './importacion';
 import { ETIQUETA_RECURSO, aNumero, money, type GrupoRecurso, type Insumo } from './types';
 
@@ -54,8 +55,12 @@ export function InsumosPage() {
     setCargando(true);
     setError(null);
     try {
-      const data = extractData(await apiService.getInsumos({ q: busqueda || undefined, grupo: grupo || undefined }));
-      setInsumos(Array.isArray(data) ? data : []);
+      // El filtro también viaja con el nombre del backend, no con el de la interfaz.
+      const data = extractData(await apiService.getInsumos({
+        q: busqueda || undefined,
+        grupo: grupo ? grupoABackend(grupo) : undefined,
+      }));
+      setInsumos(insumosDesdeBackend(data));
     } catch (e: any) {
       setInsumos([]);
       setError(e?.message || 'No se pudo cargar el maestro de insumos.');

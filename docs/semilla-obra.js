@@ -52,6 +52,18 @@
   const lista = (d) => (Array.isArray(d) ? d : (d?.items ?? d?.data ?? d?.results ?? []));
   const clave = (s) => String(s ?? '').trim().toLowerCase();
 
+  /**
+   * El backend nombra los grupos en singular y con espacio. La tabla de abajo
+   * usa la convención de la interfaz (plural, guion bajo) y se traduce aquí,
+   * igual que hace mapeo.ts en la app.
+   */
+  const GRUPO_BACKEND = {
+    MATERIALES: 'MATERIAL',
+    MANO_OBRA: 'MANO OBRA',
+    EQUIPOS: 'EQUIPO',
+    TRANSPORTE: 'TRANSPORTE',
+  };
+
   // ── Catálogo ────────────────────────────────────────────────
 
   const INSUMOS = [
@@ -157,7 +169,9 @@
     let creados = 0;
     for (const [descripcion, unidad, grupo, valorUnitario] of INSUMOS) {
       if (mapa.has(clave(descripcion))) continue;
-      const nuevo = await pedir('POST', `${PRE}/catalog/supplies`, { descripcion, unidad, grupo, valorUnitario });
+      const nuevo = await pedir('POST', `${PRE}/catalog/supplies`, {
+        descripcion, unidad, grupo: GRUPO_BACKEND[grupo] ?? grupo, valorUnitario,
+      });
       if (!nuevo?.id) throw new Error(`El servidor no devolvió id al crear el insumo "${descripcion}".`);
       mapa.set(clave(descripcion), String(nuevo.id));
       creados++;

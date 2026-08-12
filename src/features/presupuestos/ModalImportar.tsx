@@ -4,6 +4,7 @@ import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { GRUPOS_VALIDOS, detectarSeparador, leerNumero, partirLineaCsv } from './importacion';
+import { esGrupoValido, grupoABackend, grupoDesdeBackend } from './mapeo';
 
 export type TipoImportacion = 'APUS' | 'INSUMOS';
 
@@ -89,7 +90,9 @@ export function ModalImportar({
         continue;
       }
       if (tipo === 'INSUMOS') {
-        if (!GRUPOS_VALIDOS.includes(fila.grupo.toUpperCase() as any)) {
+        // Se acepta singular o plural, con guion o con espacio: quien escribe
+        // el CSV a mano no tiene por qué saber la convención exacta.
+        if (!esGrupoValido(fila.grupo)) {
           malas.push({ fila: i + 1, motivo: `Grupo "${fila.grupo}" no válido (${GRUPOS_VALIDOS.join(', ')})` });
           continue;
         }
@@ -99,7 +102,9 @@ export function ModalImportar({
           continue;
         }
         fila.valorunitario = String(v);
-        fila.grupo = fila.grupo.toUpperCase();
+        // Se guarda ya normalizado a la convención de la interfaz; la
+        // traducción al backend se hace al enviar.
+        fila.grupo = grupoDesdeBackend(fila.grupo);
       }
       buenas.push(fila);
     }
@@ -114,7 +119,7 @@ export function ModalImportar({
     try {
       const cuerpo = {
         filas: filas.map((f) => (tipo === 'INSUMOS'
-          ? { descripcion: f.descripcion, unidad: f.unidad, grupo: f.grupo, valorUnitario: f.valorunitario }
+          ? { descripcion: f.descripcion, unidad: f.unidad, grupo: grupoABackend(f.grupo), valorUnitario: f.valorunitario }
           : { descripcion: f.descripcion, unidad: f.unidad, capitulo: f.capitulo, valorUnitario: f.valorunitario })),
         dryRun: true,
       };

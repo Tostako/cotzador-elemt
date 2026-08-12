@@ -1,4 +1,4 @@
-import { AIU_POR_DEFECTO, type Aiu, type NuevoProyecto, type Proyecto, type TipoObra } from './types';
+import { AIU_POR_DEFECTO, type Aiu, type GrupoRecurso, type Insumo, type NuevoProyecto, type Proyecto, type TipoObra } from './types';
 
 /**
  * Traducción entre el modelo de la interfaz y el contrato del backend.
@@ -25,6 +25,62 @@ const num = (v: any, porDefecto = 0) => {
   const n = typeof v === 'number' ? v : parseFloat(String(v ?? ''));
   return Number.isFinite(n) ? n : porDefecto;
 };
+
+// ── Grupo de recurso ───────────────────────────────────────
+
+/**
+ * El backend nombra los grupos en singular y con espacio —`MATERIAL`,
+ * `MANO OBRA`, `EQUIPO`, `TRANSPORTE`— y la interfaz en plural con guion bajo.
+ * Mandar el nombre de la interfaz devuelve un 400 del validador.
+ *
+ * La traducción vive aquí y no en las pantallas: si el contrato cambia otra
+ * vez, se toca un sitio. Y `grupoDesdeBackend` acepta las dos convenciones a
+ * propósito, porque un grupo que no se reconoce no rompe nada visible —
+ * simplemente deja la etiqueta en blanco y el insumo desaparece de su sección
+ * del consolidado, que es el fallo silencioso que ya nos costó caro con los
+ * materiales de enchapes.
+ */
+const GRUPO_A_BACKEND: Record<GrupoRecurso, string> = {
+  MATERIALES: 'MATERIAL',
+  MANO_OBRA: 'MANO OBRA',
+  EQUIPOS: 'EQUIPO',
+  TRANSPORTE: 'TRANSPORTE',
+};
+
+export const grupoABackend = (g: GrupoRecurso | string): string =>
+  GRUPO_A_BACKEND[g as GrupoRecurso] ?? String(g);
+
+/** Normaliza para comparar: mayúsculas, guiones a espacios, sin espacios de más.
+ *  No hace falta quitar tildes: ningún nombre de grupo lleva. */
+const normalizar = (v: unknown) =>
+  String(v ?? '').toUpperCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** Backend (o CSV escrito a mano) → interfaz. Tolera singular, plural y guion. */
+export function grupoDesdeBackend(v: unknown): GrupoRecurso {
+  const n = normalizar(v);
+  if (n.startsWith('MATERIAL')) return 'MATERIALES';
+  if (n.startsWith('MANO')) return 'MANO_OBRA';
+  if (n.startsWith('EQUIPO')) return 'EQUIPOS';
+  if (n.startsWith('TRANSPORTE')) return 'TRANSPORTE';
+  // Sin correspondencia se cae a materiales: es el grupo mayoritario y deja
+  // el insumo visible, en vez de esconderlo en una sección que no existe.
+  return 'MATERIALES';
+}
+
+/** ¿Este texto nombra un grupo real? Lo usa la importación para rechazar filas. */
+export function esGrupoValido(v: unknown): boolean {
+  return /^(MATERIAL(ES)?|MANO( DE)? OBRA|EQUIPO(S)?|TRANSPORTE(S)?)$/.test(normalizar(v));
+}
+
+/** Insumo del maestro con el grupo ya traducido a la convención de la interfaz. */
+export const insumoDesdeBackend = (d: any): Insumo => ({
+  ...d,
+  id: String(d?.id ?? ''),
+  grupo: grupoDesdeBackend(d?.grupo),
+});
+
+export const insumosDesdeBackend = (d: any): Insumo[] =>
+  (Array.isArray(d) ? d : (d?.items ?? d?.data ?? [])).map(insumoDesdeBackend);
 
 // ── AIU ────────────────────────────────────────────────────
 

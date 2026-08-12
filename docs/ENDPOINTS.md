@@ -300,6 +300,21 @@ servidor desde el maestro de insumos.
 devuelve el impacto y un `confirmationToken`; la operación real exige ese token.
 Una variación por encima del umbral obliga a confirmación reforzada.
 
+⚠️ **El enum de `grupo` no coincide con el de la interfaz.** El validador del
+backend acepta **`MATERIAL`, `MANO OBRA`, `EQUIPO`, `TRANSPORTE`** —singular, y
+con espacio en «MANO OBRA»—; la interfaz usa `MATERIALES`, `MANO_OBRA`,
+`EQUIPOS`, `TRANSPORTE`. Mandar el nombre de la interfaz devuelve **400**.
+
+La traducción vive en [`mapeo.ts`](../src/features/presupuestos/mapeo.ts)
+(`grupoABackend` / `grupoDesdeBackend`) y se aplica en los seis sitios donde el
+grupo cruza la red: crear insumo, filtrar el maestro, importar, y leer el
+maestro, el consolidado y la analítica del panel.
+
+La lectura acepta las dos convenciones a propósito. Un grupo no reconocido no
+da error visible: deja la etiqueta en blanco y saca al insumo de su sección del
+consolidado — el mismo fallo silencioso que ya costó caro con los materiales de
+enchapes.
+
 ### 5.5 Cierre financiero, analítica y salidas
 
 | Método | Ruta | Historia |

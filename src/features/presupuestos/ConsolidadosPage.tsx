@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ClipboardList, Search, Handshake } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
+import { grupoDesdeBackend } from './mapeo';
 import { ETIQUETA_RECURSO, aNumero, money, type GrupoRecurso } from './types';
 
 /** Fila del consolidado: un insumo con su cantidad sumada en toda la obra. */
@@ -31,7 +32,9 @@ function normalizar(d: any): FilaConsolidado[] {
     insumoId: String(i.insumoId ?? i.insumo_id ?? i.id ?? ''),
     descripcion: i.descripcion ?? i.nombre ?? '',
     unidad: i.unidad ?? '',
-    grupo: (i.grupo ?? i.tipo ?? 'MATERIALES') as GrupoRecurso,
+    // El servidor nombra los grupos en singular (MATERIAL, EQUIPO): sin
+    // traducir, el insumo caería fuera de todas las secciones y no se vería.
+    grupo: grupoDesdeBackend(i.grupo ?? i.tipo),
     cantidadTotal: i.cantidadTotal ?? i.cantidad_total ?? i.cantidad ?? 0,
     valorUnitario: String(i.valorUnitario ?? i.valor_unitario ?? '0'),
     valorTotal: String(i.valorTotal ?? i.valor_total ?? '0'),
@@ -113,6 +116,7 @@ export function ConsolidadosPage() {
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#8c8578' }} />
           <input className="input" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar insumo…" style={{ paddingLeft: 36 }} />
         </div>
+        {/* El filtro es local sobre lo ya normalizado, así que usa el nombre de la interfaz. */}
         <select className="select" value={grupo} onChange={(e) => setGrupo(e.target.value as '' | GrupoRecurso)} style={{ flex: '0 1 200px' }} aria-label="Filtrar por grupo">
           <option value="">Todos los grupos</option>
           {ORDEN_GRUPOS.map((g) => <option key={g} value={g}>{ETIQUETA_RECURSO[g]}</option>)}

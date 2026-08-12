@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { LayoutDashboard, Plus, AlertTriangle, ArrowRight } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
+import { grupoDesdeBackend } from './mapeo';
 import {
   ETIQUETA_RECURSO, aNumero, money,
   type GrupoRecurso, type Proyecto, type ResumenAnalitica,
@@ -34,7 +35,12 @@ export function PanelObraPage() {
         apiService.getAnalitica(projectId).then(extractData),
       ]);
       setProyecto(proy || null);
-      setResumen(res || null);
+      // Los tipos de recurso llegan con el nombre del backend (MATERIAL,
+      // MANO OBRA…); sin traducir, la barra sale sin color ni etiqueta.
+      setResumen(res ? {
+        ...res,
+        recursos: (res.recursos ?? []).map((r: any) => ({ ...r, tipo: grupoDesdeBackend(r.tipo ?? r.grupo) })),
+      } : null);
     } catch (e: any) {
       setError(e?.message || 'No se pudo cargar el panel.');
     } finally {

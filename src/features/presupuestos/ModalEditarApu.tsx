@@ -3,6 +3,7 @@ import { AlertTriangle, Trash2, Plus, Search, Upload } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
+import { grupoDesdeBackend, insumosDesdeBackend } from './mapeo';
 import { ETIQUETA_RECURSO, aNumero, money, type ComponenteApu, type GrupoRecurso, type Insumo } from './types';
 
 /** Impacto que devuelve el dryRun de promover al catálogo. */
@@ -33,7 +34,8 @@ const desdeComponentes = (comps: ComponenteApu[] = []): FilaComponente[] =>
     insumoId: c.insumoId,
     descripcion: c.descripcion,
     unidad: c.unidad,
-    grupo: c.grupo,
+    // La composición del APU trae el grupo con el nombre del backend.
+    grupo: grupoDesdeBackend(c.grupo),
     rendimiento: aNumero(c.cantidad),
     valorUnitario: String(c.valorUnitario ?? '0'),
   }));
@@ -105,7 +107,7 @@ export function ModalEditarApu({
     const t = setTimeout(async () => {
       try {
         const d = extractData(await apiService.getInsumos({ q: busqueda || undefined }));
-        if (!cancel) setInsumos(Array.isArray(d) ? d : []);
+        if (!cancel) setInsumos(insumosDesdeBackend(d));
       } catch {
         if (!cancel) setInsumos([]);
       }

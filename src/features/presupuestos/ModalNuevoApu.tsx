@@ -3,6 +3,7 @@ import { AlertTriangle, Trash2, Plus, Search } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
+import { grupoABackend, grupoDesdeBackend, insumosDesdeBackend } from './mapeo';
 import { ETIQUETA_RECURSO, aNumero, money, type Capitulo, type GrupoRecurso, type Insumo } from './types';
 
 /** Componente en composición: el usuario aporta el rendimiento, nunca el precio. */
@@ -67,7 +68,7 @@ export function ModalNuevoApu({ onClose, onCreado }: { onClose: () => void; onCr
     const t = setTimeout(async () => {
       try {
         const d = extractData(await apiService.getInsumos({ q: busqueda || undefined }));
-        if (!cancel) setInsumos(Array.isArray(d) ? d : []);
+        if (!cancel) setInsumos(insumosDesdeBackend(d));
       } catch {
         if (!cancel) setInsumos([]);
       } finally {
@@ -101,7 +102,7 @@ export function ModalNuevoApu({ onClose, onCreado }: { onClose: () => void; onCr
       }
       return [...fs, {
         insumoId: i.id, descripcion: i.descripcion, unidad: i.unidad,
-        grupo: i.grupo, rendimiento: 1, valorUnitario: String(i.valorUnitario ?? '0'),
+        grupo: grupoDesdeBackend(i.grupo), rendimiento: 1, valorUnitario: String(i.valorUnitario ?? '0'),
       }];
     });
     setBuscando(false);
@@ -117,7 +118,8 @@ export function ModalNuevoApu({ onClose, onCreado }: { onClose: () => void; onCr
       const creado = extractData(await apiService.createInsumo({
         descripcion: nuevoInsumo.descripcion.trim(),
         unidad: nuevoInsumo.unidad,
-        grupo: nuevoInsumo.grupo,
+        // El validador del backend usa MATERIAL / MANO OBRA / EQUIPO.
+        grupo: grupoABackend(nuevoInsumo.grupo),
         valorUnitario: nuevoInsumo.valorUnitario,
       }));
       showNotification('Correcto', 'success', 'Insumo creado en el maestro.');

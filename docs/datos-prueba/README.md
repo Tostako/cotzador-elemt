@@ -81,6 +81,16 @@ materiales preseleccionados. Pon precios en dos o tres líneas y mira la
 diferencia contra el presupuesto; el botón «Llevar al maestro» solo aparece en
 las líneas que marques como Aprobadas.
 
+## Nombres de grupo
+
+En los CSV se escribe con la convención de la interfaz —`MATERIALES`,
+`MANO_OBRA`, `EQUIPOS`, `TRANSPORTE`— y la app lo traduce a lo que espera el
+backend (`MATERIAL`, `MANO OBRA`, `EQUIPO`, `TRANSPORTE`) al enviarlo.
+
+El lector es tolerante: acepta singular o plural, guion bajo o espacio, y
+mayúsculas o minúsculas. `mano de obra`, `MANO_OBRA` y `MANO OBRA` valen igual.
+Lo que no vale es un grupo que no existe, como `MAQUINARIA`.
+
 ## Formato de los CSV
 
 Separador `;` y codificación UTF-8, que es lo que produce Excel en español con
