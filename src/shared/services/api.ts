@@ -275,8 +275,12 @@ async function api(path: string, options: RequestInit = {}) {
   const timeoutId = setTimeout(() => controller.abort(), 20_000);
 
   const doFetch = (authToken: string | null) => {
+    // Con FormData el Content-Type lo pone el navegador, porque incluye el
+    // `boundary` del multipart. Fijarlo a mano deja a Multer sin poder separar
+    // las partes y el archivo no llega: el servidor responde que falta.
+    const esFormData = options.body instanceof FormData;
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      ...(esFormData ? {} : { 'Content-Type': 'application/json' }),
       'X-Shop-Slug': SHOP_SLUG,
       ...((options.headers as Record<string, string>) || {}),
     };
@@ -616,8 +620,22 @@ export const apiService = {
 
   // Importación / exportación Excel — HU-13. La importación es en dos pasos:
   // se sube, se revisan los errores y solo entonces se confirma.
-  importarApus: (data: any) => api(`${PRESUP_BASE}/catalog/apus/import`, { method: 'POST', body: JSON.stringify(data) }),
-  importarInsumos: (data: any) => api(`${PRESUP_BASE}/catalog/supplies/import`, { method: 'POST', body: JSON.stringify(data) }),
+  //
+  // El controlador usa `FileInterceptor('archivo')`: es **multipart/form-data**
+  // con el fichero en un campo llamado literalmente `archivo`, no un JSON con
+  // las filas. Si no llega, responde `ARCHIVO_REQUERIDO`.
+  //
+  // El parseo lo hace el servidor: espera un **XLSX**, no un CSV.
+  importarApus: (archivo: File) => {
+    const fd = new FormData();
+    fd.append('archivo', archivo, archivo.name);
+    return api(`${PRESUP_BASE}/catalog/apus/import`, { method: 'POST', body: fd });
+  },
+  importarInsumos: (archivo: File) => {
+    const fd = new FormData();
+    fd.append('archivo', archivo, archivo.name);
+    return api(`${PRESUP_BASE}/catalog/supplies/import`, { method: 'POST', body: fd });
+  },
   erroresImportacion: (jobId: string) => api(`${PRESUP_BASE}/catalog/imports/${jobId}/errors`),
   confirmarImportacion: (jobId: string) => api(`${PRESUP_BASE}/catalog/imports/${jobId}/confirm`, { method: 'POST' }),
 

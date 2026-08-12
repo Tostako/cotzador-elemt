@@ -56,21 +56,32 @@ En Base de APUs y en Insumos, botón **Importar**.
 | [`apus.csv`](apus.csv) | 12 filas, todas válidas |
 | [`insumos-con-errores.csv`](insumos-con-errores.csv) | 10 filas: 4 entran, 6 se rechazan |
 
-**Columnas de cada tipo:**
+⚠️ **El servidor importa XLSX, no CSV.** Estos `.csv` son la plantilla: ábrelos
+en Excel y usa «Guardar como → Libro de Excel (.xlsx)». Hay que **renombrar la
+hoja** para que coincida con lo que el servidor busca.
 
-| Tipo | Columnas |
-|---|---|
-| Insumos | `descripcion`, `unidad`, `grupo`, `valorUnitario` — todas obligatorias |
-| APUs | `descripcion`, `unidad`, `capitulo` obligatorias; `codigo` opcional |
+| Tipo | Hoja | Cabeceras exactas |
+|---|---|---|
+| APUs | `APUs` | `codigo` · `descripcion` · `unidad` · `capitulo` · `componentes` |
+| Insumos | `Insumos` | `descripcion` · `unidad` · `grupo` · `valorUnitario` |
 
-En los APUs, el **capítulo se escribe por nombre o por código** (`Estructura` o
-`EST`) y tiene que existir ya en el catálogo: la app lo traduce al UUID que
-espera el servidor y rechaza la fila si no lo encuentra. El `codigo` del APU es
-obligatorio para el servidor (máx. 30 caracteres); si el CSV no trae esa
-columna se genera desde la descripción.
+La columna **`componentes`** lleva los insumos separados por `;`, cada uno como
+`nombre:rendimiento`:
 
-Los APUs importados así entran **sin composición**: quedan creados y hay que
-abrirlos para añadirles insumos y rendimientos.
+```
+Cemento gris uso general 50 kg:0.35;Oficial de construcción:0.28
+```
+
+El nombre tiene que coincidir **exactamente** con la descripción del insumo en
+el maestro, así que importa primero `insumos.csv` y después `apus.csv`. Los 50
+componentes de la plantilla están comprobados contra `insumos.csv`.
+
+En el CSV esa celda va entrecomillada, porque su `;` interno chocaría con el
+separador de columnas. Al pasar a XLSX el problema desaparece: es una celda.
+
+> El de insumos no está confirmado: el endpoint comparte controlador, pero no
+> tengo documentadas su hoja ni sus cabeceras. Si falla, el error del servidor
+> dirá qué espera.
 
 El de errores sirve para ver que el rechazo funciona. Debería marcar:
 

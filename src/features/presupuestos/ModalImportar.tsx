@@ -1,40 +1,50 @@
 import { useState } from 'react';
-import { Upload, AlertTriangle, CheckCircle2, FileSpreadsheet } from 'lucide-react';
+import { Upload, AlertTriangle, CheckCircle2, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
-import { GRUPOS_VALIDOS, detectarSeparador, leerNumero, partirLineaCsv } from './importacion';
-import { capitulosDesdeBackend, codigoSugerido, esGrupoValido, grupoABackend, grupoDesdeBackend } from './mapeo';
 
 export type TipoImportacion = 'APUS' | 'INSUMOS';
 
-/** Columnas esperadas por tipo. El orden no importa: se busca por encabezado. */
-const COLUMNAS: Record<TipoImportacion, { requeridas: string[]; ejemplo: string; nota?: string }> = {
-  INSUMOS: {
-    requeridas: ['descripcion', 'unidad', 'grupo', 'valorUnitario'],
-    ejemplo: 'descripcion;unidad;grupo;valorUnitario\nCemento gris 50 kg;bulto;MATERIALES;32000',
-  },
+/** Formato del libro que espera el servidor, por tipo. */
+const FORMATO: Record<TipoImportacion, { hoja: string; columnas: string[]; ejemplo?: string }> = {
   APUS: {
-    requeridas: ['descripcion', 'unidad', 'capitulo'],
-    ejemplo: 'codigo;descripcion;unidad;capitulo\nEST-01;Mampostería bloque n.º 5;m2;Estructura',
-    nota: 'La columna «codigo» es opcional: si falta se genera desde la descripción. '
-      + 'El capítulo se escribe por nombre o por código y debe existir ya en el catálogo.',
+    hoja: 'APUs',
+    columnas: ['codigo', 'descripcion', 'unidad', 'capitulo', 'componentes'],
+    ejemplo: 'Cemento gris x50kg:0.02;Operario oficial:0.01',
+  },
+  // Sin confirmar: el endpoint de insumos comparte controlador y patrón, pero
+  // no tenemos su hoja ni sus cabeceras documentadas.
+  INSUMOS: {
+    hoja: 'Insumos',
+    columnas: ['descripcion', 'unidad', 'grupo', 'valorUnitario'],
   },
 };
 
-/** Fila rechazada, venga del análisis local o del servidor. */
 interface ErrorFila {
   fila: number;
   motivo: string;
 }
 
+/** Lo que devuelve la previsualización del servidor. */
+interface Resumen {
+  jobId: string;
+  nuevos: number;
+  actualizados: number;
+  conError: number;
+  expiraEn?: string;
+}
+
 /**
  * HU-13 · Importación del catálogo desde una hoja de cálculo.
  *
- * Nunca se importa a ciegas: el archivo se analiza, se muestra qué filas
- * entran y cuáles se rechazan con el motivo, y solo entonces el usuario
- * confirma. Un archivo con errores no bloquea al resto — se importa lo válido
- * y se reporta lo demás.
+ * El archivo se sube tal cual —multipart, campo `archivo`— y lo parsea el
+ * servidor: aquí no se lee ni se valida nada. Antes se analizaba el CSV en el
+ * cliente y se mandaban las filas en JSON, que es justo lo que el endpoint no
+ * acepta.
+ *
+ * Sigue siendo en dos pasos: subir devuelve un resumen y un `job_id` sin
+ * escribir nada, y solo `confirm` aplica el lote.
  */
 export function ModalImportar({
   tipo,
@@ -45,199 +55,107 @@ export function ModalImportar({
   onClose: () => void;
   onImportado: () => void;
 }) {
-  const [nombreArchivo, setNombreArchivo] = useState('');
-  const [filas, setFilas] = useState<Record<string, string>[]>([]);
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [resumen, setResumen] = useState<Resumen | null>(null);
   const [errores, setErrores] = useState<ErrorFila[]>([]);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [analizando, setAnalizando] = useState(false);
+  const [subiendo, setSubiendo] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [fallo, setFallo] = useState<string | null>(null);
 
-  const esperadas = COLUMNAS[tipo].requeridas;
+  const formato = FORMATO[tipo];
+  const etiqueta = tipo === 'INSUMOS' ? 'insumos' : 'APUs';
 
-  const leerArchivo = async (archivo: File) => {
-    setNombreArchivo(archivo.name);
-    setFilas([]); setErrores([]); setJobId(null); setFallo(null);
-
-    if (/\.xlsx?$/i.test(archivo.name)) {
-      setFallo('Los .xlsx no se pueden leer aquí. En Excel usa «Guardar como → CSV UTF-8» y vuelve a intentarlo.');
-      return;
-    }
-
-    const texto = (await archivo.text()).replace(/^﻿/, '');
-    const lineas = texto.split(/\r?\n/).filter((l) => l.trim());
-    if (lineas.length < 2) {
-      setFallo('El archivo no tiene filas de datos.');
-      return;
-    }
-    const sep = detectarSeparador(lineas[0]);
-    const cabecera = partirLineaCsv(lineas[0], sep).map((h) => h.replace(/\s+/g, '').toLowerCase());
-
-    const faltan = esperadas.filter((c) => !cabecera.includes(c.toLowerCase()));
-    if (faltan.length) {
-      setFallo(`Faltan columnas obligatorias: ${faltan.join(', ')}.`);
-      return;
-    }
-
-    // Los APUs referencian el capítulo por UUID, no por nombre. Se resuelve
-    // aquí para poder rechazar la fila con un motivo entendible —«ese capítulo
-    // no existe»— en vez de dejar que el servidor conteste que el id no es un
-    // UUID válido, que no le dice nada a quien escribió el CSV.
-    let porCapitulo = new Map<string, string>();
-    if (tipo === 'APUS') {
-      try {
-        const caps = capitulosDesdeBackend(extractData(await apiService.getCapitulos()));
-        if (caps.length === 0) {
-          setFallo('No hay capítulos en el catálogo. Créalos antes de importar APUs.');
-          return;
-        }
-        // Se admite tanto el nombre como el código: en un CSV se escribe
-        // indistintamente «Estructura» o «EST».
-        for (const c of caps) {
-          porCapitulo.set(c.nombre.trim().toLowerCase(), c.id);
-          if (c.codigo) porCapitulo.set(c.codigo.trim().toLowerCase(), c.id);
-        }
-      } catch (e: any) {
-        setFallo(e?.message || 'No se pudieron cargar los capítulos para validar el archivo.');
-        return;
-      }
-    }
-
-    const buenas: Record<string, string>[] = [];
-    const malas: ErrorFila[] = [];
-    for (let i = 1; i < lineas.length; i++) {
-      const celdas = partirLineaCsv(lineas[i], sep);
-      const fila: Record<string, string> = {};
-      cabecera.forEach((h, j) => { fila[h] = celdas[j] ?? ''; });
-
-      const vacias = esperadas.filter((c) => !fila[c.toLowerCase()]);
-      if (vacias.length) {
-        malas.push({ fila: i + 1, motivo: `Sin ${vacias.join(', ')}` });
-        continue;
-      }
-      if (tipo === 'INSUMOS') {
-        // Se acepta singular o plural, con guion o con espacio: quien escribe
-        // el CSV a mano no tiene por qué saber la convención exacta.
-        if (!esGrupoValido(fila.grupo)) {
-          malas.push({ fila: i + 1, motivo: `Grupo "${fila.grupo}" no válido (${GRUPOS_VALIDOS.join(', ')})` });
-          continue;
-        }
-        const v = leerNumero(fila.valorunitario);
-        if (!Number.isFinite(v) || v < 0) {
-          malas.push({ fila: i + 1, motivo: `Valor unitario "${fila.valorunitario}" no es un número` });
-          continue;
-        }
-        fila.valorunitario = String(v);
-        // Se guarda ya normalizado a la convención de la interfaz; la
-        // traducción al backend se hace al enviar.
-        fila.grupo = grupoDesdeBackend(fila.grupo);
-      } else {
-        const capituloId = porCapitulo.get(fila.capitulo.trim().toLowerCase());
-        if (!capituloId) {
-          malas.push({
-            fila: i + 1,
-            motivo: `El capítulo "${fila.capitulo}" no existe en el catálogo`,
-          });
-          continue;
-        }
-        fila.__capitulo_id = capituloId;
-        // `codigo` es obligatorio para el servidor (máx. 30). Si el CSV no
-        // trae la columna, se deriva de la descripción en vez de rechazar
-        // el archivo entero por un dato que se puede deducir.
-        const propuesto = (fila.codigo || '').trim() || codigoSugerido(fila.descripcion);
-        if (propuesto.length > 30) {
-          malas.push({ fila: i + 1, motivo: `El código "${propuesto}" pasa de 30 caracteres` });
-          continue;
-        }
-        fila.codigo = propuesto;
-      }
-      buenas.push(fila);
-    }
-
-    setFilas(buenas);
-    setErrores(malas);
+  const elegir = (f: File) => {
+    setArchivo(f);
+    setResumen(null);
+    setErrores([]);
+    // El servidor parsea XLSX. Se avisa aquí para no gastar una subida y un
+    // error del servidor en algo que se ve por la extensión.
+    setFallo(/\.xlsx?$/i.test(f.name)
+      ? null
+      : 'El servidor espera un archivo de Excel (.xlsx). Si tienes un CSV, ábrelo en Excel y usa «Guardar como → Libro de Excel».');
   };
 
-  /** Paso 1: el servidor analiza y devuelve un job; nada queda guardado aún. */
-  const analizar = async () => {
-    setAnalizando(true);
+  /** Paso 1: subir y previsualizar. No escribe nada en el catálogo. */
+  const revisar = async () => {
+    if (!archivo) return;
+    setSubiendo(true);
+    setFallo(null);
+    setErrores([]);
     try {
-      const cuerpo = {
-        filas: filas.map((f) => (tipo === 'INSUMOS'
-          ? { descripcion: f.descripcion, unidad: f.unidad, grupo: grupoABackend(f.grupo), valorUnitario: f.valorunitario }
-          // El capítulo viaja como UUID en las dos convenciones, igual que en
-          // el alta de APU, y `codigo` es obligatorio.
-          : {
-            codigo: f.codigo,
-            descripcion: f.descripcion,
-            unidad: f.unidad,
-            capitulo_id: f.__capitulo_id,
-            capituloId: f.__capitulo_id,
-          })),
-        dryRun: true,
-      };
-      const res = extractData(tipo === 'INSUMOS'
-        ? await apiService.importarInsumos(cuerpo)
-        : await apiService.importarApus(cuerpo));
+      const d: any = extractData(tipo === 'INSUMOS'
+        ? await apiService.importarInsumos(archivo)
+        : await apiService.importarApus(archivo));
 
-      const id = res?.jobId ?? res?.job_id ?? res?.id;
-      if (!id) {
-        // Sin job no hay segundo paso: el servidor ya aplicó la importación.
-        showNotification('Importado', 'success', `${filas.length} fila(s) procesada(s).`);
+      const jobId = d?.job_id ?? d?.jobId ?? d?.id;
+      if (!jobId) {
+        // Sin job no hay segundo paso: se dio por aplicada.
+        showNotification('Importado', 'success', 'El servidor procesó el archivo.');
         onImportado();
         return;
       }
-      setJobId(String(id));
-      // Los rechazos del servidor se suman a los detectados aquí: pueden ser
-      // otros (duplicados, capítulo inexistente) y hay que verlos todos.
+      setResumen({
+        jobId: String(jobId),
+        nuevos: Number(d?.nuevos ?? 0),
+        actualizados: Number(d?.actualizados ?? 0),
+        conError: Number(d?.con_error ?? d?.conError ?? 0),
+        expiraEn: d?.expira_en ?? d?.expiraEn,
+      });
+
+      // El detalle por fila es lo que permite corregir el archivo; sin él solo
+      // se sabe cuántas fallaron, no por qué.
       try {
-        const errs = extractData(await apiService.erroresImportacion(String(id)));
-        const arr = Array.isArray(errs) ? errs : (errs?.items ?? []);
+        const errs = extractData(await apiService.erroresImportacion(String(jobId)));
+        const arr = Array.isArray(errs) ? errs : (errs?.items ?? errs?.errores ?? []);
         if (Array.isArray(arr) && arr.length) {
-          setErrores((e) => [...e, ...arr.map((x: any) => ({ fila: x.fila ?? x.row ?? 0, motivo: x.motivo ?? x.mensaje ?? x.message ?? 'Rechazada' }))]);
+          setErrores(arr.map((x: any) => ({
+            fila: x.fila ?? x.row ?? x.linea ?? 0,
+            motivo: x.motivo ?? x.mensaje ?? x.message ?? x.error ?? 'Fila rechazada',
+          })));
         }
-      } catch { /* el detalle de errores es opcional */ }
+      } catch { /* el detalle es opcional; el resumen ya da el número */ }
     } catch (e: any) {
       setFallo(e?.message || 'El servidor rechazó el archivo.');
     } finally {
-      setAnalizando(false);
+      setSubiendo(false);
     }
   };
 
-  /** Paso 2: solo ahora se escribe en el catálogo. */
+  /** Paso 2: aplicar el lote. */
   const confirmar = async () => {
-    if (!jobId) return;
+    if (!resumen) return;
     setConfirmando(true);
+    setFallo(null);
     try {
-      const res = extractData(await apiService.confirmarImportacion(jobId));
-      const n = res?.importadas ?? res?.creadas ?? filas.length;
-      showNotification('Importado', 'success', `${n} registro(s) agregado(s) al catálogo.`);
+      const d: any = extractData(await apiService.confirmarImportacion(resumen.jobId));
+      const n = d?.importadas ?? d?.creadas ?? (resumen.nuevos + resumen.actualizados);
+      showNotification('Importado', 'success', `${n} registro(s) aplicados al catálogo.`);
       onImportado();
     } catch (e: any) {
-      showNotification('Error', 'error', e?.message || 'No se pudo confirmar la importación.');
+      setFallo(e?.message || 'No se pudo confirmar la importación.');
     } finally {
       setConfirmando(false);
     }
   };
 
-  const etiqueta = tipo === 'INSUMOS' ? 'insumos' : 'APUs';
+  const aplicables = resumen ? resumen.nuevos + resumen.actualizados : 0;
 
   return (
     <FormModal
       title={`Importar ${etiqueta}`}
-      subtitle="Desde un CSV exportado de Excel. Se revisa antes de guardar nada."
+      subtitle="Desde un archivo de Excel. Se revisa antes de guardar nada."
       maxWidth={620}
       onClose={onClose}
       footer={
         <>
           <button type="button" className="btn btn-small btn-secondary" onClick={onClose} style={{ width: 'auto' }}>Cancelar</button>
-          {jobId ? (
-            <button type="button" className="btn btn-small" onClick={confirmar} disabled={confirmando} style={{ width: 'auto' }}>
-              {confirmando ? 'Importando…' : `Confirmar ${filas.length} fila(s)`}
+          {resumen ? (
+            <button type="button" className="btn btn-small" onClick={confirmar} disabled={confirmando || aplicables === 0} style={{ width: 'auto' }}>
+              {confirmando ? 'Importando…' : `Confirmar ${aplicables} fila(s)`}
             </button>
           ) : (
-            <button type="button" className="btn btn-small" onClick={analizar} disabled={analizando || filas.length === 0} style={{ width: 'auto' }}>
-              {analizando ? 'Revisando…' : 'Revisar archivo'}
+            <button type="button" className="btn btn-small" onClick={revisar} disabled={subiendo || !archivo} style={{ width: 'auto' }}>
+              {subiendo ? 'Subiendo…' : 'Revisar archivo'}
             </button>
           )}
         </>
@@ -250,17 +168,14 @@ export function ModalImportar({
         }}
       >
         <Upload size={22} color="#b69462" />
-        <span style={{ fontWeight: 600 }}>{nombreArchivo || 'Elegir archivo CSV'}</span>
+        <span style={{ fontWeight: 600 }}>{archivo?.name || 'Elegir archivo .xlsx'}</span>
         <span className="small" style={{ color: '#8c8578' }}>
-          Columnas: {esperadas.join(', ')}
+          Hoja «{formato.hoja}» con las columnas: {formato.columnas.join(', ')}
         </span>
-        {COLUMNAS[tipo].nota && (
-          <span className="small" style={{ color: '#6f6a5f', maxWidth: 380 }}>{COLUMNAS[tipo].nota}</span>
-        )}
         <input
           type="file"
-          accept=".csv,text/csv,.xlsx,.xls"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) leerArchivo(f); }}
+          accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) elegir(f); }}
           style={{ display: 'none' }}
         />
       </label>
@@ -268,19 +183,22 @@ export function ModalImportar({
       {fallo && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, padding: '10px 12px', borderRadius: 9, background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.25)' }}>
           <AlertTriangle size={15} color="#ff6b6b" style={{ flexShrink: 0, marginTop: 1 }} />
-          <span className="small" style={{ color: '#ffb4b4' }}>{fallo}</span>
+          <span className="small" style={{ color: '#ffb4b4', wordBreak: 'break-word' }}>{fallo}</span>
         </div>
       )}
 
-      {(filas.length > 0 || errores.length > 0) && (
+      {resumen && (
         <div style={{ marginTop: 14 }}>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 10 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-              <CheckCircle2 size={15} color="#4ade80" /> {filas.length} fila(s) válidas
+              <CheckCircle2 size={15} color="#4ade80" /> {resumen.nuevos} nuevo(s)
             </span>
-            {errores.length > 0 && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#5aa9e6' }}>
+              <RefreshCw size={15} /> {resumen.actualizados} actualizado(s)
+            </span>
+            {resumen.conError > 0 && (
               <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#ff9500' }}>
-                <AlertTriangle size={15} /> {errores.length} rechazada(s)
+                <AlertTriangle size={15} /> {resumen.conError} con error
               </span>
             )}
           </div>
@@ -289,17 +207,23 @@ export function ModalImportar({
             <div style={{ maxHeight: 150, overflowY: 'auto', display: 'grid', gap: 3 }}>
               {errores.map((e, i) => (
                 <div key={`${e.fila}-${i}`} className="small" style={{ color: '#c0b8a9', padding: '5px 9px', borderRadius: 7, background: 'rgba(255,149,0,0.07)' }}>
-                  <strong>Fila {e.fila}</strong> · {e.motivo}
+                  {e.fila ? <strong>Fila {e.fila}</strong> : <strong>Error</strong>} · {e.motivo}
                 </div>
               ))}
             </div>
           )}
-
-          {jobId && (
-            <p className="small" style={{ color: '#8c8578', marginTop: 10 }}>
-              Todavía no se ha guardado nada. Al confirmar entran solo las filas válidas; las rechazadas se quedan fuera.
+          {/* Con errores contados pero sin detalle, decirlo es más honesto que
+              dejar la lista vacía como si no hubiera nada que corregir. */}
+          {resumen.conError > 0 && errores.length === 0 && (
+            <p className="small" style={{ color: '#8c8578' }}>
+              El servidor no detalló qué filas fallaron.
             </p>
           )}
+
+          <p className="small" style={{ color: '#8c8578', marginTop: 10 }}>
+            Todavía no se ha guardado nada. Al confirmar entran solo las filas válidas.
+            {resumen.expiraEn && ' La previsualización caduca: si tardas, vuelve a subir el archivo.'}
+          </p>
         </div>
       )}
 
@@ -307,9 +231,19 @@ export function ModalImportar({
         <summary className="small" style={{ cursor: 'pointer', color: '#8c8578', display: 'flex', alignItems: 'center', gap: 6 }}>
           <FileSpreadsheet size={14} /> Ver el formato esperado
         </summary>
-        <pre className="small" style={{ marginTop: 8, padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.3)', overflowX: 'auto', color: '#c0b8a9', fontSize: 11 }}>
-{COLUMNAS[tipo].ejemplo}
-        </pre>
+        <div className="small" style={{ marginTop: 8, padding: 10, borderRadius: 8, background: 'rgba(0,0,0,0.3)', color: '#c0b8a9' }}>
+          <p>Libro de Excel con una hoja llamada <strong>«{formato.hoja}»</strong> y estas cabeceras exactas:</p>
+          <pre style={{ margin: '6px 0', overflowX: 'auto', fontSize: 11 }}>{formato.columnas.join(' | ')}</pre>
+          {formato.ejemplo && (
+            <>
+              <p style={{ marginTop: 8 }}>
+                <strong>componentes</strong>: los insumos separados por <code>;</code>, cada uno como
+                {' '}<code>nombre:rendimiento</code>. El nombre debe coincidir exactamente con el del maestro.
+              </p>
+              <pre style={{ margin: '6px 0', overflowX: 'auto', fontSize: 11 }}>{formato.ejemplo}</pre>
+            </>
+          )}
+        </div>
       </details>
     </FormModal>
   );

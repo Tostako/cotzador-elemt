@@ -437,8 +437,8 @@ enchapes.
 | GET · PUT | `/costos/projects/:id/budget/items/:itemId/memoria` | HU-08 |
 | GET · POST | `/costos/projects/:id/quotations` | HU-22 |
 | PATCH | `/costos/projects/:id/quotations/:quotationId` | HU-22 |
-| POST | `/costos/catalog/apus/import` | HU-13 |
-| POST | `/costos/catalog/supplies/import` | HU-13 |
+| POST | `/costos/catalog/apus/import` | HU-13 — **multipart**, campo `archivo` |
+| POST | `/costos/catalog/supplies/import` | HU-13 — **multipart**, campo `archivo` |
 | GET | `/costos/catalog/imports/:jobId/errors` | HU-13 |
 | POST | `/costos/catalog/imports/:jobId/confirm` | HU-13 |
 | GET · PUT | `/costos/org/branding` | HU-25 |
@@ -451,9 +451,21 @@ Notas de contrato que el frontend da por supuestas:
   actividad al total y devolver `tieneMemoria` y `cantidadDesdeMemoria` en el
   presupuesto: la tabla los usa para bloquear el campo y marcar las actividades
   sin soporte.
-- **HU-13.** El `POST` de importación va con `{ filas[], dryRun: true }` y se
-  espera `{ jobId }`; el alta real ocurre en `/confirm`. Si la respuesta **no**
-  trae `jobId`, el frontend asume que la importación ya se aplicó de una vez y
+- **HU-13.** La importación es **`multipart/form-data`** con el fichero en un
+  campo llamado literalmente **`archivo`** (`FileInterceptor('archivo')` en
+  `catalog.controller.ts:135`). No es un JSON con las filas: mandarlo así
+  devuelve `ARCHIVO_REQUERIDO`. Y **el Content-Type no se fija a mano** — lo
+  pone el navegador con su `boundary`, o Multer no encuentra el archivo.
+
+  El servidor parsea **XLSX**, no CSV. Para APUs espera una hoja llamada
+  `APUs` con las cabeceras `codigo | descripcion | unidad | capitulo |
+  componentes`, donde `componentes` es una cadena
+  `nombreInsumo:rendimiento` separada por `;` y el insumo se empareja por
+  **descripción exacta**.
+
+  La previsualización responde `{ job_id, nuevos, actualizados, con_error,
+  expira_en }` sin escribir nada; `/imports/:jobId/confirm` aplica el lote.
+  Si la respuesta **no** trae `job_id`, el frontend asume que ya se aplicó y
   no pide confirmación.
 - **HU-22.** El `PATCH` manda solo las líneas cambiadas: `{ lineas: [{ id, … }] }`.
   Llevar un precio aprobado al maestro **no** va por aquí: reutiliza
