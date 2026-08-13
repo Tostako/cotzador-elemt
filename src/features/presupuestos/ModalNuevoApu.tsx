@@ -4,6 +4,7 @@ import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { apuABackend, capitulosDesdeBackend, codigoSugerido, grupoABackend, grupoDesdeBackend, insumosDesdeBackend } from './mapeo';
+import { olvidarMaestroInsumos } from './maestroInsumos';
 import { ETIQUETA_RECURSO, aNumero, money, type Capitulo, type GrupoRecurso, type Insumo } from './types';
 
 /** Componente en composición: el usuario aporta el rendimiento, nunca el precio. */
@@ -134,6 +135,9 @@ export function ModalNuevoApu({ onClose, onCreado }: { onClose: () => void; onCr
           motivo: 'Precio inicial',
         });
       }
+      // El maestro cacheado se usa para pintar la composición de los APUs: si
+      // no se invalida, el insumo recién creado saldría como no encontrado.
+      olvidarMaestroInsumos();
       showNotification('Correcto', 'success', 'Insumo creado en el maestro.');
       // Queda en el maestro y disponible para cualquier otro APU.
       if (creado?.id) {

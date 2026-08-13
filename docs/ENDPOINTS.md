@@ -396,12 +396,34 @@ que suena a id mal construido y no a campo ausente.
 { "apu_id": "1d3c8e2a-5f1b-4a7c-9f0e-9a2b4c5d6e7f", "cantidad": 300 }
 ```
 
-⚠️ **`CreateApuDto` tiene dos exigencias que no se ven venir:**
+⚠️ **`CreateApuDto` tiene tres exigencias que no se ven venir:**
 
 - `codigo` es **obligatorio**, cadena no vacía de **máx. 30 caracteres**.
 - Los componentes llevan **`insumo_id`** en snake_case, no `insumoId` — aunque
   el resto del cuerpo vaya en camelCase. Con el nombre equivocado el error es
   «`insumo_id must be a UUID`», que apunta al formato y no a la causa.
+- El capítulo es **`chapter_id`**, en inglés. Mandarlo como `capituloId` **no
+  da error**: el campo se descarta y el APU queda sin capítulo, en silencio.
+
+`origen` es opcional: `BASE` | `PERSONALIZADO` | `GENERADO_IA` | `IMPORTADO`.
+El frontend crea con `PERSONALIZADO`.
+
+⚠️ **La respuesta devuelve los componentes en crudo** — solo `id`, `apu_id`,
+`insumo_id` y `rendimiento` (este último como cadena). **No trae descripción,
+unidad, grupo ni precio del insumo.** Sin cruzarlos contra el maestro, la
+composición de un APU se ve sin nombres y a cero, que no parece un error de
+lectura sino un APU vacío.
+
+Ese cruce lo hace `enriquecerComponentes` con el maestro que cachea
+[`maestroInsumos.ts`](../src/features/presupuestos/maestroInsumos.ts) — una
+sola petición, no una por APU desplegado. La caché se invalida al crear un
+insumo o al recargar la pantalla de precios. Un componente cuyo insumo ya no
+existe se marca como huérfano en vez de mostrarse en blanco.
+
+El valor del APU es **`costo_unitario`**, y `avisos` explica por qué puede
+salir más bajo de lo esperado (`El insumo "X" no tiene precio; se usa 0.00`).
+Esos avisos se muestran al desplegar el APU: son la única pista de que el
+número está incompleto.
 
 ⚠️ **`CreateSupplyDto` no lleva precio.** Mandar `valorUnitario` en el alta no
 da error —se ignora en silencio— y el insumo queda sin precio. El precio va

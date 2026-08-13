@@ -3,7 +3,8 @@ import { AlertTriangle, Trash2, Plus, Search, Upload } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
-import { grupoDesdeBackend, insumosDesdeBackend } from './mapeo';
+import { componentesDesdeBackend, enriquecerComponentes, insumosDesdeBackend } from './mapeo';
+import { maestroInsumos } from './maestroInsumos';
 import { ETIQUETA_RECURSO, aNumero, money, type ComponenteApu, type GrupoRecurso, type Insumo } from './types';
 
 /** Impacto que devuelve el dryRun de promover al catálogo. */
@@ -62,10 +63,11 @@ const ORDEN: GrupoRecurso[] = ['MATERIALES', 'MANO_OBRA', 'EQUIPOS', 'TRANSPORTE
 const desdeComponentes = (comps: ComponenteApu[] = []): FilaComponente[] =>
   comps.map((c) => ({
     insumoId: c.insumoId,
-    descripcion: c.descripcion,
-    unidad: c.unidad,
-    // La composición del APU trae el grupo con el nombre del backend.
-    grupo: grupoDesdeBackend(c.grupo),
+    // Tras enriquecer con el maestro estos campos ya vienen; el respaldo es
+    // para el insumo que ya no existe, que se marca en vez de dejarse en blanco.
+    descripcion: c.descripcion ?? 'Insumo no encontrado',
+    unidad: c.unidad ?? '',
+    grupo: c.grupo ?? 'MATERIALES',
     rendimiento: aNumero(c.cantidad),
     valorUnitario: String(c.valorUnitario ?? '0'),
   }));
@@ -116,8 +118,13 @@ export function ModalEditarApu({
     setCargando(true);
     setError(null);
     try {
-      const d = extractData(await apiService.getActividadApu(projectId, itemId));
-      setFilas(desdeComponentes(d?.componentes));
+      // Los componentes llegan crudos (`insumo_id` + `rendimiento`): hay que
+      // cruzarlos con el maestro para tener nombre, unidad, grupo y precio.
+      const [d, maestro] = await Promise.all([
+        apiService.getActividadApu(projectId, itemId).then(extractData),
+        maestroInsumos().catch(() => new Map()),
+      ]);
+      setFilas(desdeComponentes(enriquecerComponentes(componentesDesdeBackend(d?.componentes), maestro)));
       setUnidad(d?.unidad ?? '');
       if (d?.descripcion) setDescripcion(d.descripcion);
       setDiverge(!!d?.divergeDelCatalogo);

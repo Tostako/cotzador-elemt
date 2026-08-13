@@ -75,11 +75,20 @@ export interface Capitulo {
 
 // ── Nivel 3: Actividad (APU dentro de un presupuesto) ──────
 
+/**
+ * Aviso del servidor. Llega en dos formas según el endpoint: la validación
+ * blanda usa `codigo`/`bloqueante`, y el catálogo de APUs `tipo`/`field`. Se
+ * admiten las dos para no perder el mensaje, que es lo único imprescindible.
+ */
 export interface Aviso {
-  codigo: string;
   mensaje: string;
+  codigo?: string;
+  /** `warning` | `error` en los avisos del catálogo. */
+  tipo?: string;
+  /** Ruta del campo al que se refiere, p. ej. `componentes.<id>.precio`. */
+  campo?: string;
   /** La validación blanda (H-16) nunca bloquea: solo informa. */
-  bloqueante: boolean;
+  bloqueante?: boolean;
 }
 
 export interface ActividadPresupuesto {
@@ -113,16 +122,29 @@ export interface Presupuesto {
 
 // ── Nivel 2: APU del catálogo ──────────────────────────────
 
+/**
+ * Componente de un APU.
+ *
+ * El servidor devuelve la fila cruda —`insumo_id` y `rendimiento`, nada más—,
+ * así que descripción, unidad, grupo y precio se rellenan cruzando con el
+ * maestro de insumos (ver `enriquecerComponentes`). Hasta que se cruzan, esos
+ * campos vienen vacíos: por eso son opcionales y no mienten con un valor
+ * inventado.
+ */
 export interface ComponenteApu {
   insumoId: string;
-  descripcion: string;
-  unidad: string;
-  grupo: GrupoRecurso;
   /** Rendimiento: cantidad de insumo por unidad de actividad. */
   cantidad: number;
-  valorUnitario: Importe;
-  subtotal: Importe;
+  descripcion?: string;
+  unidad?: string;
+  grupo?: GrupoRecurso;
+  valorUnitario?: Importe;
+  subtotal?: Importe;
+  /** El insumo no está en el maestro: se cita un id que ya no existe. */
+  huerfano?: boolean;
 }
+
+export type OrigenApu = 'BASE' | 'PERSONALIZADO' | 'GENERADO_IA' | 'IMPORTADO';
 
 export interface Apu {
   id: string;
@@ -131,8 +153,11 @@ export interface Apu {
   /** Obligatorio al crear (máx. 30 caracteres). */
   codigo?: string;
   capitulo?: Capitulo;
+  origen?: OrigenApu;
   valorUnitario: Importe;
   componentes?: ComponenteApu[];
+  /** Los devuelve el servidor: insumos sin precio, sobre todo. */
+  avisos?: Aviso[];
 }
 
 // ── Nivel 1: Insumo ────────────────────────────────────────

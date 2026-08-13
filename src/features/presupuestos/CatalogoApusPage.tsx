@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Layers, Search, ChevronDown, ChevronRight, Copy, Plus, Upload, Download } from 'lucide-react';
+import { Layers, Search, ChevronDown, ChevronRight, Copy, Plus, Upload, Download, AlertTriangle } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { ModalNuevoApu } from './ModalNuevoApu';
 import { ModalImportar } from './ModalImportar';
 import { descargarXlsx } from './exportarXlsx';
-import { apuDesdeBackend, apusDesdeBackend, capitulosDesdeBackend, codigoSugerido } from './mapeo';
+import { apuDesdeBackend, apusDesdeBackend, capitulosDesdeBackend, codigoSugerido, enriquecerComponentes } from './mapeo';
+import { maestroInsumos } from './maestroInsumos';
 import { ETIQUETA_RECURSO, aNumero, money, type Apu, type Capitulo, type ComponenteApu, type GrupoRecurso } from './types';
 
 /**
@@ -40,13 +41,16 @@ export function CatalogoApusPage() {
     if (apus.length === 0 || exportando) return;
     setExportando(true);
     try {
+      // La descripción del insumo es lo que el importador empareja, y los
+      // componentes llegan solo con el id: sin el maestro no hay qué escribir.
+      const maestro = await maestroInsumos().catch(() => new Map());
       const detalles: Apu[] = [];
       const TANDA = 6;
       for (let i = 0; i < apus.length; i += TANDA) {
         const tanda = await Promise.all(apus.slice(i, i + TANDA).map(async (a) => {
-          if (a.componentes) return a;
           try {
-            return apuDesdeBackend(extractData(await apiService.getApu(a.id)));
+            const d = a.componentes ? a : apuDesdeBackend(extractData(await apiService.getApu(a.id)));
+            return { ...d, componentes: enriquecerComponentes(d.componentes ?? [], maestro) };
           } catch {
             // Si falla el detalle se exporta el APU sin componentes, que es
             // válido al reimportar, en vez de tumbar la exportación entera.
@@ -65,8 +69,11 @@ export function CatalogoApusPage() {
           a.unidad,
           a.capitulo?.nombre ?? '',
           // «descripcionExacta:rendimiento» separados por ';', que es como lo
-          // lee el importador.
-          (a.componentes ?? []).map((c) => `${c.descripcion}:${aNumero(c.cantidad)}`).join(';'),
+          // lee el importador. Los huérfanos se omiten: escribir un nombre que
+          // no está en el maestro haría fallar esa fila al reimportar.
+          (a.componentes ?? [])
+            .filter((c) => c.descripcion && !c.huerfano)
+            .map((c) => `${c.descripcion}:${aNumero(c.cantidad)}`).join(';'),
         ]),
       ]);
 
@@ -242,8 +249,16 @@ function FilaApu({ apu, abierto, onAlternar, onDuplicar }: { apu: Apu; abierto: 
     setCargando(true);
     (async () => {
       try {
-        const d = extractData(await apiService.getApu(apu.id));
-        if (!cancel && d) setDetalle(d);
+        // El detalle trae los componentes en crudo: `insumo_id` y
+        // `rendimiento`. Sin cruzarlos con el maestro, la composición sale sin
+        // nombres y a cero, que es justo lo que se veía.
+        const [d, maestro] = await Promise.all([
+          apiService.getApu(apu.id).then(extractData).then(apuDesdeBackend),
+          maestroInsumos().catch(() => new Map()),
+        ]);
+        if (!cancel && d) {
+          setDetalle({ ...d, componentes: enriquecerComponentes(d.componentes ?? [], maestro) });
+        }
       } catch {
         /* se muestra sin composición */
       } finally {
@@ -258,9 +273,10 @@ function FilaApu({ apu, abierto, onAlternar, onDuplicar }: { apu: Apu; abierto: 
     const comps = detalle?.componentes ?? [];
     const mapa = new Map<GrupoRecurso, ComponenteApu[]>();
     for (const c of comps) {
-      const lista = mapa.get(c.grupo) ?? [];
+      const g = c.grupo ?? 'MATERIALES';
+      const lista = mapa.get(g) ?? [];
       lista.push(c);
-      mapa.set(c.grupo, lista);
+      mapa.set(g, lista);
     }
     return Array.from(mapa.entries());
   }, [detalle]);
@@ -294,6 +310,18 @@ function FilaApu({ apu, abierto, onAlternar, onDuplicar }: { apu: Apu; abierto: 
 
       {abierto && (
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          {/* Los avisos del servidor explican por qué un APU vale menos de lo
+              esperado: casi siempre, un insumo sin precio contando como 0. */}
+          {(detalle?.avisos?.length ?? 0) > 0 && (
+            <div style={{ display: 'grid', gap: 5, marginBottom: 12 }}>
+              {detalle!.avisos!.map((av, i) => (
+                <div key={i} className="small" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '7px 10px', borderRadius: 8, background: 'rgba(255,149,0,0.08)', border: '1px solid rgba(255,149,0,0.22)' }}>
+                  <AlertTriangle size={14} color="#ff9500" style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span style={{ color: '#e0d3b8' }}>{av.mensaje}</span>
+                </div>
+              ))}
+            </div>
+          )}
           {cargando ? (
             <p className="small" style={{ color: '#999' }}>Cargando composición…</p>
           ) : porGrupo.length === 0 ? (

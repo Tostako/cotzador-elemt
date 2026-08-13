@@ -1,4 +1,9 @@
-import { AIU_POR_DEFECTO, type Aiu, type Apu, type Capitulo, type GrupoRecurso, type Insumo, type NuevoProyecto, type Proyecto, type TipoObra } from './types';
+import {
+  AIU_POR_DEFECTO,
+  type Aiu, type Apu, type Aviso, type Capitulo, type ComponenteApu,
+  type GrupoRecurso, type Insumo, type NuevoProyecto, type OrigenApu,
+  type Proyecto, type TipoObra,
+} from './types';
 
 /**
  * Traducción entre el modelo de la interfaz y el contrato del backend.
@@ -117,22 +122,84 @@ export function apuABackend(a: {
   descripcion: string;
   unidad: string;
   codigo: string;
-  capituloId: string;
+  capituloId?: string;
+  origen?: OrigenApu;
   componentes: Array<{ insumoId: string; rendimiento: number }>;
 }) {
   return {
     descripcion: a.descripcion,
     unidad: a.unidad,
     codigo: a.codigo.slice(0, 30),
-    // Se mandan las dos convenciones del capítulo: el DTO se queda con la que
-    // conoce y descarta la otra, que es como trata los campos de más.
-    capituloId: a.capituloId,
-    capitulo_id: a.capituloId,
+    // El campo es `chapter_id`, en inglés y snake_case, aunque el resto del
+    // cuerpo vaya en español. Mandarlo como `capituloId` no da error: el
+    // capítulo se pierde en silencio y el APU queda suelto.
+    ...(a.capituloId ? { chapter_id: a.capituloId } : {}),
+    origen: a.origen ?? 'PERSONALIZADO',
     componentes: a.componentes.map((c) => ({
       insumo_id: c.insumoId,
       rendimiento: c.rendimiento,
     })),
   };
+}
+
+/**
+ * Componentes tal como los devuelve el servidor: filas crudas con `insumo_id`
+ * y `rendimiento`, sin descripción ni precio. Se completan con
+ * `enriquecerComponentes` cruzando contra el maestro de insumos.
+ */
+export function componentesDesdeBackend(d: any): ComponenteApu[] {
+  return listaDesdeBackend(d).map((c: any) => ({
+    insumoId: String(campo(c, 'insumo_id', 'insumoId') ?? ''),
+    cantidad: num(campo(c, 'rendimiento', 'cantidad'), 0),
+    // Si algún día el servidor los enriquece, se aprovechan sin cambiar nada.
+    descripcion: campo(c, 'descripcion', 'nombre'),
+    unidad: campo(c, 'unidad'),
+    grupo: campo(c, 'grupo') ? grupoDesdeBackend(campo(c, 'grupo')) : undefined,
+    valorUnitario: campo(c, 'valorUnitario', 'valor_unitario', 'precio_vigente'),
+    subtotal: campo(c, 'subtotal'),
+  }));
+}
+
+/**
+ * Rellena descripción, unidad, grupo y precio de cada componente con los datos
+ * del maestro, y calcula el subtotal como rendimiento × precio.
+ *
+ * Un componente cuyo insumo ya no está en el maestro se marca como huérfano en
+ * vez de mostrarse en blanco: una fila vacía parece un fallo de carga, y esto
+ * es un dato que falta de verdad.
+ */
+export function enriquecerComponentes(
+  componentes: ComponenteApu[],
+  maestro: Map<string, Insumo>,
+): ComponenteApu[] {
+  return componentes.map((c) => {
+    const insumo = maestro.get(c.insumoId);
+    if (!insumo) {
+      return { ...c, huerfano: true, descripcion: c.descripcion ?? 'Insumo no encontrado', grupo: c.grupo ?? 'MATERIALES' };
+    }
+    const precio = num(c.valorUnitario ?? insumo.valorUnitario, 0);
+    return {
+      ...c,
+      descripcion: c.descripcion ?? insumo.descripcion,
+      unidad: c.unidad ?? insumo.unidad,
+      grupo: c.grupo ?? insumo.grupo,
+      valorUnitario: String(precio),
+      subtotal: c.subtotal ?? String(precio * c.cantidad),
+    };
+  });
+}
+
+/** Avisos del servidor; el mensaje es lo único que siempre viene. */
+export function avisosDesdeBackend(d: any): Aviso[] {
+  return listaDesdeBackend(d)
+    .map((a: any) => ({
+      mensaje: campo(a, 'mensaje', 'message', 'texto') ?? '',
+      tipo: campo(a, 'tipo', 'type'),
+      codigo: campo(a, 'codigo', 'code'),
+      campo: campo(a, 'field', 'campo'),
+      bloqueante: !!campo(a, 'bloqueante', 'blocking'),
+    }))
+    .filter((a) => a.mensaje);
 }
 
 /** Marcas diacríticas combinantes. Se construye con escapes ASCII a propósito:
@@ -148,20 +215,27 @@ const DIACRITICOS = new RegExp('[\\u0300-\\u036f]', 'g');
  */
 export function apuDesdeBackend(d: any): Apu {
   const cap = campo(d, 'capitulo', 'chapter');
+  const idCapitulo = campo(d, 'chapter_id', 'capitulo_id', 'capituloId');
+  const nombreCapitulo = campo(d, 'capitulo_nombre', 'capituloNombre');
   return {
     ...d,
     id: String(campo(d, 'id') ?? ''),
     descripcion: campo(d, 'descripcion', 'nombre') ?? '',
     unidad: campo(d, 'unidad') ?? '',
     codigo: campo(d, 'codigo') ?? undefined,
+    origen: campo(d, 'origen'),
     capitulo: cap && typeof cap === 'object'
       ? { id: String(campo(cap, 'id') ?? ''), nombre: campo(cap, 'nombre', 'name') ?? '' }
-      : campo(d, 'capitulo_nombre', 'capituloNombre')
-        ? { id: String(campo(d, 'capitulo_id', 'capituloId') ?? ''), nombre: campo(d, 'capitulo_nombre', 'capituloNombre') }
+      // Sin objeto anidado, el APU solo trae `chapter_id`: el nombre lo pone
+      // quien lo pinte, cruzando con la lista de capítulos.
+      : idCapitulo || nombreCapitulo
+        ? { id: String(idCapitulo ?? ''), nombre: nombreCapitulo ?? '' }
         : undefined,
     valorUnitario: String(
-      campo(d, 'valorUnitario', 'valor_unitario', 'precioUnitario', 'precio_unitario', 'costo_unitario', 'total') ?? '0'
+      campo(d, 'costo_unitario', 'costoUnitario', 'valorUnitario', 'valor_unitario', 'precioUnitario', 'precio_unitario', 'total') ?? '0'
     ),
+    componentes: d?.componentes ? componentesDesdeBackend(d.componentes) : undefined,
+    avisos: d?.avisos ? avisosDesdeBackend(d.avisos) : undefined,
   };
 }
 
