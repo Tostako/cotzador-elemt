@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { LayoutTemplate, AlertTriangle } from 'lucide-react';
-import { apiService } from '../../shared/services/api';
+import { LayoutTemplate } from 'lucide-react';
+import { apiService, type ApiError } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { codigoSugerido } from './mapeo';
-import { aNumero, money, type Presupuesto, type Proyecto } from './types';
+import { money, type Presupuesto, type Proyecto } from './types';
 
 /**
  * HU-02 · Guardar el presupuesto actual como plantilla.
@@ -29,22 +29,12 @@ export function ModalGuardarPlantilla({
   onClose: () => void;
   onGuardada: () => void;
 }) {
-  const actividades = useMemo(() => {
-    const salida: Array<{ apu_id: string; cantidad: number; descripcion: string }> = [];
-    for (const cap of presupuesto?.capitulos ?? []) {
-      for (const a of cap.actividades ?? []) {
-        // Sin el id del APU la actividad no se puede reproducir: la plantilla
-        // guarda referencias al catálogo, no copias.
-        const apuId = a.apuSnapshot?.apuId;
-        if (!apuId) continue;
-        salida.push({ apu_id: apuId, cantidad: aNumero(a.cantidad), descripcion: a.descripcion });
-      }
-    }
-    return salida;
-  }, [presupuesto]);
-
-  const totalActividades = (presupuesto?.capitulos ?? []).reduce((s, c) => s + (c.actividades?.length ?? 0), 0);
-  const sinApu = totalActividades - actividades.length;
+  // Solo para mostrar cuántas se van a copiar: el que las copia es el
+  // servidor, a partir de `project_id`.
+  const totalActividades = useMemo(
+    () => (presupuesto?.capitulos ?? []).reduce((s, c) => s + (c.actividades?.length ?? 0), 0),
+    [presupuesto],
+  );
 
   const [nombre, setNombre] = useState(proyecto?.nombre ?? '');
   const [codigo, setCodigo] = useState(() => codigoSugerido(proyecto?.nombre ?? '', 20));
@@ -62,27 +52,32 @@ export function ModalGuardarPlantilla({
       showNotification('Falta el código', 'warning', 'La plantilla necesita un código.');
       return;
     }
-    if (actividades.length === 0) {
-      showNotification('Sin actividades', 'warning', 'Un presupuesto vacío no puede guardarse como plantilla.');
-      return;
-    }
     setGuardando(true);
     setFallo(null);
     try {
+      // Se manda `project_id` y el servidor copia los items. Antes se extraían
+      // los `apu_id` del snapshot de cada actividad, y bastaba con que un item
+      // no lo trajera para quedarse sin actividades y recibir un
+      // ACTIVIDADES_REQUERIDAS que no explicaba nada.
       await apiService.crearPlantilla({
         codigo: codigo.trim(),
         nombre: nombre.trim(),
         alcance: alcance.trim() || undefined,
         area_referencia: area.trim() ? Number(area) : undefined,
-        actividades: actividades.map(({ apu_id, cantidad }) => ({ apu_id, cantidad })),
+        project_id: proyecto?.id,
       });
       showNotification('Guardada', 'success', `"${nombre.trim()}" ya está disponible como plantilla.`);
       onGuardada();
-    } catch (e: any) {
-      // El código duplicado es el rechazo habitual y tiene arreglo evidente.
-      setFallo(e?.codigo === 'PLANTILLA_CODIGO_EXISTENTE'
-        ? `Ya existe una plantilla con el código "${codigo.trim()}". Usa otro.`
-        : e?.message || 'No se pudo guardar la plantilla.');
+    } catch (e) {
+      // Los códigos del servidor dicen exactamente qué corregir; el mensaje
+      // genérico deja al usuario adivinando.
+      const err = e as ApiError;
+      const porCodigo: Record<string, string> = {
+        PLANTILLA_CODIGO_EXISTENTE: `Ya existe una plantilla con el código "${codigo.trim()}". Usa otro.`,
+        PLANTILLA_SIN_ACTIVIDADES: 'El presupuesto no tiene actividades que copiar.',
+        ACTIVIDADES_REQUERIDAS: 'No se pudo identificar el proyecto de origen. Recarga y vuelve a intentarlo.',
+      };
+      setFallo((err?.codigo && porCodigo[err.codigo]) || err?.message || 'No se pudo guardar la plantilla.');
     } finally {
       setGuardando(false);
     }
@@ -97,8 +92,8 @@ export function ModalGuardarPlantilla({
       footer={
         <>
           <button type="button" className="btn btn-small btn-secondary" onClick={onClose} style={{ width: 'auto' }}>Cancelar</button>
-          <button type="button" className="btn btn-small" onClick={guardar} disabled={guardando || actividades.length === 0} style={{ width: 'auto' }}>
-            {guardando ? 'Guardando…' : `Guardar ${actividades.length} actividad(es)`}
+          <button type="button" className="btn btn-small" onClick={guardar} disabled={guardando || totalActividades === 0} style={{ width: 'auto' }}>
+            {guardando ? 'Guardando…' : `Guardar ${totalActividades} actividad(es)`}
           </button>
         </>
       }
@@ -127,7 +122,7 @@ export function ModalGuardarPlantilla({
         <div style={{ padding: '11px 13px', borderRadius: 11, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
           <div className="flex-between" style={{ gap: 8, flexWrap: 'wrap' }}>
             <span className="small" style={{ color: '#8c8578' }}>Se guardarán</span>
-            <span style={{ fontWeight: 700 }}>{actividades.length} actividad(es)</span>
+            <span style={{ fontWeight: 700 }}>{totalActividades} actividad(es)</span>
           </div>
           <p className="small" style={{ color: '#8c8578', marginTop: 6 }}>
             Solo el APU y la cantidad de cada una. El valor se recalcula con los precios
@@ -136,18 +131,7 @@ export function ModalGuardarPlantilla({
           </p>
         </div>
 
-        {/* Una actividad sin APU no se puede reproducir: hay que decirlo antes
-            de guardar, no dejar que la plantilla salga incompleta en silencio. */}
-        {sinApu > 0 && (
-          <div style={{ display: 'flex', gap: 9, padding: '10px 12px', borderRadius: 10, background: 'rgba(255,149,0,0.08)', border: '1px solid rgba(255,149,0,0.25)' }}>
-            <AlertTriangle size={15} color="#ff9500" style={{ flexShrink: 0, marginTop: 1 }} />
-            <p className="small" style={{ color: '#e0d3b8' }}>
-              {sinApu} actividad(es) quedarán fuera: no se pudo identificar su APU del catálogo.
-            </p>
-          </div>
-        )}
-
-        {actividades.length === 0 && (
+        {totalActividades === 0 && (
           <div style={{ display: 'flex', gap: 9, padding: '10px 12px', borderRadius: 10, background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.25)' }}>
             <LayoutTemplate size={15} color="#ff6b6b" style={{ flexShrink: 0, marginTop: 1 }} />
             <p className="small" style={{ color: '#ffb4b4' }}>

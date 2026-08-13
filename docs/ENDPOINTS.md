@@ -495,6 +495,18 @@ frontend y dejaba las tarjetas medio en blanco.
 `[{ apu_id, cantidad }]`. `valor_referencia` lo recalcula el servidor con los
 precios vigentes, así que una plantilla vieja no envejece.
 
+**`POST /templates` admite dos modalidades**, y hay que mandar una:
+
+| Campo | Qué hace |
+|---|---|
+| `project_id` | El servidor copia los items de ese proyecto |
+| `actividades` | `[{ apu_id, cantidad }]` explícitas |
+
+El frontend usa **`project_id`**. Con `actividades` había que extraer los
+`apu_id` del `apu_snapshot` de cada item, y bastaba con que uno no lo trajera
+para quedarse sin actividades y recibir un `ACTIVIDADES_REQUERIDAS` que no
+explica nada. Copiando en el servidor, ese fallo no existe.
+
 Una plantilla se crea **desde un presupuesto existente** («Guardar como
 plantilla»), no con un editor aparte: para modificarla, se aplica a un
 proyecto, se ajusta y se vuelve a guardar. Aplicarla no deja vínculo, así que

@@ -586,10 +586,18 @@ export const apiService = {
   // Plantillas de proyecto — HU-02. El listado mezcla SISTEMA y PROPIA; solo
   // las propias se pueden editar o borrar.
   getPlantillas: () => api(`${PRESUP_BASE}/templates`),
-  /** `actividades` va como `[{ apu_id, cantidad }]`, no como conteo. */
+  /**
+   * Crear plantilla. Dos modalidades, y hay que mandar **una de las dos** o
+   * responde 400 `ACTIVIDADES_REQUERIDAS`:
+   *
+   * - `project_id`: el servidor copia los items de ese proyecto. Es la que usa
+   *   la app, porque no depende de que el frontend sepa extraer los `apu_id`.
+   * - `actividades`: `[{ apu_id, cantidad }]` explícitas.
+   */
   crearPlantilla: (data: {
-    codigo: string; nombre: string; alcance?: string;
-    area_referencia?: number; actividades: Array<{ apu_id: string; cantidad: number }>;
+    codigo: string; nombre: string; alcance?: string; area_referencia?: number;
+    project_id?: string;
+    actividades?: Array<{ apu_id: string; cantidad: number }>;
   }) => api(`${PRESUP_BASE}/templates`, { method: 'POST', body: JSON.stringify(data) }),
   updatePlantilla: (id: string, data: any) =>
     api(`${PRESUP_BASE}/templates/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
