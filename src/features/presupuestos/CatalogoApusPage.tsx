@@ -7,6 +7,7 @@ import { ModalImportar } from './ModalImportar';
 import { descargarXlsx } from './exportarXlsx';
 import { apuDesdeBackend, apusDesdeBackend, capitulosDesdeBackend, codigoSugerido, enriquecerComponentes } from './mapeo';
 import { maestroInsumos } from './maestroInsumos';
+import { useCostosApu } from './costosApu';
 import { ETIQUETA_RECURSO, aNumero, money, type Apu, type Capitulo, type ComponenteApu, type GrupoRecurso } from './types';
 
 /**
@@ -28,6 +29,8 @@ export function CatalogoApusPage() {
   const [modalNuevo, setModalNuevo] = useState(false);
   const [modalImportar, setModalImportar] = useState(false);
   const [exportando, setExportando] = useState(false);
+  // El listado no devuelve el costo; se completa pidiendo los detalles.
+  const { costo, cargando: cargandoCostos } = useCostosApu(apus);
 
   /**
    * HU-13 · Exporta lo que se está viendo —filtros incluidos— en el mismo
@@ -155,6 +158,7 @@ export function CatalogoApusPage() {
           {!cargando && !error && (
             <span className="small" style={{ color: '#8c8578' }}>
               {apus.length} APU{apus.length === 1 ? '' : 's'}{capituloId ? ' en el capítulo' : ' en el catálogo'}
+              {cargandoCostos && ' · calculando costos…'}
             </span>
           )}
           <button type="button" className="btn btn-small btn-secondary" onClick={() => setModalImportar(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -212,6 +216,7 @@ export function CatalogoApusPage() {
             <FilaApu
               key={a.id}
               apu={a}
+              costo={costo(a)}
               abierto={abierto === a.id}
               onAlternar={() => setAbierto((x) => (x === a.id ? null : a.id))}
               onDuplicar={() => duplicar(a)}
@@ -239,7 +244,14 @@ export function CatalogoApusPage() {
 }
 
 /** Fila del catálogo; al desplegarla se carga la composición del APU. */
-function FilaApu({ apu, abierto, onAlternar, onDuplicar }: { apu: Apu; abierto: boolean; onAlternar: () => void; onDuplicar: () => void }) {
+function FilaApu({ apu, costo, abierto, onAlternar, onDuplicar }: {
+  apu: Apu;
+  /** `undefined` mientras no se conoce: el listado no trae el costo. */
+  costo?: string;
+  abierto: boolean;
+  onAlternar: () => void;
+  onDuplicar: () => void;
+}) {
   const [detalle, setDetalle] = useState<Apu | null>(apu.componentes ? apu : null);
   const [cargando, setCargando] = useState(false);
 
@@ -293,7 +305,11 @@ function FilaApu({ apu, abierto, onAlternar, onDuplicar }: { apu: Apu; abierto: 
           <div style={{ fontWeight: 600 }}>{apu.descripcion}</div>
           <p className="small" style={{ color: '#8c8578' }}>{apu.capitulo?.nombre || '—'} · {apu.unidad}</p>
         </div>
-        <span style={{ fontWeight: 700, color: '#b69462', whiteSpace: 'nowrap' }}>{money(apu.valorUnitario)}</span>
+        {/* Mientras no se sabe se muestra un guion, no $0: afirmar que un APU
+            vale cero cuando aún no ha llegado el dato es peor que no decir nada. */}
+        <span style={{ fontWeight: 700, color: costo === undefined ? '#6f6a5f' : '#b69462', whiteSpace: 'nowrap' }}>
+          {costo === undefined ? '—' : money(detalle?.valorUnitario ?? costo)}
+        </span>
         {/* HU-12: duplicar para crear una variante sin tocar el original */}
         <span
           role="button"

@@ -6,6 +6,7 @@ import { FormModal } from '../../shared/components/FormModal';
 import { ModalImportar } from './ModalImportar';
 import { grupoABackend, paginaInsumosDesdeBackend } from './mapeo';
 import { olvidarMaestroInsumos } from './maestroInsumos';
+import { olvidarCostosApu } from './costosApu';
 import { descargarXlsx } from './exportarXlsx';
 import { ETIQUETA_RECURSO, aNumero, money, type GrupoRecurso, type Insumo } from './types';
 
@@ -86,6 +87,9 @@ export function InsumosPage() {
       // Los precios que se ven aquí son los que usa la composición de los APUs:
       // si cambian, la caché del maestro deja de ser cierta.
       olvidarMaestroInsumos();
+      // Los costos de los APUs se calculan con estos precios: si cambian, los
+      // que estuvieran cacheados dejan de ser ciertos.
+      olvidarCostosApu();
     } catch (e: any) {
       setInsumos([]);
       setError(e?.message || 'No se pudo cargar el maestro de insumos.');
