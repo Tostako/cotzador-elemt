@@ -1,18 +1,13 @@
-import { useEffect, useState } from 'react';
-import { LayoutTemplate, AlertTriangle } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { LayoutTemplate, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
-import { money } from './types';
+import { plantillasDesdeBackend } from './mapeo';
+import { money, type Plantilla } from './types';
 
-interface Plantilla {
-  id: string;
-  nombre: string;
-  descripcion?: string;
-  areaM2?: number;
-  actividades?: number;
-  valorReferencia?: string;
-}
+/** Solo las propias se pueden tocar; las del sistema vienen precargadas. */
+const esPropia = (p: Plantilla) => (p.origen ?? 'PROPIA') === 'PROPIA';
 
 /**
  * HU-02 · Arrancar el presupuesto desde una plantilla precargada.
@@ -41,30 +36,45 @@ export function ModalPlantillas({
   const [modo, setModo] = useState<'REEMPLAZAR' | 'AGREGAR'>('AGREGAR');
   const [aplicando, setAplicando] = useState(false);
 
-  useEffect(() => {
-    let cancel = false;
-    (async () => {
-      try {
-        const d = extractData(await apiService.getPlantillas());
-        const arr = Array.isArray(d) ? d : (d?.items ?? []);
-        if (!cancel) {
-          setPlantillas((Array.isArray(arr) ? arr : []).map((p: any) => ({
-            id: String(p.id ?? ''),
-            nombre: p.nombre ?? 'Plantilla',
-            descripcion: p.descripcion,
-            areaM2: p.areaM2 ?? p.area_m2,
-            actividades: p.actividades ?? p.actividadesCount,
-            valorReferencia: p.valorReferencia ?? p.valor_referencia,
-          })));
-        }
-      } catch (e: any) {
-        if (!cancel) setError(e?.message || 'No se pudieron cargar las plantillas.');
-      } finally {
-        if (!cancel) setCargando(false);
-      }
-    })();
-    return () => { cancel = true; };
+  const cargar = useCallback(async () => {
+    setCargando(true);
+    try {
+      setPlantillas(plantillasDesdeBackend(extractData(await apiService.getPlantillas())));
+      setError(null);
+    } catch (e: any) {
+      setError(e?.message || 'No se pudieron cargar las plantillas.');
+    } finally {
+      setCargando(false);
+    }
   }, []);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const borrar = async (p: Plantilla) => {
+    // Aplicar una plantilla no deja vínculo con el proyecto, así que borrarla
+    // no afecta a nada ya creado. Aun así se confirma: no hay deshacer.
+    if (!window.confirm(`¿Eliminar la plantilla "${p.nombre}"?\n\nLos proyectos que ya la usaron no cambian.`)) return;
+    try {
+      await apiService.deletePlantilla(p.id);
+      showNotification('Eliminada', 'success', `Se eliminó "${p.nombre}".`);
+      if (elegida?.id === p.id) setElegida(null);
+      cargar();
+    } catch (e: any) {
+      showNotification('Error', 'error', e?.message || 'No se pudo eliminar la plantilla.');
+    }
+  };
+
+  const renombrar = async (p: Plantilla) => {
+    const nombre = window.prompt('Nuevo nombre de la plantilla:', p.nombre);
+    if (nombre === null || !nombre.trim() || nombre.trim() === p.nombre) return;
+    try {
+      await apiService.updatePlantilla(p.id, { nombre: nombre.trim() });
+      showNotification('Guardada', 'success', 'Nombre actualizado.');
+      cargar();
+    } catch (e: any) {
+      showNotification('Error', 'error', e?.message || 'No se pudo renombrar la plantilla.');
+    }
+  };
 
   const aplicar = async () => {
     if (!elegida) return;
@@ -131,14 +141,41 @@ export function ModalPlantillas({
               >
                 <LayoutTemplate size={17} color="#b69462" style={{ flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600 }}>{p.nombre}</div>
+                  <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                    {p.nombre}
+                    {p.codigo && <span className="small" style={{ color: '#8c8578', fontWeight: 500 }}>{p.codigo}</span>}
+                    {/* Distinguir las del sistema evita que alguien busque por
+                        qué no puede borrar una que no es suya. */}
+                    {!esPropia(p) && (
+                      <span className="small" style={{ padding: '1px 7px', borderRadius: 999, background: 'rgba(255,255,255,0.07)', color: '#8c8578', fontWeight: 500 }}>
+                        del sistema
+                      </span>
+                    )}
+                  </div>
                   <p className="small" style={{ color: '#8c8578' }}>
-                    {[p.areaM2 ? `${p.areaM2} m²` : null, p.actividades ? `${p.actividades} actividades` : null, p.descripcion]
-                      .filter(Boolean).join(' · ') || '—'}
+                    {[p.areaReferencia ? `${p.areaReferencia} m²` : null,
+                      p.actividades ? `${p.actividades} actividades` : null,
+                      p.alcance].filter(Boolean).join(' · ') || '—'}
                   </p>
                 </div>
                 {p.valorReferencia && (
                   <span style={{ fontWeight: 700, color: '#b69462', whiteSpace: 'nowrap' }}>{money(p.valorReferencia)}</span>
+                )}
+                {esPropia(p) && (
+                  <span style={{ display: 'inline-flex', gap: 2, flexShrink: 0 }}>
+                    <span role="button" tabIndex={0} title="Renombrar"
+                      onClick={(e) => { e.stopPropagation(); renombrar(p); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); renombrar(p); } }}
+                      style={{ padding: 5, borderRadius: 7, color: '#8c8578', cursor: 'pointer' }}>
+                      <Pencil size={14} />
+                    </span>
+                    <span role="button" tabIndex={0} title="Eliminar"
+                      onClick={(e) => { e.stopPropagation(); borrar(p); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); borrar(p); } }}
+                      style={{ padding: 5, borderRadius: 7, color: '#ff6b6b', cursor: 'pointer' }}>
+                      <Trash2 size={14} />
+                    </span>
+                  </span>
                 )}
               </button>
             );

@@ -237,6 +237,25 @@ export const AIU_POR_DEFECTO: Aiu = {
   descuento: 0,
 };
 
+// ── Plantillas de proyecto (H-02) ──────────────────────────
+
+/** `SISTEMA` son las precargadas: se pueden aplicar, pero no tocar. */
+export type OrigenPlantilla = 'SISTEMA' | 'PROPIA';
+
+export interface Plantilla {
+  id: string;
+  codigo: string;
+  nombre: string;
+  /** Para qué sirve la plantilla; el listado lo llama `alcance`. */
+  alcance?: string;
+  areaReferencia?: number;
+  /** Recalculado con los precios vigentes en cada consulta. */
+  valorReferencia?: Importe;
+  /** En el listado es un conteo; al crear o editar, el array de actividades. */
+  actividades?: number;
+  origen?: OrigenPlantilla;
+}
+
 // ── Cotización a proveedores (H-22) ────────────────────────
 
 export type EstadoLinea = 'PENDIENTE' | 'COTIZADO' | 'APROBADO' | 'RECHAZADO';

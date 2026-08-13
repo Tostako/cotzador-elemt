@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { HardHat, Plus, ChevronDown, ChevronRight, Trash2, Search, LayoutDashboard, ClipboardList, LayoutTemplate, FileSearch, Calculator, Lock, Handshake } from 'lucide-react';
+import { HardHat, Plus, ChevronDown, ChevronRight, Trash2, Search, LayoutDashboard, ClipboardList, LayoutTemplate, FileSearch, Calculator, Lock, Handshake, Save } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { ResumenFinanciero } from './ResumenFinanciero';
 import { ExportarMenu } from './ExportarMenu';
 import { ModalPlantillas } from './ModalPlantillas';
+import { ModalGuardarPlantilla } from './ModalGuardarPlantilla';
 import { ModalEditarApu } from './ModalEditarApu';
 import { ModalMemoria } from './ModalMemoria';
 import { AvisoDeshacer } from './AvisoDeshacer';
@@ -37,6 +38,7 @@ export function PresupuestoObraPage() {
   const [aiuSinGuardar, setAiuSinGuardar] = useState(false);
   const [modalActividad, setModalActividad] = useState(false);
   const [modalPlantillas, setModalPlantillas] = useState(false);
+  const [modalGuardarPlantilla, setModalGuardarPlantilla] = useState(false);
   const [apuEnEdicion, setApuEnEdicion] = useState<{ itemId: string; descripcion: string } | null>(null);
   const [memoriaAbierta, setMemoriaAbierta] = useState<ActividadPresupuesto | null>(null);
   const [deshacer, setDeshacer] = useState<{ token: string; expiraEn?: string; mensaje: string } | null>(null);
@@ -184,6 +186,13 @@ export function PresupuestoObraPage() {
           <button type="button" className="btn btn-small btn-secondary" onClick={() => setModalPlantillas(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <LayoutTemplate size={15} /> Plantilla
           </button>
+          {/* Guardar solo tiene sentido con contenido: una plantilla vacía no
+              sirve de nada y el servidor la rechaza. */}
+          {!vacio && (
+            <button type="button" className="btn btn-small btn-secondary" onClick={() => setModalGuardarPlantilla(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Save size={15} /> Guardar como plantilla
+            </button>
+          )}
           <ExportarMenu projectId={projectId} deshabilitado={vacio} />
           <button type="button" className="btn btn-small" onClick={() => setModalActividad(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Plus size={16} /> Agregar actividad
@@ -365,6 +374,15 @@ export function PresupuestoObraPage() {
               setDeshacer({ token: res.undoToken, expiraEn: res.expiraEn, mensaje: 'Se aplicó la plantilla.' });
             }
           }}
+        />
+      )}
+
+      {modalGuardarPlantilla && (
+        <ModalGuardarPlantilla
+          proyecto={proyecto}
+          presupuesto={presupuesto}
+          onClose={() => setModalGuardarPlantilla(false)}
+          onGuardada={() => setModalGuardarPlantilla(false)}
         />
       )}
 

@@ -2,7 +2,8 @@ import {
   AIU_POR_DEFECTO,
   type ActividadPresupuesto, type Aiu, type Apu, type ApuSnapshot, type Aviso,
   type Capitulo, type ComponenteApu, type GrupoRecurso, type Insumo,
-  type NuevoProyecto, type OrigenApu, type Presupuesto, type Proyecto, type TipoObra,
+  type NuevoProyecto, type OrigenApu, type Plantilla, type Presupuesto,
+  type Proyecto, type TipoObra,
 } from './types';
 
 /**
@@ -271,6 +272,28 @@ export function apuSnapshotDesdeBackend(d: any): ApuSnapshot {
       subtotal: String(campo(c, 'subtotal') ?? '0'),
     })),
   };
+}
+
+/**
+ * Plantillas del catálogo.
+ *
+ * El listado usa `alcance` y `area_referencia`, no `descripcion` ni `area_m2`:
+ * leerlas por el nombre equivocado dejaba las tarjetas medio en blanco.
+ * `actividades` aquí es el **conteo**, no el array.
+ */
+export function plantillasDesdeBackend(d: any): Plantilla[] {
+  return listaDesdeBackend(d).map((p: any) => ({
+    id: String(campo(p, 'id') ?? ''),
+    codigo: campo(p, 'codigo') ?? '',
+    nombre: campo(p, 'nombre') ?? 'Plantilla',
+    alcance: campo(p, 'alcance', 'descripcion') ?? undefined,
+    areaReferencia: campo(p, 'area_referencia', 'areaReferencia') !== undefined
+      ? num(campo(p, 'area_referencia', 'areaReferencia'))
+      : undefined,
+    valorReferencia: campo(p, 'valor_referencia', 'valorReferencia'),
+    actividades: typeof campo(p, 'actividades') === 'number' ? campo(p, 'actividades') : undefined,
+    origen: campo(p, 'origen'),
+  }));
 }
 
 /** Avisos del servidor; el mensaje es lo único que siempre viene. */

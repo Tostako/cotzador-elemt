@@ -583,8 +583,18 @@ export const apiService = {
   /** Consolidado por grupo: la lista de compras de la obra. */
   getConsolidados: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/analytics/consolidated`),
 
-  // Plantillas de proyecto — HU-02
+  // Plantillas de proyecto — HU-02. El listado mezcla SISTEMA y PROPIA; solo
+  // las propias se pueden editar o borrar.
   getPlantillas: () => api(`${PRESUP_BASE}/templates`),
+  /** `actividades` va como `[{ apu_id, cantidad }]`, no como conteo. */
+  crearPlantilla: (data: {
+    codigo: string; nombre: string; alcance?: string;
+    area_referencia?: number; actividades: Array<{ apu_id: string; cantidad: number }>;
+  }) => api(`${PRESUP_BASE}/templates`, { method: 'POST', body: JSON.stringify(data) }),
+  updatePlantilla: (id: string, data: any) =>
+    api(`${PRESUP_BASE}/templates/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deletePlantilla: (id: string) =>
+    api(`${PRESUP_BASE}/templates/${id}`, { method: 'DELETE' }),
   /** `modo` es obligatorio si el presupuesto ya tiene actividades: el servidor
    *  nunca decide por el usuario entre reemplazar y agregar. */
   aplicarPlantilla: (projectId: string, templateId: string, modo: 'REEMPLAZAR' | 'AGREGAR') =>

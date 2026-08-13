@@ -479,10 +479,30 @@ enchapes.
 | GET · PUT | `/costos/projects/:id/aiu` | HU-16 |
 | GET | `/costos/projects/:id/analytics/summary` | HU-17, HU-18 |
 | GET | `/costos/projects/:id/analytics/consolidated` | HU-19 |
-| GET | `/costos/templates` | HU-02 |
+| GET · POST | `/costos/templates` | HU-02 — listar y crear |
+| PATCH · DELETE | `/costos/templates/:id` | HU-02 — editar y borrar (solo las propias) |
 | POST | `/costos/projects/:id/apply-template` | HU-02 (`modo` obligatorio si ya hay contenido) |
 | GET · POST | `/costos/projects/:id/documents` | HU-20, HU-21 (asíncrono: 202 + id) |
 | GET | `/costos/documents/:docId` | Estado del documento |
+
+**Plantillas.** El listado mezcla `origen: SISTEMA` (precargadas, no se tocan)
+y `PROPIA`. Los campos son `codigo`, `nombre`, **`alcance`** y
+**`area_referencia`** — no `descripcion` ni `area_m2`, que era lo que leía el
+frontend y dejaba las tarjetas medio en blanco.
+
+⚠️ **`actividades` cambia de forma según el endpoint**: en el listado es un
+**conteo** (número) y en la entidad de `POST`/`PATCH` es el **array**
+`[{ apu_id, cantidad }]`. `valor_referencia` lo recalcula el servidor con los
+precios vigentes, así que una plantilla vieja no envejece.
+
+Una plantilla se crea **desde un presupuesto existente** («Guardar como
+plantilla»), no con un editor aparte: para modificarla, se aplica a un
+proyecto, se ajusta y se vuelve a guardar. Aplicarla no deja vínculo, así que
+borrarla no afecta a los proyectos que ya la usaron.
+
+Errores propios: `ACTIVIDADES_REQUERIDAS`, `PLANTILLA_SIN_ACTIVIDADES`,
+`PLANTILLA_CODIGO_EXISTENTE`, `APU_INEXISTENTE`, `PLANTILLA_SIN_APUS`,
+`MODO_REQUERIDO`.
 
 ### 5.6 Memorias, cotizaciones, importación y marca — fase 3
 
