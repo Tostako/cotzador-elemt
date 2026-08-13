@@ -91,6 +91,28 @@ export interface Aviso {
   bloqueante?: boolean;
 }
 
+/** Instantánea del APU congelada en el proyecto: ya viene enriquecida. */
+export interface ComponenteSnapshot {
+  insumoId: string;
+  descripcion: string;
+  unidad: string;
+  grupo: GrupoRecurso;
+  rendimiento: number;
+  valor: Importe;
+  subtotal: Importe;
+}
+
+export interface ApuSnapshot {
+  apuId: string;
+  codigo?: string;
+  descripcion: string;
+  unidad: string;
+  valorUnitario: Importe;
+  version?: number;
+  capturadoEn?: string;
+  componentes: ComponenteSnapshot[];
+}
+
 export interface ActividadPresupuesto {
   id: string;
   capitulo: Capitulo;
@@ -99,6 +121,9 @@ export interface ActividadPresupuesto {
   cantidad: string;
   valorUnitario: Importe;
   valorParcial: Importe;
+  /** Obligatorio como `If-Match` al cambiar la cantidad (HU-05). */
+  etag?: string;
+  apuSnapshot?: ApuSnapshot;
   /** Instantánea del APU congelada en el proyecto (H-07). */
   apuSnapshotId?: string;
   avisos?: Aviso[];
@@ -114,10 +139,18 @@ export interface Totales {
   total: Importe;
 }
 
-/** Respuesta de GET /projects/:id/budget: actividades agrupadas por capítulo. */
+/**
+ * Presupuesto del proyecto ya normalizado.
+ *
+ * El servidor lo devuelve plano —`items[]` sueltos, sin capítulos— y con el
+ * AIU incluido; la agrupación la hace `presupuestoDesdeBackend`.
+ */
 export interface Presupuesto {
   capitulos: Array<Capitulo & { actividades: ActividadPresupuesto[] }>;
   totales: Totales;
+  /** Viene en la misma respuesta: ahorra una petición aparte. */
+  aiu?: Aiu;
+  avisos?: Aviso[];
 }
 
 // ── Nivel 2: APU del catálogo ──────────────────────────────

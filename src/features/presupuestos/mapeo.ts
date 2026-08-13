@@ -1,8 +1,8 @@
 import {
   AIU_POR_DEFECTO,
-  type Aiu, type Apu, type Aviso, type Capitulo, type ComponenteApu,
-  type GrupoRecurso, type Insumo, type NuevoProyecto, type OrigenApu,
-  type Proyecto, type TipoObra,
+  type ActividadPresupuesto, type Aiu, type Apu, type ApuSnapshot, type Aviso,
+  type Capitulo, type ComponenteApu, type GrupoRecurso, type Insumo,
+  type NuevoProyecto, type OrigenApu, type Presupuesto, type Proyecto, type TipoObra,
 } from './types';
 
 /**
@@ -187,6 +187,90 @@ export function enriquecerComponentes(
       subtotal: c.subtotal ?? String(precio * c.cantidad),
     };
   });
+}
+
+/**
+ * Presupuesto del proyecto → interfaz.
+ *
+ * La respuesta es **plana**: `{ costo_directo, total, aiu, items[], avisos }`.
+ * No hay `capitulos` ni `totales`, que es lo que leía la pantalla — y como
+ * `[].every()` devuelve `true`, un presupuesto lleno se daba por vacío y
+ * parecía que las actividades se habían perdido. Estaban guardadas.
+ *
+ * Los items vienen sueltos, sin capítulo. Si alguno lo trae se agrupa por él;
+ * si no, todo va a un único grupo sin nombre, que es más honesto que inventar
+ * una jerarquía que el servidor no da.
+ */
+export function presupuestoDesdeBackend(d: any): Presupuesto {
+  const items = listaDesdeBackend(campo(d, 'items', 'actividades') ?? d);
+
+  const actividades: ActividadPresupuesto[] = items.map((i: any) => {
+    const snap = campo(i, 'apu_snapshot', 'apuSnapshot');
+    const idCap = campo(i, 'chapter_id', 'capitulo_id', 'capituloId');
+    const nomCap = campo(i, 'capitulo_nombre', 'capituloNombre')
+      ?? (typeof campo(i, 'capitulo') === 'object' ? campo(campo(i, 'capitulo'), 'nombre') : campo(i, 'capitulo'));
+    return {
+      id: String(campo(i, 'item_id', 'id') ?? ''),
+      capitulo: { id: String(idCap ?? ''), nombre: nomCap ?? '' },
+      descripcion: campo(i, 'descripcion') ?? '',
+      unidad: campo(i, 'unidad') ?? '',
+      cantidad: String(campo(i, 'cantidad') ?? '0'),
+      valorUnitario: String(campo(i, 'valor_unitario', 'valorUnitario') ?? '0'),
+      valorParcial: String(campo(i, 'subtotal', 'valorParcial', 'valor_parcial') ?? '0'),
+      // El `PATCH` lo exige como If-Match; sin él, cambiar la cantidad falla.
+      etag: campo(i, 'etag'),
+      apuSnapshot: snap ? apuSnapshotDesdeBackend(snap) : undefined,
+      tieneMemoria: campo(i, 'tieneMemoria', 'tiene_memoria'),
+      cantidadDesdeMemoria: campo(i, 'cantidadDesdeMemoria', 'cantidad_desde_memoria'),
+    };
+  });
+
+  // Agrupación por capítulo conservando el orden de llegada.
+  const porCapitulo = new Map<string, Capitulo & { actividades: ActividadPresupuesto[] }>();
+  for (const a of actividades) {
+    const clave = a.capitulo.id || a.capitulo.nombre || '';
+    const grupo = porCapitulo.get(clave)
+      ?? { id: a.capitulo.id, nombre: a.capitulo.nombre || 'Sin capítulo', actividades: [] };
+    grupo.actividades.push(a);
+    porCapitulo.set(clave, grupo);
+  }
+  const capitulos = Array.from(porCapitulo.values()).map((c) => ({
+    ...c,
+    subtotal: String(c.actividades.reduce((s, a) => s + num(a.valorParcial), 0)),
+  }));
+
+  return {
+    capitulos,
+    totales: {
+      costoDirecto: String(campo(d, 'costo_directo', 'costoDirecto') ?? '0'),
+      aiu: campo(d, 'aiu_valor', 'aiuValor'),
+      total: String(campo(d, 'total') ?? '0'),
+    },
+    aiu: campo(d, 'aiu') ? aiuDesdeBackend(campo(d, 'aiu')) : undefined,
+    avisos: d?.avisos ? avisosDesdeBackend(d.avisos) : undefined,
+  };
+}
+
+/** La instantánea sí llega enriquecida: no hace falta cruzarla con el maestro. */
+export function apuSnapshotDesdeBackend(d: any): ApuSnapshot {
+  return {
+    apuId: String(campo(d, 'apu_id', 'apuId') ?? ''),
+    codigo: campo(d, 'codigo'),
+    descripcion: campo(d, 'descripcion') ?? '',
+    unidad: campo(d, 'unidad') ?? '',
+    valorUnitario: String(campo(d, 'valor_unitario', 'valorUnitario') ?? '0'),
+    version: campo(d, 'version'),
+    capturadoEn: campo(d, 'capturado_en', 'capturadoEn'),
+    componentes: listaDesdeBackend(campo(d, 'componentes')).map((c: any) => ({
+      insumoId: String(campo(c, 'insumo_id', 'insumoId') ?? ''),
+      descripcion: campo(c, 'descripcion') ?? '',
+      unidad: campo(c, 'unidad') ?? '',
+      grupo: grupoDesdeBackend(campo(c, 'grupo')),
+      rendimiento: num(campo(c, 'rendimiento', 'cantidad'), 0),
+      valor: String(campo(c, 'valor', 'valor_unitario', 'valorUnitario') ?? '0'),
+      subtotal: String(campo(c, 'subtotal') ?? '0'),
+    })),
+  };
 }
 
 /** Avisos del servidor; el mensaje es lo único que siempre viene. */

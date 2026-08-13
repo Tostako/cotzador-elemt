@@ -11,7 +11,7 @@ import { ModalEditarApu } from './ModalEditarApu';
 import { ModalMemoria } from './ModalMemoria';
 import { AvisoDeshacer } from './AvisoDeshacer';
 import { money, aNumero, AIU_POR_DEFECTO, type Aiu, type ActividadPresupuesto, type Apu, type Presupuesto, type Proyecto } from './types';
-import { actividadABackend, aiuABackend, aiuDesdeBackend, apusDesdeBackend, proyectoDesdeBackend } from './mapeo';
+import { actividadABackend, aiuABackend, aiuDesdeBackend, apusDesdeBackend, presupuestoDesdeBackend, proyectoDesdeBackend } from './mapeo';
 
 const AIU_INICIAL: Aiu = { ...AIU_POR_DEFECTO, costoDirecto: '0' };
 
@@ -45,14 +45,20 @@ export function PresupuestoObraPage() {
     setCargando(true);
     setError(null);
     try {
-      const [proy, pres, aiuRes] = await Promise.all([
+      const [proy, pres] = await Promise.all([
         apiService.getObraProyecto(projectId).then(extractData).catch(() => null),
-        apiService.getPresupuesto(projectId).then(extractData),
-        apiService.getAiu(projectId).then(extractData).catch(() => null),
+        apiService.getPresupuesto(projectId).then(extractData).then(presupuestoDesdeBackend),
       ]);
       setProyecto(proy ? proyectoDesdeBackend(proy) : null);
-      setPresupuesto(pres || { capitulos: [], totales: { costoDirecto: '0', total: '0' } });
-      if (aiuRes) setAiu({ ...AIU_INICIAL, ...aiuDesdeBackend(aiuRes) });
+      setPresupuesto(pres);
+      // El AIU viene en la misma respuesta del presupuesto; solo si no está se
+      // pide aparte, para no gastar una petición de más.
+      if (pres.aiu) {
+        setAiu({ ...AIU_INICIAL, ...pres.aiu });
+      } else {
+        const aiuRes = await apiService.getAiu(projectId).then(extractData).catch(() => null);
+        if (aiuRes) setAiu({ ...AIU_INICIAL, ...aiuDesdeBackend(aiuRes) });
+      }
     } catch (e: any) {
       setError(e?.message || 'No se pudo cargar el presupuesto.');
     } finally {
@@ -97,16 +103,25 @@ export function PresupuestoObraPage() {
       return n;
     });
 
-  const cambiarCantidad = async (itemId: string, cantidad: number) => {
+  const cambiarCantidad = async (actividad: ActividadPresupuesto, cantidad: number) => {
     if (!(cantidad > 0)) {
       showNotification('Atención', 'warning', 'La cantidad debe ser mayor que cero.');
       return;
     }
     try {
-      await apiService.updateActividadCantidad(projectId, itemId, cantidad);
+      await apiService.updateActividadCantidad(projectId, actividad.id, cantidad, actividad.etag);
       await cargar(); // el servidor devuelve la cascada; se relee para no desincronizar
     } catch (e: any) {
-      showNotification('Error', 'error', e?.message || 'No se pudo actualizar la cantidad.');
+      // 412: el etag ya no coincide porque la actividad cambió por otro lado.
+      // Recargar es la salida correcta, y hay que decirlo en vez de dejar que
+      // parezca un fallo cualquiera.
+      if (e?.status === 412) {
+        showNotification('Cambió por otro lado', 'warning',
+          'Alguien modificó esta actividad mientras la editabas. Se recargó el presupuesto.');
+        await cargar();
+      } else {
+        showNotification('Error', 'error', e?.message || 'No se pudo actualizar la cantidad.');
+      }
     }
   };
 
@@ -262,7 +277,7 @@ export function PresupuestoObraPage() {
                                       defaultValue={aNumero(a.cantidad)}
                                       onBlur={(e) => {
                                         const v = parseFloat(e.target.value);
-                                        if (v !== aNumero(a.cantidad)) cambiarCantidad(a.id, v);
+                                        if (v !== aNumero(a.cantidad)) cambiarCantidad(a, v);
                                       }}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                       style={{ width: 90, padding: '6px 8px', textAlign: 'right' }}

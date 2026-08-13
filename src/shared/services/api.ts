@@ -477,9 +477,20 @@ export const apiService = {
   getPresupuesto: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/budget`),
   addActividad: (projectId: string, data: any) =>
     api(`${PRESUP_BASE}/projects/${projectId}/budget/items`, { method: 'POST', body: JSON.stringify(data) }),
-  /** Solo se acepta el campo `cantidad`; cualquier otro devuelve 422. */
-  updateActividadCantidad: (projectId: string, itemId: string, cantidad: number) =>
-    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}`, { method: 'PATCH', body: JSON.stringify({ cantidad }) }),
+  /**
+   * Cambia la cantidad de una actividad. Solo se acepta el campo `cantidad`.
+   *
+   * El `etag` de cada item del presupuesto es **obligatorio** como `If-Match`
+   * (HU-05): sin él el servidor rechaza el cambio. Y si alguien tocó esa
+   * actividad entretanto, el etag ya no coincide y responde 412 — que es
+   * justamente el aviso de «esto cambió, recarga» en vez de pisarlo.
+   */
+  updateActividadCantidad: (projectId: string, itemId: string, cantidad: number, etag?: string) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ cantidad }),
+      headers: etag ? { 'If-Match': etag } : undefined,
+    }),
   deleteActividad: (projectId: string, itemId: string) =>
     api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}`, { method: 'DELETE' }),
   getActividadApu: (projectId: string, itemId: string) =>

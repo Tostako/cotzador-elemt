@@ -259,6 +259,38 @@ que `/projects/:id`, o el router interpretará `paperera` como un id.
 
 ### 5.2 Presupuesto — HU-04, HU-05, HU-06, HU-07
 
+⚠️ **`GET /projects/:id/budget` responde plano**, no agrupado por capítulos:
+
+```json
+{ "costo_directo": "…", "total": "…", "aiu": { … },
+  "items": [ { "item_id", "descripcion", "unidad", "cantidad",
+               "valor_unitario", "subtotal", "apu_snapshot", "etag" } ],
+  "avisos": [] }
+```
+
+No hay `capitulos` ni `totales`. Leerlo como si los hubiera daba un array
+vacío, y `[].every()` devuelve `true`: **un presupuesto lleno se mostraba como
+vacío** y parecía que las actividades se habían perdido. Estaban guardadas.
+La agrupación por capítulo la hace `presupuestoDesdeBackend` en el cliente.
+
+El **AIU viene en la misma respuesta**, así que no hace falta pedirlo aparte.
+
+⚠️ **`PATCH /budget/items/:itemId` exige `If-Match`** con el `etag` de ese item
+(HU-05). Sin él, el cambio se rechaza; si no coincide, responde **412** porque
+alguien lo tocó entretanto — ese es el aviso de «recarga» en lugar de pisar el
+cambio ajeno.
+
+> Esto reabre HU-05, que se había descartado por producto: el control de
+> concurrencia **ya está implementado en el servidor y es obligatorio**, no
+> opcional.
+
+`apu_snapshot.componentes` **sí llega enriquecido** —descripción, unidad,
+grupo, `valor` y `subtotal`—, al contrario que los componentes del catálogo.
+Ahí no hace falta cruzar con el maestro.
+
+No existe un endpoint por lotes: crear un proyecto con sus APUs es un `POST`
+del proyecto más un `POST` por cada APU.
+
 | Método | Ruta | Uso |
 |---|---|---|
 | GET | `/costos/projects/:id/budget` | Presupuesto por capítulos |
