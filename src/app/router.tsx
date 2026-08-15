@@ -7,6 +7,15 @@ import { useStore } from '../shared/services/store';
 // (p. ej. Konva en Planos/Barrederas) solo se descargan al entrar a esas rutas.
 const LandingPage = lazy(() => import('../features/landing/LandingPage').then((m) => ({ default: m.LandingPage })));
 const FeatureDetailPage = lazy(() => import('../features/landing/FeatureDetailPage').then((m) => ({ default: m.FeatureDetailPage })));
+const ObrasPage = lazy(() => import('../features/presupuestos/ObrasPage').then((m) => ({ default: m.ObrasPage })));
+const PresupuestoObraPage = lazy(() => import('../features/presupuestos/PresupuestoObraPage').then((m) => ({ default: m.PresupuestoObraPage })));
+const PanelObraPage = lazy(() => import('../features/presupuestos/PanelObraPage').then((m) => ({ default: m.PanelObraPage })));
+const ConsolidadosPage = lazy(() => import('../features/presupuestos/ConsolidadosPage').then((m) => ({ default: m.ConsolidadosPage })));
+const CotizacionesPage = lazy(() => import('../features/presupuestos/CotizacionesPage').then((m) => ({ default: m.CotizacionesPage })));
+const MarcaPage = lazy(() => import('../features/presupuestos/MarcaPage').then((m) => ({ default: m.MarcaPage })));
+const CatalogoApusPage = lazy(() => import('../features/presupuestos/CatalogoApusPage').then((m) => ({ default: m.CatalogoApusPage })));
+const CapitulosPage = lazy(() => import('../features/presupuestos/CapitulosPage').then((m) => ({ default: m.CapitulosPage })));
+const InsumosObraPage = lazy(() => import('../features/presupuestos/InsumosPage').then((m) => ({ default: m.InsumosPage })));
 const LoginPage = lazy(() => import('../features/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('../features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })));
 const ForgotPasswordPage = lazy(() => import('../features/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
@@ -69,6 +78,18 @@ export const router = createBrowserRouter([
   { path: '/calculadoras/barrederas/:planId', element: prot(<BarrederasPage />) },
   { path: '/calculadoras/cornisas', element: prot(<CornisasPage />) },
   { path: '/calculadoras/cornisas/:planId', element: prot(<CornisasPage />) },
+  // Presupuestos de Obra (APU) — los catálogos son globales y cuelgan de
+  // /catalogo, no del proyecto, para que la ruta refleje el alcance de lo que
+  // se edita (DOC-04 §8).
+  { path: '/obra', element: prot(<ObrasPage />) },
+  { path: '/obra/:projectId/panel', element: prot(<PanelObraPage />) },
+  { path: '/obra/:projectId/consolidados', element: prot(<ConsolidadosPage />) },
+  { path: '/obra/:projectId/cotizaciones', element: prot(<CotizacionesPage />) },
+  { path: '/catalogo/apus', element: prot(<CatalogoApusPage />) },
+  { path: '/catalogo/capitulos', element: prot(<CapitulosPage />) },
+  { path: '/catalogo/insumos', element: prot(<InsumosObraPage />) },
+  { path: '/catalogo/marca', element: prot(<MarcaPage />) },
+  { path: '/obra/:projectId/presupuesto', element: prot(<PresupuestoObraPage />) },
   { path: '/planos', element: prot(<PlanosPage />) },
   { path: '/planos/nuevo', element: prot(<PlanoEditorPage />) },
   { path: '/planos/:id', element: prot(<PlanoEditorPage />) },

@@ -1,0 +1,31 @@
+descripcion;unidad;grupo;precio
+Cemento gris uso general 50 kg;bulto;MATERIAL;34500
+Arena de río lavada;m3;MATERIAL;95000
+"Triturado 3/4""";m3;MATERIAL;118000
+"Bloque n.º 5 perforado, 12x20x40";und;MATERIAL;2450
+Ladrillo tolete común;und;MATERIAL;1150
+Acero de refuerzo 60000 PSI;kg;MATERIAL;5800
+Alambre negro n.º 18;kg;MATERIAL;7200
+"Porcelanato 60x60, tráfico alto";m2;MATERIAL;62000
+Cerámica pared 30x60;m2;MATERIAL;38500
+Adhesivo para porcelanato 25 kg;bulto;MATERIAL;42000
+Boquilla premium color;kg;MATERIAL;9800
+Estuco plástico;galón;MATERIAL;38000
+Pintura vinilo tipo 1;galón;MATERIAL;89000
+Guardaescoba MDF 10 cm;ml;MATERIAL;12400
+"Tubería PVC sanitaria 4""";ml;MATERIAL;28500
+Cable THHN n.º 12;ml;MATERIAL;3900
+Tomacorriente doble con polo a tierra;und;MATERIAL;12800
+Impermeabilizante integral;kg;MATERIAL;8600
+Oficial de construcción;día;MANO_OBRA;98000
+Ayudante de construcción;día;MANO_OBRA;68000
+Maestro de obra;día;MANO_OBRA;145000
+Oficial enchapador;día;MANO_OBRA;115000
+Oficial pintor;día;MANO_OBRA;92000
+Oficial electricista;día;MANO_OBRA;125000
+Mezcladora de concreto 1 saco;día;EQUIPO;85000
+Andamio certificado (cuerpo);día;EQUIPO;18000
+Pulidora con disco diamantado;día;EQUIPO;32000
+Herramienta menor;global;EQUIPO;5500
+Volqueta 5 m3;viaje;TRANSPORTE;180000
+Acarreo vertical de materiales;m3;TRANSPORTE;22000

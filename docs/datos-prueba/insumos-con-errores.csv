@@ -1,0 +1,14 @@
+descripcion;unidad;grupo;precio
+Varilla corrugada n.º 4;kg;MATERIAL;5900
+Soldadura E6013;kg;MATERIALES;18500
+Malla electrosoldada;m2;MANO DE OBRA;9800
+;m2;MATERIAL;12000
+Lámina de drywall 1/2;;MATERIAL;48000
+Perfilería drywall;ml;material;4200
+Oficial drywallero;día;MANO_OBRA;
+Grúa telescópica;día;MAQUINARIA;620000
+Anclaje químico cartucho 300 ml;und;MATERIAL;abc
+Tornillo autoperforante;und;MATERIAL;-150
+Sellante de poliuretano;und;MATERIAL;"32500,75"
+Andamio colgante;día;EQUIPO;18000
+Andamio colgante;día;EQUIPO;18000

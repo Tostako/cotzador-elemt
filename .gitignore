@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Documentación de referencia de terceros (no forma parte del producto)
+frontend cost pro/

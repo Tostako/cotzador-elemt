@@ -114,6 +114,11 @@ const runtimeEnv = (typeof window !== 'undefined' && (window as any).__ENV) || {
 const API_URL = import.meta.env.VITE_API_URL || runtimeEnv.VITE_API_URL || 'http://localhost:3000/api/v1';
 export const SHOP_SLUG = import.meta.env.VITE_SHOP_SLUG || runtimeEnv.VITE_SHOP_SLUG || 'elemet-haus';
 
+/** Prefijo del módulo de Presupuestos de Obra: el backend lo publica bajo
+ *  /api/v1/costos/... (p. ej. @Controller('costos/projects')). API_URL ya
+ *  aporta /api/v1, así que aquí solo va /costos. */
+const PRESUP_BASE = '/costos';
+
 function getToken() {
   const user = localStorage.getItem('element_user:v1');
   if (!user) return null;
@@ -192,6 +197,52 @@ function refreshAccessToken(): Promise<string | null> {
   return _refreshPromise;
 }
 
+/** Error de la API con el estado a mano, para distinguir "no existe" de "lo rechazó". */
+export interface ApiError extends Error {
+  status: number;
+  /** Motivos de validación tal cual los devolvió el servidor. */
+  motivos: string[];
+  /** Código de negocio del filtro global: NOT_FOUND, CAPITULO_EN_USO… */
+  codigo?: string;
+}
+
+/**
+ * Construye el mensaje a partir del cuerpo de error.
+ *
+ * NestJS responde `{ message: [...detalles...], error: 'Bad Request' }`. Antes
+ * se leía `error` primero, así que el usuario veía "Bad Request" y los motivos
+ * reales —el campo que falla y por qué— se perdían. Aquí manda `message`, que
+ * es lo único que permite corregir el problema; `error` queda de reserva.
+ */
+function construirError(status: number, path: string, cuerpo: any): ApiError {
+  const bruto = cuerpo?.message ?? cuerpo?.error;
+  const motivos = Array.isArray(bruto)
+    ? bruto.map(String)
+    : typeof bruto === 'string' && bruto
+      ? [bruto]
+      : [];
+
+  let mensaje = motivos.join(' · ');
+  // Un 404 sin cuerpo útil es casi siempre una ruta que aún no existe: decirlo
+  // ahorra buscar el fallo en el formulario.
+  if (!mensaje) {
+    mensaje = status === 404
+      ? `El servidor no tiene la ruta ${path} (404).`
+      : `Error HTTP ${status}`;
+  } else if (status === 404) {
+    mensaje += ` (404 en ${path})`;
+  }
+
+  const e = new Error(mensaje) as ApiError;
+  e.status = status;
+  e.motivos = motivos;
+  // El filtro global manda un `codigo` de negocio. Importa porque el estado
+  // HTTP no siempre lo distingue: borrar un capítulo en uso responde 400,
+  // no 409, y solo el codigo lo separa de un fallo de validación.
+  e.codigo = typeof cuerpo?.codigo === 'string' ? cuerpo.codigo : undefined;
+  return e;
+}
+
 async function api(path: string, options: RequestInit = {}) {
   const isAuthRoute = path.startsWith('/auth/') || path.startsWith('/public/');
   let token = getToken();
@@ -205,9 +256,13 @@ async function api(path: string, options: RequestInit = {}) {
     }
   }
 
-  // shop_slug en la query (auth y demás; las públicas ya lo llevan en el path)
+  // shop_slug en la query (auth y demás; las públicas ya lo llevan en el path).
+  // El módulo de presupuestos de obra queda fuera: resuelve el tenant desde el
+  // JWT y no lee este parámetro, así que ensuciaría la URL sin aportar nada.
   let finalPath = path;
-  if (!path.includes('shop_slug') && !path.startsWith('/public/')) {
+  const necesitaShopSlug =
+    !path.includes('shop_slug') && !path.startsWith('/public/') && !path.startsWith(`${PRESUP_BASE}/`);
+  if (necesitaShopSlug) {
     const separator = path.includes('?') ? '&' : '?';
     finalPath = `${path}${separator}shop_slug=${SHOP_SLUG}`;
   }
@@ -220,8 +275,12 @@ async function api(path: string, options: RequestInit = {}) {
   const timeoutId = setTimeout(() => controller.abort(), 20_000);
 
   const doFetch = (authToken: string | null) => {
+    // Con FormData el Content-Type lo pone el navegador, porque incluye el
+    // `boundary` del multipart. Fijarlo a mano deja a Multer sin poder separar
+    // las partes y el archivo no llega: el servidor responde que falta.
+    const esFormData = options.body instanceof FormData;
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      ...(esFormData ? {} : { 'Content-Type': 'application/json' }),
       'X-Shop-Slug': SHOP_SLUG,
       ...((options.headers as Record<string, string>) || {}),
     };
@@ -246,8 +305,8 @@ async function api(path: string, options: RequestInit = {}) {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: `Error HTTP ${response.status}` }));
-      console.error('[API ERROR]', response.status, error);
-      throw new Error(error.error || error.message || `Error HTTP ${response.status}`);
+      console.error('[API ERROR]', response.status, path, error);
+      throw construirError(response.status, path, error);
     }
 
     if (response.status === 204) return null; // sin contenido (p. ej. logout)
@@ -255,6 +314,74 @@ async function api(path: string, options: RequestInit = {}) {
   } catch (err: any) {
     if (err.name === 'AbortError') {
       throw new Error('El servidor tardó demasiado en responder. Intenta de nuevo.');
+    }
+    if (err.name === 'TypeError' || err.message?.includes('Failed to fetch')) {
+      throw new Error('No se pudo conectar con el servidor. Verifica tu conexión.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function filenameDesdeContentDisposition(header: string | null): string | undefined {
+  if (!header) return undefined;
+  const utf = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (utf?.[1]) {
+    try { return decodeURIComponent(utf[1].replace(/"/g, '')); } catch { return utf[1].replace(/"/g, ''); }
+  }
+  const normal = /filename="?([^";]+)"?/i.exec(header);
+  return normal?.[1];
+}
+
+async function apiBlob(path: string): Promise<{ blob: Blob; filename?: string }> {
+  const isAuthRoute = path.startsWith('/auth/') || path.startsWith('/public/');
+  let token = getToken();
+
+  if (token && !isAuthRoute && isTokenExpired(token)) {
+    token = await refreshAccessToken();
+    if (!token) {
+      handleAuthExpired();
+      throw new Error('Tu sesión expiró. Inicia sesión de nuevo.');
+    }
+  }
+
+  let finalPath = path;
+  const necesitaShopSlug =
+    !path.includes('shop_slug') && !path.startsWith('/public/') && !path.startsWith(`${PRESUP_BASE}/`);
+  if (necesitaShopSlug) {
+    finalPath = `${path}${path.includes('?') ? '&' : '?'}shop_slug=${SHOP_SLUG}`;
+  }
+
+  const baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+  const url = `${baseUrl}${finalPath}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60_000);
+
+  const doFetch = (authToken: string | null) => {
+    const headers: Record<string, string> = { 'X-Shop-Slug': SHOP_SLUG };
+    if (authToken) headers.Authorization = `Bearer ${authToken}`;
+    return fetch(url, { headers, credentials: 'include', signal: controller.signal });
+  };
+
+  try {
+    let response = await doFetch(token);
+    if (response.status === 401 && !isAuthRoute) {
+      const newToken = await refreshAccessToken();
+      if (newToken) response = await doFetch(newToken);
+      if (response.status === 401) handleAuthExpired();
+    }
+    if (!response.ok) {
+      const texto = await response.text().catch(() => '');
+      throw construirError(response.status, path, texto ? { message: texto } : null);
+    }
+    return {
+      blob: await response.blob(),
+      filename: filenameDesdeContentDisposition(response.headers.get('Content-Disposition')),
+    };
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw new Error('El servidor tardó demasiado en descargar el documento. Intenta de nuevo.');
     }
     if (err.name === 'TypeError' || err.message?.includes('Failed to fetch')) {
       throw new Error('No se pudo conectar con el servidor. Verifica tu conexión.');
@@ -381,4 +508,250 @@ export const apiService = {
   updateCornisasProject: (id: string, data: any) => api(`/tile-calculator/cornisas-projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteCornisasProject: (id: string) => api(`/tile-calculator/cornisas-projects/${id}`, { method: 'DELETE' }),
   importPlanToCornisas: (id: string, data: any) => api(`/tile-calculator/house-plans/${id}/import-to-cornisas`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // ── Presupuestos de Obra / APU (DOC-05) ───────────────
+  // La especificación escribe las rutas como "/v1/projects"; aquí van sin ese
+  // prefijo porque API_URL ya termina en /api/v1. Si el backend las publica en
+  // otra base, se cambia PRESUP_BASE y no hay que tocar las pantallas.
+  //
+  // Proyectos de obra — HU-01, HU-03
+  getObraProyectos: (params?: { estado?: string; page?: number; per_page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.estado) qs.set('estado', params.estado);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.per_page) qs.set('per_page', String(params.per_page));
+    const s = qs.toString();
+    return api(`${PRESUP_BASE}/projects${s ? `?${s}` : ''}`);
+  },
+  getObraProyecto: (id: string) => api(`${PRESUP_BASE}/projects/${id}`),
+  createObraProyecto: (data: any) => api(`${PRESUP_BASE}/projects`, { method: 'POST', body: JSON.stringify(data) }),
+  /** `version` viaja como If-Match para el control de concurrencia optimista. */
+  updateObraProyecto: (id: string, data: any, version?: number | string) =>
+    api(`${PRESUP_BASE}/projects/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+      ...(version != null ? { headers: { 'If-Match': String(version) } } : {}),
+    }),
+  /** Borrado lógico: mueve el proyecto a la papelera (H-09). */
+  deleteObraProyecto: (id: string) => api(`${PRESUP_BASE}/projects/${id}`, { method: 'DELETE' }),
+  restaurarObraProyecto: (id: string) => api(`${PRESUP_BASE}/projects/${id}/restaurar`, { method: 'POST' }),
+  /** HU-03 · Copia presupuesto, cantidades y parámetros de AIU. */
+  duplicarObraProyecto: (id: string, nombre?: string) =>
+    api(`${PRESUP_BASE}/projects/${id}/duplicate`, { method: 'POST', body: JSON.stringify(nombre ? { nombre } : {}) }),
+  // Ojo: el backend escribe la ruta "paperera", no "papelera".
+  getObraPapelera: () => api(`${PRESUP_BASE}/projects/paperera`),
+
+  // Presupuesto — HU-04, HU-05, HU-06, HU-07
+  getPresupuesto: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/budget`),
+  addActividad: (projectId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items`, { method: 'POST', body: JSON.stringify(data) }),
+  /**
+   * Cambia la cantidad de una actividad. Solo se acepta el campo `cantidad`.
+   *
+   * El `etag` de cada item del presupuesto es **obligatorio** como `If-Match`
+   * (HU-05): sin él el servidor rechaza el cambio. Y si alguien tocó esa
+   * actividad entretanto, el etag ya no coincide y responde 412 — que es
+   * justamente el aviso de «esto cambió, recarga» en vez de pisarlo.
+   */
+  updateActividadCantidad: (projectId: string, itemId: string, cantidad: number, etag?: string) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ cantidad }),
+      headers: etag ? { 'If-Match': etag } : undefined,
+    }),
+  deleteActividad: (projectId: string, itemId: string) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}`, { method: 'DELETE' }),
+  getActividadApu: (projectId: string, itemId: string) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/apu`),
+  /** HU-11 · Alcance de PROYECTO: edita la instantánea, el catálogo no se toca.
+   *  El cuerpo solo lleva rendimientos; los precios salen del maestro. */
+  updateActividadApu: (projectId: string, itemId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/apu`, { method: 'PUT', body: JSON.stringify(data) }),
+  /** HU-11 · Alcance de CATÁLOGO: publica la versión del proyecto como versión
+   *  nueva del APU global. Acción distinta, permiso distinto (admin_catalogo). */
+  /**
+   * Promueve el APU de la actividad al catálogo global.
+   *
+   * El controlador no tiene `@Body()`: `dryRun` va por query y el token de
+   * confirmación por la cabecera `x-confirmation-token`. Mandarlo en el cuerpo
+   * —como se hacía antes— no llega al `@Headers()` y el servicio responde 422
+   * CONFIRMACION_REQUERIDA.
+   *
+   * Con `dryRun` el servicio devuelve el análisis y no escribe. Si el APU no
+   * difiere del global, responde `sin_cambios` sin tocar nada.
+   */
+  promoverApu: (projectId: string, itemId: string, opciones?: { dryRun?: boolean; confirmationToken?: string }) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/apu/promote${opciones?.dryRun ? '?dryRun=true' : ''}`, {
+      method: 'POST',
+      headers: opciones?.confirmationToken ? { 'x-confirmation-token': opciones.confirmationToken } : undefined,
+    }),
+
+  // Cierre financiero — HU-16
+  getAiu: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/aiu`),
+  updateAiu: (projectId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/aiu`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Catálogo — HU-09, HU-14
+  getApus: (params?: { q?: string; capituloId?: string; page?: number; perPage?: number; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.q) qs.set('q', params.q);
+    if (params?.capituloId) qs.set('chapter_id', params.capituloId);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.perPage) qs.set('per_page', String(params.perPage));
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const s = qs.toString();
+    return api(`${PRESUP_BASE}/catalog/apus${s ? `?${s}` : ''}`);
+  },
+  exportApus: (params?: { q?: string; capituloId?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.q) qs.set('q', params.q);
+    if (params?.capituloId) qs.set('chapter_id', params.capituloId);
+    const s = qs.toString();
+    return apiBlob(`${PRESUP_BASE}/catalog/apus/export${s ? `?${s}` : ''}`);
+  },
+  getApu: (id: string) => api(`${PRESUP_BASE}/catalog/apus/${id}`),
+  // Capítulos — CRUD completo. Devuelve el array directo dentro de `data`.
+  // No figura en la spec de OpenAPI, pero está servido y en uso.
+  getCapitulos: () => api(`${PRESUP_BASE}/catalog/chapters`),
+  /** `nombre` obligatorio; `codigo` y `orden` opcionales. */
+  createCapitulo: (data: { nombre: string; codigo?: string; orden?: number }) =>
+    api(`${PRESUP_BASE}/catalog/chapters`, { method: 'POST', body: JSON.stringify(data) }),
+  updateCapitulo: (id: string, data: { nombre?: string; codigo?: string; orden?: number }) =>
+    api(`${PRESUP_BASE}/catalog/chapters/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  /** Con APUs activos responde **400** con `codigo: CAPITULO_EN_USO`, no 409. */
+  deleteCapitulo: (id: string) =>
+    api(`${PRESUP_BASE}/catalog/chapters/${id}`, { method: 'DELETE' }),
+  /**
+   * Maestro de insumos. Responde paginado:
+   * `{ items, total, page, per_page, total_pages }` con `per_page` 20 por
+   * defecto, así que sin pedir más solo llegan los primeros veinte.
+   */
+  getInsumos: (params?: { q?: string; grupo?: string; page?: number; perPage?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.q) qs.set('q', params.q);
+    if (params?.grupo) qs.set('grupo', params.grupo);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.perPage) qs.set('per_page', String(params.perPage));
+    const s = qs.toString();
+    return api(`${PRESUP_BASE}/catalog/supplies${s ? `?${s}` : ''}`);
+  },
+  /**
+   * Añade un precio a la serie histórica del insumo. **Escribe siempre.**
+   *
+   * `CreatePriceDto` acepta `{ valor }` obligatorio y `vigente_desde`,
+   * `usuario`, `motivo`, `origen` opcionales. Cualquier otro campo lo rechaza
+   * el ValidationPipe. No hay `dryRun`: el DOC-05 lo preveía pero el backend
+   * no lo implementa, y pasarlo no simulaba nada — creaba el precio.
+   */
+  setPrecioInsumo: (supplyId: string, data: { valor: number; motivo?: string; origen?: string; usuario?: string; vigente_desde?: string }) =>
+    api(`${PRESUP_BASE}/catalog/supplies/${supplyId}/prices`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  /** Serie histórica de precios del insumo. */
+  getPreciosInsumo: (supplyId: string) => api(`${PRESUP_BASE}/catalog/supplies/${supplyId}/prices`),
+  getUsoInsumo: (supplyId: string) => api(`${PRESUP_BASE}/catalog/supplies/${supplyId}/usage`),
+  /** Alta de insumo. Se usa también desde la composición de un APU: el insumo
+   *  queda en el maestro, no dentro del APU (RN-10.3). */
+  createInsumo: (data: any) => api(`${PRESUP_BASE}/catalog/supplies`, { method: 'POST', body: JSON.stringify(data) }),
+  updateInsumo: (id: string, data: any) => api(`${PRESUP_BASE}/catalog/supplies/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteInsumo: (id: string) => api(`${PRESUP_BASE}/catalog/supplies/${id}`, { method: 'DELETE' }),
+
+  // Analítica — HU-17, HU-18, HU-19
+  getAnalitica: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/analytics/summary`),
+  /** Consolidado por grupo: la lista de compras de la obra. */
+  getConsolidados: (projectId: string, grupo?: string) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/analytics/consolidated${grupo ? `?grupo=${encodeURIComponent(grupo)}` : ''}`),
+
+  // Plantillas de proyecto — HU-02. El listado mezcla SISTEMA y PROPIA; solo
+  // las propias se pueden editar o borrar.
+  getPlantillas: () => api(`${PRESUP_BASE}/templates`),
+  /**
+   * Crear plantilla. Dos modalidades, y hay que mandar **una de las dos** o
+   * responde 400 `ACTIVIDADES_REQUERIDAS`:
+   *
+   * - `project_id`: el servidor copia los items de ese proyecto. Es la que usa
+   *   la app, porque no depende de que el frontend sepa extraer los `apu_id`.
+   * - `actividades`: `[{ apu_id, cantidad }]` explícitas.
+   */
+  crearPlantilla: (data: {
+    codigo: string; nombre: string; alcance?: string; area_referencia?: number;
+    project_id?: string;
+    actividades?: Array<{ apu_id: string; cantidad: number }>;
+  }) => api(`${PRESUP_BASE}/templates`, { method: 'POST', body: JSON.stringify(data) }),
+  updatePlantilla: (id: string, data: any) =>
+    api(`${PRESUP_BASE}/templates/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deletePlantilla: (id: string) =>
+    api(`${PRESUP_BASE}/templates/${id}`, { method: 'DELETE' }),
+  /** `modo` es obligatorio si el presupuesto ya tiene actividades: el servidor
+   *  nunca decide por el usuario entre reemplazar y agregar. */
+  aplicarPlantilla: (projectId: string, templateId: string, modo: 'REEMPLAZAR' | 'AGREGAR') =>
+    api(`${PRESUP_BASE}/projects/${projectId}/apply-template`, {
+      method: 'POST',
+      body: JSON.stringify({ templateId, modo }),
+    }),
+
+  // APUs del catálogo — HU-10, HU-11, HU-12
+  /**
+   * Alta de APU. `codigo` es **obligatorio** (máx. 30 caracteres) y los
+   * componentes llevan **`insumo_id`** en snake_case, no `insumoId`.
+   */
+  createApu: (data: any) => api(`${PRESUP_BASE}/catalog/apus`, { method: 'POST', body: JSON.stringify(data) }),
+  updateApu: (id: string, data: any) => api(`${PRESUP_BASE}/catalog/apus/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  /** Proyectos y presupuestos que se verían afectados por editar el APU. */
+  getImpactoApu: (id: string) => api(`${PRESUP_BASE}/catalog/apus/${id}/impact`),
+  duplicarApu: (id: string, descripcion: string) =>
+    api(`${PRESUP_BASE}/catalog/apus/${id}/duplicate`, { method: 'POST', body: JSON.stringify({ descripcion }) }),
+
+  // Documentos — HU-20, HU-21. Generación asíncrona: devuelve 202 + id y hay
+  // que consultar el estado hasta que pase de GENERANDO a LISTO.
+  generarDocumento: (projectId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/documents`, { method: 'POST', body: JSON.stringify(data) }),
+  getDocumento: (docId: string) => api(`${PRESUP_BASE}/documents/${docId}`),
+  descargarDocumento: (docId: string) => apiBlob(`${PRESUP_BASE}/documents/${docId}/file`),
+  getDocumentos: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/documents`),
+
+  // Deshacer — HU-07 (token válido 10 s)
+  deshacer: (undoToken: string) => api(`${PRESUP_BASE}/undo/${undoToken}`, { method: 'POST' }),
+
+  // Memorias de cálculo — HU-08. Pertenecen a la actividad del proyecto, no al
+  // APU del catálogo: sustentan la cantidad de obra de ESTA obra.
+  getMemoria: (projectId: string, itemId: string) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/memoria`),
+  updateMemoria: (projectId: string, itemId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/budget/items/${itemId}/memoria`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Cotización a proveedores — HU-22
+  getCotizaciones: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/quotations`),
+  crearCotizacion: (projectId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/quotations`, { method: 'POST', body: JSON.stringify(data) }),
+  updateCotizacion: (projectId: string, quotationId: string, data: any) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/quotations/${quotationId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  // Importación / exportación Excel — HU-13. La importación es en dos pasos:
+  // se sube, se revisan los errores y solo entonces se confirma.
+  //
+  // El controlador usa `FileInterceptor('archivo')`: es **multipart/form-data**
+  // con el fichero en un campo llamado literalmente `archivo`, no un JSON con
+  // las filas. Si no llega, responde `ARCHIVO_REQUERIDO`.
+  //
+  // El parseo lo hace el servidor: espera un **XLSX**, no un CSV.
+  importarApus: (archivo: File) => {
+    const fd = new FormData();
+    fd.append('archivo', archivo, archivo.name);
+    return api(`${PRESUP_BASE}/catalog/apus/import`, { method: 'POST', body: fd });
+  },
+  importarInsumos: (archivo: File) => {
+    const fd = new FormData();
+    fd.append('archivo', archivo, archivo.name);
+    return api(`${PRESUP_BASE}/catalog/supplies/import`, { method: 'POST', body: fd });
+  },
+  erroresImportacion: (jobId: string) => api(`${PRESUP_BASE}/catalog/imports/${jobId}/errors`),
+  confirmarImportacion: (jobId: string) => api(`${PRESUP_BASE}/catalog/imports/${jobId}/confirm`, { method: 'POST' }),
+
+  // Marca — HU-25. Se guarda en el servidor y se asocia a la organización,
+  // no al navegador, y nunca afecta a cálculos ni presupuestos.
+  getMarca: () => api(`${PRESUP_BASE}/org/branding`),
+  updateMarca: (data: any) => api(`${PRESUP_BASE}/org/branding`, { method: 'PUT', body: JSON.stringify(data) }),
+  getPlantillasDocumento: () => api(`${PRESUP_BASE}/org/document-templates`),
 };
