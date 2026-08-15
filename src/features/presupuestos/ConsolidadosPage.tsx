@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ClipboardList, Search, Handshake } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
-import { grupoDesdeBackend } from './mapeo';
+import { grupoABackend, grupoDesdeBackend } from './mapeo';
 import { ETIQUETA_RECURSO, aNumero, money, type GrupoRecurso } from './types';
 
 /** Fila del consolidado: un insumo con su cantidad sumada en toda la obra. */
@@ -19,12 +19,13 @@ interface FilaConsolidado {
 const ORDEN_GRUPOS: GrupoRecurso[] = ['MATERIALES', 'MANO_OBRA', 'EQUIPOS', 'TRANSPORTE'];
 
 /** Lee el consolidado venga agrupado por el servidor o como lista plana. */
-function normalizar(d: any): FilaConsolidado[] {
+export function normalizarConsolidado(d: any, grupoForzado?: GrupoRecurso): FilaConsolidado[] {
   if (!d) return [];
   const bruto: any[] = Array.isArray(d)
     ? d
     : Array.isArray(d.items) ? d.items
     : Array.isArray(d.insumos) ? d.insumos
+    : Array.isArray(d.data) ? d.data
     // Formato agrupado: { grupos: [{ tipo, items: [...] }] }
     : Array.isArray(d.grupos) ? d.grupos.flatMap((g: any) => (g.items ?? []).map((i: any) => ({ grupo: g.tipo ?? g.grupo, ...i })))
     : [];
@@ -34,7 +35,7 @@ function normalizar(d: any): FilaConsolidado[] {
     unidad: i.unidad ?? '',
     // El servidor nombra los grupos en singular (MATERIAL, EQUIPO): sin
     // traducir, el insumo caería fuera de todas las secciones y no se vería.
-    grupo: grupoDesdeBackend(i.grupo ?? i.tipo),
+    grupo: grupoForzado ?? grupoDesdeBackend(i.grupo ?? i.tipo),
     cantidadTotal: i.cantidadTotal ?? i.cantidad_total ?? i.cantidad ?? 0,
     valorUnitario: String(i.valorUnitario ?? i.valor_unitario ?? '0'),
     valorTotal: String(i.valorTotal ?? i.valor_total ?? '0'),
@@ -61,7 +62,11 @@ export function ConsolidadosPage() {
     setCargando(true);
     setError(null);
     try {
-      setFilas(normalizar(extractData(await apiService.getConsolidados(projectId))));
+      const respuestas = await Promise.all(ORDEN_GRUPOS.map(async (g) => {
+        const d = extractData(await apiService.getConsolidados(projectId, grupoABackend(g)));
+        return normalizarConsolidado(d, g);
+      }));
+      setFilas(respuestas.flat());
     } catch (e: any) {
       setFilas([]);
       setError(e?.message || 'No se pudo cargar el consolidado.');

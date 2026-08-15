@@ -1,8 +1,8 @@
 import {
-  AIU_POR_DEFECTO,
+  ACENTOS_MARCA, AIU_POR_DEFECTO,
   type ActividadPresupuesto, type Aiu, type Apu, type ApuSnapshot, type Aviso,
   type Capitulo, type ComponenteApu, type GrupoRecurso, type Insumo,
-  type NuevoProyecto, type OrigenApu, type Plantilla, type Presupuesto,
+  type Marca, type NuevoProyecto, type OrigenApu, type Plantilla, type Presupuesto,
   type Proyecto, type TipoObra,
 } from './types';
 
@@ -90,8 +90,21 @@ export function esGrupoValido(v: unknown): boolean {
  * cuando acierta la forma equivocada — y una lista vacía parece un catálogo
  * sin datos, no un error de lectura.
  */
-export const listaDesdeBackend = (d: any): any[] =>
-  Array.isArray(d) ? d : (d?.items ?? d?.data ?? d?.results ?? []);
+export const listaDesdeBackend = (d: any): any[] => {
+  if (Array.isArray(d)) return d;
+  if (!d || typeof d !== 'object') return [];
+  if (Array.isArray(d.items)) return d.items;
+  if (Array.isArray(d.results)) return d.results;
+  if (d.data !== undefined) return listaDesdeBackend(d.data);
+  return [];
+};
+
+const paginaDesdeBackend = (d: any) => {
+  if (d?.data && typeof d.data === 'object' && !Array.isArray(d.data)) {
+    return d.data;
+  }
+  return d;
+};
 
 /** Capítulos del catálogo, ordenados por `orden` si el servidor lo manda. */
 export function capitulosDesdeBackend(d: any): Capitulo[] {
@@ -348,6 +361,18 @@ export function apuDesdeBackend(d: any): Apu {
 
 export const apusDesdeBackend = (d: any): Apu[] => listaDesdeBackend(d).map(apuDesdeBackend);
 
+export function paginaApusDesdeBackend(d: any): { items: Apu[]; total: number; pagina: number; porPagina: number; paginas: number } {
+  const paginacion = paginaDesdeBackend(d);
+  const items = apusDesdeBackend(paginacion);
+  return {
+    items,
+    total: Number(campo(paginacion, 'total') ?? items.length) || items.length,
+    pagina: Number(campo(paginacion, 'page') ?? 1) || 1,
+    porPagina: Number(campo(paginacion, 'per_page', 'perPage') ?? items.length) || items.length,
+    paginas: Number(campo(paginacion, 'total_pages', 'totalPages') ?? 1) || 1,
+  };
+}
+
 /**
  * Actividad nueva del presupuesto → backend.
  *
@@ -390,7 +415,7 @@ export const insumoDesdeBackend = (d: any): Insumo => ({
 });
 
 export const insumosDesdeBackend = (d: any): Insumo[] =>
-  (Array.isArray(d) ? d : (d?.items ?? d?.data ?? [])).map(insumoDesdeBackend);
+  listaDesdeBackend(d).map(insumoDesdeBackend);
 
 /**
  * Página del maestro de insumos.
@@ -399,12 +424,23 @@ export const insumosDesdeBackend = (d: any): Insumo[] =>
  * solo con `items` hace que el contador de la pantalla muestre el tamaño de la
  * página —20— en vez del total real del catálogo.
  */
-export function paginaInsumosDesdeBackend(d: any): { items: Insumo[]; total: number; paginas: number } {
-  const items = insumosDesdeBackend(d);
+export function paginaInsumosDesdeBackend(d: any): { items: Insumo[]; total: number; pagina: number; porPagina: number; paginas: number } {
+  const paginacion = paginaDesdeBackend(d);
+  const items = insumosDesdeBackend(paginacion);
   return {
     items,
-    total: Number(campo(d, 'total') ?? items.length) || items.length,
-    paginas: Number(campo(d, 'total_pages', 'totalPages') ?? 1) || 1,
+    total: Number(campo(paginacion, 'total') ?? items.length) || items.length,
+    pagina: Number(campo(paginacion, 'page') ?? 1) || 1,
+    porPagina: Number(campo(paginacion, 'per_page', 'perPage') ?? items.length) || items.length,
+    paginas: Number(campo(paginacion, 'total_pages', 'totalPages') ?? 1) || 1,
+  };
+}
+
+export function insumoABackend(i: { descripcion: string; unidad: string; grupo: GrupoRecurso | string }) {
+  return {
+    descripcion: i.descripcion.trim(),
+    unidad: i.unidad.trim(),
+    grupo: grupoABackend(i.grupo),
   };
 }
 
@@ -481,4 +517,32 @@ export function proyectoDesdeBackend(d: any): Proyecto {
 export function proyectosDesdeBackend(d: any): Proyecto[] {
   const arr = Array.isArray(d) ? d : (d?.items ?? d?.data ?? d?.results ?? []);
   return (Array.isArray(arr) ? arr : []).map(proyectoDesdeBackend);
+}
+
+export function marcaDesdeBackend(d: any): Marca {
+  return {
+    nombreEmpresa: campo(d, 'nombreEmpresa', 'nombre_empresa') ?? '',
+    nit: campo(d, 'nit') ?? '',
+    direccion: campo(d, 'direccion') ?? '',
+    telefono: campo(d, 'telefono') ?? '',
+    correo: campo(d, 'correo') ?? '',
+    sitioWeb: campo(d, 'sitioWeb', 'sitio_web') ?? '',
+    logoUrl: campo(d, 'logoUrl', 'logo_url') ?? '',
+    colorAcento: campo(d, 'colorAcento', 'color_acento') ?? ACENTOS_MARCA[0].valor,
+    plantillaDocumento: campo(d, 'plantillaDocumento', 'plantilla_documento') ?? 'CLASICA',
+  };
+}
+
+export function marcaABackend(m: Partial<Marca>) {
+  return {
+    nombre_empresa: m.nombreEmpresa,
+    nit: m.nit || undefined,
+    direccion: m.direccion || undefined,
+    telefono: m.telefono || undefined,
+    correo: m.correo || undefined,
+    sitio_web: m.sitioWeb || undefined,
+    logo_url: m.logoUrl || undefined,
+    color_acento: m.colorAcento,
+    plantilla_documento: m.plantillaDocumento ?? 'CLASICA',
+  };
 }

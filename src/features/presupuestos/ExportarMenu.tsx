@@ -2,10 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 import { Download, FileText, Sheet, Loader2, Check } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
+import { marcaABackend, marcaDesdeBackend } from './mapeo';
 
 type TipoDocumento =
   | 'PDF_CLIENTE' | 'PDF_INTERNO' | 'PDF_COSTOS_APU'
   | 'XLSX_PRESUPUESTO' | 'XLSX_INSUMOS' | 'XLSX_APUS';
+
+interface DocumentoGenerado {
+  id?: string;
+  estado?: string;
+  referencia?: string;
+  filePath?: string;
+}
 
 /** Las siete salidas del aplicativo de referencia agrupadas en un solo menú (H-12). */
 const SALIDAS: Array<{ tipo: TipoDocumento; etiqueta: string; nota?: string; destacada?: boolean; icono: 'pdf' | 'xlsx' }> = [
@@ -16,6 +24,48 @@ const SALIDAS: Array<{ tipo: TipoDocumento; etiqueta: string; nota?: string; des
   { tipo: 'XLSX_INSUMOS', etiqueta: 'Insumos en Excel', icono: 'xlsx' },
   { tipo: 'XLSX_APUS', etiqueta: 'APUs en Excel', icono: 'xlsx' },
 ];
+
+const campo = (o: any, ...nombres: string[]) => {
+  for (const n of nombres) {
+    if (o?.[n] !== undefined && o?.[n] !== null && o[n] !== '') return o[n];
+  }
+  return undefined;
+};
+
+function documentoDesdeBackend(d: any): DocumentoGenerado {
+  return {
+    id: String(campo(d, 'id', 'document_id', 'documentId') ?? ''),
+    estado: campo(d, 'estado', 'status'),
+    referencia: campo(d, 'referencia', 'reference', 'numero'),
+    filePath: campo(d, 'file_path', 'filePath'),
+  };
+}
+
+function descargarBlob(blob: Blob, nombre: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function payloadDocumento(tipo: TipoDocumento) {
+  try {
+    const marca = marcaDesdeBackend(extractData(await apiService.getMarca()));
+    const marcaBackend = marcaABackend(marca);
+    return {
+      tipo,
+      plantilla_documento: marcaBackend.plantilla_documento,
+      marca: marcaBackend,
+      branding: marcaBackend,
+    };
+  } catch {
+    return { tipo };
+  }
+}
 
 /**
  * HU-20 · HU-21 — Menú de exportación.
@@ -28,7 +78,7 @@ const SALIDAS: Array<{ tipo: TipoDocumento; etiqueta: string; nota?: string; des
 export function ExportarMenu({ projectId, deshabilitado }: { projectId: string; deshabilitado?: boolean }) {
   const [abierto, setAbierto] = useState(false);
   const [generando, setGenerando] = useState<TipoDocumento | null>(null);
-  const [listo, setListo] = useState<{ referencia?: string; url?: string } | null>(null);
+  const [listo, setListo] = useState<DocumentoGenerado | null>(null);
   const cajaRef = useRef<HTMLDivElement>(null);
   const sondeo = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -43,12 +93,12 @@ export function ExportarMenu({ projectId, deshabilitado }: { projectId: string; 
   useEffect(() => () => { if (sondeo.current) clearTimeout(sondeo.current); }, []);
 
   /** Consulta el estado del documento hasta que esté listo (máx. ~30 s). */
-  const esperarDocumento = async (docId: string, intentos = 15): Promise<any | null> => {
+  const esperarDocumento = async (docId: string, intentos = 15): Promise<DocumentoGenerado | null> => {
     for (let i = 0; i < intentos; i++) {
       await new Promise((r) => { sondeo.current = setTimeout(r, 2000); });
       try {
-        const d = extractData(await apiService.getDocumento(docId));
-        if (d?.estado && d.estado !== 'GENERANDO') return d;
+        const d = documentoDesdeBackend(extractData(await apiService.getDocumento(docId)));
+        if (d.estado && d.estado !== 'GENERANDO') return d;
       } catch {
         return null; // si el endpoint de consulta no existe, se corta el sondeo
       }
@@ -61,16 +111,29 @@ export function ExportarMenu({ projectId, deshabilitado }: { projectId: string; 
     setGenerando(tipo);
     setListo(null);
     try {
-      const res = extractData(await apiService.generarDocumento(projectId, { tipo }));
+      let res: DocumentoGenerado;
+      try {
+        res = documentoDesdeBackend(extractData(await apiService.generarDocumento(projectId, await payloadDocumento(tipo))));
+      } catch (e: any) {
+        // Compatibilidad: si el DTO del backend todavía solo acepta `tipo`, no
+        // rompemos la exportación; la marca quedará del lado del backend.
+        if (e?.status !== 400) throw e;
+        res = documentoDesdeBackend(extractData(await apiService.generarDocumento(projectId, { tipo })));
+      }
       if (!res?.id) throw new Error('El servidor no devolvió el identificador del documento.');
 
       showNotification('Generando', 'info', `Documento ${res.referencia || res.id} en preparación…`);
       const doc = await esperarDocumento(res.id);
 
-      if (doc?.url) {
-        setListo({ referencia: doc.referencia || res.referencia, url: doc.url });
-        window.open(doc.url, '_blank', 'noopener,noreferrer');
+      if (doc?.estado === 'LISTO') {
+        const listoFinal = { ...doc, referencia: doc.referencia || res.referencia };
+        setListo(listoFinal);
+        const archivo = await apiService.descargarDocumento(res.id);
+        descargarBlob(archivo.blob, archivo.filename ?? doc.filePath ?? `${doc.referencia || res.id}.pdf`);
         showNotification('Listo', 'success', `Documento ${doc.referencia || ''} generado.`);
+      } else if (doc?.estado && doc.estado !== 'ERROR' && doc.estado !== 'FALLIDO') {
+        setListo({ ...doc, referencia: doc.referencia || res.referencia });
+        showNotification('En proceso', 'warning', 'El documento todavía no está listo para descargar.');
       } else {
         // Queda encolado: no es un error, solo tarda más de lo que esperamos aquí.
         setListo({ referencia: res.referencia });
@@ -97,6 +160,25 @@ export function ExportarMenu({ projectId, deshabilitado }: { projectId: string; 
         {generando ? <Loader2 size={15} className="exp-girando" /> : listo ? <Check size={15} /> : <Download size={15} />}
         {generando ? 'Generando…' : 'Exportar'}
       </button>
+
+      {listo?.id && listo.estado === 'LISTO' && !generando && (
+        <button
+          type="button"
+          className="btn btn-small btn-secondary"
+          onClick={async () => {
+            try {
+              const archivo = await apiService.descargarDocumento(listo.id!);
+              descargarBlob(archivo.blob, archivo.filename ?? listo.filePath ?? `${listo.referencia || listo.id}.pdf`);
+            } catch (e: any) {
+              showNotification('Error', 'error', e?.message || 'No se pudo descargar el documento.');
+            }
+          }}
+          style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 6 }}
+          title={listo.referencia ? `Descargar ${listo.referencia}` : 'Descargar documento generado'}
+        >
+          <FileText size={15} /> Descargar
+        </button>
+      )}
 
       {abierto && (
         <div

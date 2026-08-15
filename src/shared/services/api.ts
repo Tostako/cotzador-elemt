@@ -324,6 +324,74 @@ async function api(path: string, options: RequestInit = {}) {
   }
 }
 
+function filenameDesdeContentDisposition(header: string | null): string | undefined {
+  if (!header) return undefined;
+  const utf = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (utf?.[1]) {
+    try { return decodeURIComponent(utf[1].replace(/"/g, '')); } catch { return utf[1].replace(/"/g, ''); }
+  }
+  const normal = /filename="?([^";]+)"?/i.exec(header);
+  return normal?.[1];
+}
+
+async function apiBlob(path: string): Promise<{ blob: Blob; filename?: string }> {
+  const isAuthRoute = path.startsWith('/auth/') || path.startsWith('/public/');
+  let token = getToken();
+
+  if (token && !isAuthRoute && isTokenExpired(token)) {
+    token = await refreshAccessToken();
+    if (!token) {
+      handleAuthExpired();
+      throw new Error('Tu sesión expiró. Inicia sesión de nuevo.');
+    }
+  }
+
+  let finalPath = path;
+  const necesitaShopSlug =
+    !path.includes('shop_slug') && !path.startsWith('/public/') && !path.startsWith(`${PRESUP_BASE}/`);
+  if (necesitaShopSlug) {
+    finalPath = `${path}${path.includes('?') ? '&' : '?'}shop_slug=${SHOP_SLUG}`;
+  }
+
+  const baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+  const url = `${baseUrl}${finalPath}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60_000);
+
+  const doFetch = (authToken: string | null) => {
+    const headers: Record<string, string> = { 'X-Shop-Slug': SHOP_SLUG };
+    if (authToken) headers.Authorization = `Bearer ${authToken}`;
+    return fetch(url, { headers, credentials: 'include', signal: controller.signal });
+  };
+
+  try {
+    let response = await doFetch(token);
+    if (response.status === 401 && !isAuthRoute) {
+      const newToken = await refreshAccessToken();
+      if (newToken) response = await doFetch(newToken);
+      if (response.status === 401) handleAuthExpired();
+    }
+    if (!response.ok) {
+      const texto = await response.text().catch(() => '');
+      throw construirError(response.status, path, texto ? { message: texto } : null);
+    }
+    return {
+      blob: await response.blob(),
+      filename: filenameDesdeContentDisposition(response.headers.get('Content-Disposition')),
+    };
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw new Error('El servidor tardó demasiado en descargar el documento. Intenta de nuevo.');
+    }
+    if (err.name === 'TypeError' || err.message?.includes('Failed to fetch')) {
+      throw new Error('No se pudo conectar con el servidor. Verifica tu conexión.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export const apiService = {
   // ── Auth ──────────────────────────────────────────
   register: (data: any) =>
@@ -524,13 +592,22 @@ export const apiService = {
     api(`${PRESUP_BASE}/projects/${projectId}/aiu`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // Catálogo — HU-09, HU-14
-  getApus: (params?: { q?: string; capituloId?: string; limit?: number }) => {
+  getApus: (params?: { q?: string; capituloId?: string; page?: number; perPage?: number; limit?: number }) => {
     const qs = new URLSearchParams();
     if (params?.q) qs.set('q', params.q);
-    if (params?.capituloId) qs.set('capituloId', params.capituloId);
+    if (params?.capituloId) qs.set('chapter_id', params.capituloId);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.perPage) qs.set('per_page', String(params.perPage));
     if (params?.limit) qs.set('limit', String(params.limit));
     const s = qs.toString();
     return api(`${PRESUP_BASE}/catalog/apus${s ? `?${s}` : ''}`);
+  },
+  exportApus: (params?: { q?: string; capituloId?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.q) qs.set('q', params.q);
+    if (params?.capituloId) qs.set('chapter_id', params.capituloId);
+    const s = qs.toString();
+    return apiBlob(`${PRESUP_BASE}/catalog/apus/export${s ? `?${s}` : ''}`);
   },
   getApu: (id: string) => api(`${PRESUP_BASE}/catalog/apus/${id}`),
   // Capítulos — CRUD completo. Devuelve el array directo dentro de `data`.
@@ -577,11 +654,14 @@ export const apiService = {
   /** Alta de insumo. Se usa también desde la composición de un APU: el insumo
    *  queda en el maestro, no dentro del APU (RN-10.3). */
   createInsumo: (data: any) => api(`${PRESUP_BASE}/catalog/supplies`, { method: 'POST', body: JSON.stringify(data) }),
+  updateInsumo: (id: string, data: any) => api(`${PRESUP_BASE}/catalog/supplies/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteInsumo: (id: string) => api(`${PRESUP_BASE}/catalog/supplies/${id}`, { method: 'DELETE' }),
 
   // Analítica — HU-17, HU-18, HU-19
   getAnalitica: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/analytics/summary`),
   /** Consolidado por grupo: la lista de compras de la obra. */
-  getConsolidados: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/analytics/consolidated`),
+  getConsolidados: (projectId: string, grupo?: string) =>
+    api(`${PRESUP_BASE}/projects/${projectId}/analytics/consolidated${grupo ? `?grupo=${encodeURIComponent(grupo)}` : ''}`),
 
   // Plantillas de proyecto — HU-02. El listado mezcla SISTEMA y PROPIA; solo
   // las propias se pueden editar o borrar.
@@ -628,6 +708,7 @@ export const apiService = {
   generarDocumento: (projectId: string, data: any) =>
     api(`${PRESUP_BASE}/projects/${projectId}/documents`, { method: 'POST', body: JSON.stringify(data) }),
   getDocumento: (docId: string) => api(`${PRESUP_BASE}/documents/${docId}`),
+  descargarDocumento: (docId: string) => apiBlob(`${PRESUP_BASE}/documents/${docId}/file`),
   getDocumentos: (projectId: string) => api(`${PRESUP_BASE}/projects/${projectId}/documents`),
 
   // Deshacer — HU-07 (token válido 10 s)

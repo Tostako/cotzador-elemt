@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Boxes, Search, AlertTriangle, Upload, Download } from 'lucide-react';
+import { Boxes, Search, AlertTriangle, Upload, Download, Plus, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { ModalImportar } from './ModalImportar';
-import { grupoABackend, paginaInsumosDesdeBackend } from './mapeo';
+import { grupoABackend, insumoABackend, paginaInsumosDesdeBackend } from './mapeo';
 import { olvidarMaestroInsumos } from './maestroInsumos';
 import { olvidarCostosApu } from './costosApu';
 import { descargarXlsx } from './exportarXlsx';
@@ -25,6 +25,7 @@ interface Impacto {
 /** Por encima de esto se pide confirmación reforzada: un salto así casi
  *  siempre es un dedazo (un cero de más) y no una subida real. */
 const UMBRAL_VARIACION_PCT = 25;
+const POR_PAGINA = 20;
 
 /**
  * HU-14 · Maestro de insumos con precio propagable.
@@ -47,8 +48,12 @@ export function InsumosPage() {
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState<Insumo | null>(null);
   const [viendoUso, setViendoUso] = useState<Insumo | null>(null);
+  const [formulario, setFormulario] = useState<Insumo | 'nuevo' | null>(null);
   const [modalImportar, setModalImportar] = useState(false);
   const [total, setTotal] = useState(0);
+  const [pagina, setPagina] = useState(1);
+  const [paginas, setPaginas] = useState(1);
+  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
 
   /**
    * HU-13 · Exporta el recorte visible en el **mismo formato que acepta la
@@ -79,11 +84,13 @@ export function InsumosPage() {
       const data = extractData(await apiService.getInsumos({
         q: busqueda || undefined,
         grupo: grupo ? grupoABackend(grupo) : undefined,
-        perPage: 200,
+        page: pagina,
+        perPage: POR_PAGINA,
       }));
-      const pagina = paginaInsumosDesdeBackend(data);
-      setInsumos(pagina.items);
-      setTotal(pagina.total);
+      const pag = paginaInsumosDesdeBackend(data);
+      setInsumos(pag.items);
+      setTotal(pag.total);
+      setPaginas(pag.paginas);
       // Los precios que se ven aquí son los que usa la composición de los APUs:
       // si cambian, la caché del maestro deja de ser cierta.
       olvidarMaestroInsumos();
@@ -106,7 +113,27 @@ export function InsumosPage() {
     }, 300);
     return () => { cancel = true; clearTimeout(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busqueda, grupo]);
+  }, [busqueda, grupo, pagina]);
+
+  useEffect(() => { setPagina(1); }, [busqueda, grupo]);
+
+  const eliminar = async (insumo: Insumo) => {
+    const uso = insumo.usoEnApus ?? 0;
+    const textoUso = uso > 0 ? `\n\nEstá usado en ${uso} APU(s). Si el backend lo protege, puede rechazar el borrado.` : '';
+    if (!window.confirm(`¿Eliminar "${insumo.descripcion}" del maestro?${textoUso}`)) return;
+    setEliminandoId(insumo.id);
+    try {
+      await apiService.deleteInsumo(insumo.id);
+      olvidarMaestroInsumos();
+      olvidarCostosApu();
+      showNotification('Eliminado', 'success', 'Insumo eliminado del maestro.');
+      await cargar();
+    } catch (e: any) {
+      showNotification('Error', 'error', e?.message || 'No se pudo eliminar el insumo.');
+    } finally {
+      setEliminandoId(null);
+    }
+  };
 
   return (
     <main>
@@ -129,6 +156,9 @@ export function InsumosPage() {
           </button>
           <button type="button" className="btn btn-small btn-secondary" onClick={exportar} disabled={insumos.length === 0} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Download size={15} /> Exportar
+          </button>
+          <button type="button" className="btn btn-small" onClick={() => setFormulario('nuevo')} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Plus size={15} /> Nuevo insumo
           </button>
         </div>
       </div>
@@ -197,15 +227,24 @@ export function InsumosPage() {
                     </td>
                     <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 700, color: '#b69462' }}>{money(i.valorUnitario)}</td>
                     <td style={{ padding: '10px 8px', textAlign: 'right' }}>
-                      <button type="button" className="btn btn-small btn-secondary" onClick={() => setEditando(i)} style={{ width: 'auto' }}>
-                        Cambiar precio
-                      </button>
+                      <div style={{ display: 'inline-flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        <button type="button" className="btn btn-small btn-secondary" onClick={() => setEditando(i)} style={{ width: 'auto' }}>
+                          Cambiar precio
+                        </button>
+                        <button type="button" className="btn btn-small btn-secondary" onClick={() => setFormulario(i)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5 }} aria-label={`Editar ${i.descripcion}`}>
+                          <Pencil size={13} /> Editar
+                        </button>
+                        <button type="button" className="btn btn-small btn-danger" onClick={() => eliminar(i)} disabled={eliminandoId === i.id} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5 }} aria-label={`Eliminar ${i.descripcion}`}>
+                          <Trash2 size={13} /> {eliminandoId === i.id ? 'Eliminando…' : 'Eliminar'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <Paginador pagina={pagina} paginas={paginas} total={total} enPagina={insumos.length} onCambiar={setPagina} />
         </div>
       )}
 
@@ -219,6 +258,14 @@ export function InsumosPage() {
         />
       )}
 
+      {formulario && (
+        <ModalInsumo
+          insumo={formulario === 'nuevo' ? null : formulario}
+          onClose={() => setFormulario(null)}
+          onGuardado={() => { setFormulario(null); cargar(); }}
+        />
+      )}
+
       {editando && (
         <ModalCambioPrecio
           insumo={editando}
@@ -227,6 +274,130 @@ export function InsumosPage() {
         />
       )}
     </main>
+  );
+}
+
+function Paginador({
+  pagina, paginas, total, enPagina, onCambiar,
+}: {
+  pagina: number;
+  paginas: number;
+  total: number;
+  enPagina: number;
+  onCambiar: (pagina: number) => void;
+}) {
+  if (paginas <= 1 && total <= enPagina) return null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', paddingTop: 14, marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+      <span className="small" style={{ color: '#8c8578' }}>
+        Página {pagina} de {Math.max(1, paginas)} · {total} resultado{total === 1 ? '' : 's'}
+      </span>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <button type="button" className="btn btn-small btn-secondary" onClick={() => onCambiar(Math.max(1, pagina - 1))} disabled={pagina <= 1} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <ChevronLeft size={14} /> Anterior
+        </button>
+        <button type="button" className="btn btn-small btn-secondary" onClick={() => onCambiar(Math.min(paginas, pagina + 1))} disabled={pagina >= paginas} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          Siguiente <ChevronRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ModalInsumo({
+  insumo,
+  onClose,
+  onGuardado,
+}: {
+  insumo: Insumo | null;
+  onClose: () => void;
+  onGuardado: () => void;
+}) {
+  const [descripcion, setDescripcion] = useState(insumo?.descripcion ?? '');
+  const [unidad, setUnidad] = useState(insumo?.unidad ?? '');
+  const [grupo, setGrupo] = useState<GrupoRecurso>(insumo?.grupo ?? 'MATERIALES');
+  const [precio, setPrecio] = useState(insumo ? String(aNumero(insumo.valorUnitario)) : '');
+  const [guardando, setGuardando] = useState(false);
+  const [fallo, setFallo] = useState<string | null>(null);
+
+  const valor = precio.trim() === '' ? 0 : parseFloat(precio);
+  const valido = descripcion.trim().length > 0 && unidad.trim().length > 0 && (precio.trim() === '' || (Number.isFinite(valor) && valor >= 0));
+
+  const guardar = async () => {
+    if (!valido) {
+      setFallo('Completa descripción, unidad y un precio válido.');
+      return;
+    }
+    setGuardando(true);
+    setFallo(null);
+    try {
+      if (insumo) {
+        await apiService.updateInsumo(insumo.id, insumoABackend({ descripcion, unidad, grupo }));
+        if (precio.trim() !== '' && aNumero(insumo.valorUnitario) !== valor) {
+          await apiService.setPrecioInsumo(insumo.id, { valor, motivo: 'Edición manual del insumo' });
+        }
+        showNotification('Guardado', 'success', 'Insumo actualizado.');
+      } else {
+        const creado = extractData(await apiService.createInsumo(insumoABackend({ descripcion, unidad, grupo })));
+        if (creado?.id && valor > 0) {
+          await apiService.setPrecioInsumo(String(creado.id), { valor, motivo: 'Precio inicial' });
+        }
+        showNotification('Creado', 'success', 'Insumo creado en el maestro.');
+      }
+      olvidarMaestroInsumos();
+      olvidarCostosApu();
+      onGuardado();
+    } catch (e: any) {
+      setFallo(e?.message || 'No se pudo guardar el insumo.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <FormModal
+      title={insumo ? 'Editar insumo' : 'Nuevo insumo'}
+      subtitle={insumo?.descripcion ?? 'Alta individual en el maestro'}
+      maxWidth={560}
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" className="btn btn-small btn-secondary" onClick={onClose} style={{ width: 'auto' }}>Cancelar</button>
+          <button type="button" className="btn btn-small" onClick={guardar} disabled={guardando || !valido} style={{ width: 'auto' }}>
+            {guardando ? 'Guardando…' : 'Guardar'}
+          </button>
+        </>
+      }
+    >
+      <div style={{ display: 'grid', gap: 12 }}>
+        <div>
+          <label className="small" style={{ display: 'block', marginBottom: 4 }}>Descripción *</label>
+          <input className="input" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} autoFocus />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: 12 }}>
+          <div>
+            <label className="small" style={{ display: 'block', marginBottom: 4 }}>Unidad *</label>
+            <input className="input" value={unidad} onChange={(e) => setUnidad(e.target.value)} placeholder="m2, m3, UND…" />
+          </div>
+          <div>
+            <label className="small" style={{ display: 'block', marginBottom: 4 }}>Grupo</label>
+            <select className="select" value={grupo} onChange={(e) => setGrupo(e.target.value as GrupoRecurso)}>
+              {(Object.keys(ETIQUETA_RECURSO) as GrupoRecurso[]).map((g) => (
+                <option key={g} value={g}>{ETIQUETA_RECURSO[g]}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="small" style={{ display: 'block', marginBottom: 4 }}>Precio vigente</label>
+            <input className="input" type="number" min={0} step={1} value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="0" />
+          </div>
+        </div>
+        <p className="small" style={{ color: '#8c8578' }}>
+          El precio se guarda en la serie histórica. Si lo dejas vacío al crear, el insumo queda sin precio inicial.
+        </p>
+        {fallo && <p className="small" style={{ color: '#ff6b6b', wordBreak: 'break-word' }}>{fallo}</p>}
+      </div>
+    </FormModal>
   );
 }
 

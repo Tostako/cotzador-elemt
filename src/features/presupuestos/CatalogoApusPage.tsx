@@ -1,14 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Layers, Search, ChevronDown, ChevronRight, Copy, Plus, Upload, Download, AlertTriangle } from 'lucide-react';
+import { Layers, Search, ChevronDown, ChevronLeft, ChevronRight, Copy, Plus, Upload, Download, AlertTriangle } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { ModalNuevoApu } from './ModalNuevoApu';
 import { ModalImportar } from './ModalImportar';
-import { descargarXlsx } from './exportarXlsx';
-import { apuDesdeBackend, apusDesdeBackend, capitulosDesdeBackend, codigoSugerido, enriquecerComponentes } from './mapeo';
+import { apuDesdeBackend, capitulosDesdeBackend, enriquecerComponentes, paginaApusDesdeBackend } from './mapeo';
 import { maestroInsumos } from './maestroInsumos';
 import { useCostosApu } from './costosApu';
 import { ETIQUETA_RECURSO, aNumero, money, type Apu, type Capitulo, type ComponenteApu, type GrupoRecurso } from './types';
+
+const POR_PAGINA = 20;
+
+function descargarBlob(blob: Blob, nombre: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 /**
  * HU-09 · Base de datos de APUs: consulta, búsqueda y filtro por capítulo.
@@ -29,61 +41,25 @@ export function CatalogoApusPage() {
   const [modalNuevo, setModalNuevo] = useState(false);
   const [modalImportar, setModalImportar] = useState(false);
   const [exportando, setExportando] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [paginas, setPaginas] = useState(1);
   // El listado no devuelve el costo; se completa pidiendo los detalles.
   const { costo, cargando: cargandoCostos } = useCostosApu(apus);
 
-  /**
-   * HU-13 · Exporta lo que se está viendo —filtros incluidos— en el mismo
-   * formato que acepta la importación, para que el archivo se pueda reimportar.
-   *
-   * La composición no viene en el listado: cada fila la pide al desplegarse.
-   * Así que hay que traer el detalle de cada APU, en tandas para no lanzar cien
-   * peticiones a la vez.
-   */
+  /** Exporta todos los APUs filtrados desde el servidor, en formato reimportable. */
   const exportar = async () => {
-    if (apus.length === 0 || exportando) return;
+    if (total === 0 || exportando) return;
     setExportando(true);
     try {
-      // La descripción del insumo es lo que el importador empareja, y los
-      // componentes llegan solo con el id: sin el maestro no hay qué escribir.
-      const maestro = await maestroInsumos().catch(() => new Map());
-      const detalles: Apu[] = [];
-      const TANDA = 6;
-      for (let i = 0; i < apus.length; i += TANDA) {
-        const tanda = await Promise.all(apus.slice(i, i + TANDA).map(async (a) => {
-          try {
-            const d = a.componentes ? a : apuDesdeBackend(extractData(await apiService.getApu(a.id)));
-            return { ...d, componentes: enriquecerComponentes(d.componentes ?? [], maestro) };
-          } catch {
-            // Si falla el detalle se exporta el APU sin componentes, que es
-            // válido al reimportar, en vez de tumbar la exportación entera.
-            return a;
-          }
-        }));
-        detalles.push(...tanda);
-      }
-
-      const sinComposicion = detalles.filter((a) => !(a.componentes?.length)).length;
-      descargarXlsx('apus', 'APUs', [
-        ['codigo', 'descripcion', 'unidad', 'capitulo', 'componentes'],
-        ...detalles.map((a) => [
-          a.codigo ?? codigoSugerido(a.descripcion),
-          a.descripcion,
-          a.unidad,
-          a.capitulo?.nombre ?? '',
-          // «descripcionExacta:rendimiento» separados por ';', que es como lo
-          // lee el importador. Los huérfanos se omiten: escribir un nombre que
-          // no está en el maestro haría fallar esa fila al reimportar.
-          (a.componentes ?? [])
-            .filter((c) => c.descripcion && !c.huerfano)
-            .map((c) => `${c.descripcion}:${aNumero(c.cantidad)}`).join(';'),
-        ]),
-      ]);
-
-      if (sinComposicion > 0) {
-        showNotification('Exportado con avisos', 'warning',
-          `${sinComposicion} APU(s) salieron sin componentes. Al reimportarlos quedarían sin composición.`);
-      }
+      const archivo = await apiService.exportApus({
+        q: busqueda || undefined,
+        capituloId: capituloId || undefined,
+      });
+      descargarBlob(archivo.blob, archivo.filename ?? 'apus.xlsx');
+      showNotification('Exportado', 'success', 'APUs exportados con los filtros actuales.');
+    } catch (e: any) {
+      showNotification('Error', 'error', e?.message || 'No se pudo exportar el catálogo.');
     } finally {
       setExportando(false);
     }
@@ -135,17 +111,25 @@ export function CatalogoApusPage() {
         const data = extractData(await apiService.getApus({
           q: busqueda || undefined,
           capituloId: capituloId || undefined,
-          limit: 100,
+          page: pagina,
+          perPage: POR_PAGINA,
         }));
-        if (!cancel) setApus(apusDesdeBackend(data));
+        const pag = paginaApusDesdeBackend(data);
+        if (!cancel) {
+          setApus(pag.items);
+          setTotal(pag.total);
+          setPaginas(pag.paginas);
+        }
       } catch (e: any) {
-        if (!cancel) { setApus([]); setError(e?.message || 'No se pudo cargar el catálogo.'); }
+        if (!cancel) { setApus([]); setTotal(0); setPaginas(1); setError(e?.message || 'No se pudo cargar el catálogo.'); }
       } finally {
         if (!cancel) setCargando(false);
       }
     }, 300);
     return () => { cancel = true; clearTimeout(t); };
-  }, [busqueda, capituloId, recarga]);
+  }, [busqueda, capituloId, pagina, recarga]);
+
+  useEffect(() => { setPagina(1); }, [busqueda, capituloId]);
 
   return (
     <main>
@@ -157,14 +141,14 @@ export function CatalogoApusPage() {
           {/* El contador sale de la misma consulta que la pantalla (H-13) */}
           {!cargando && !error && (
             <span className="small" style={{ color: '#8c8578' }}>
-              {apus.length} APU{apus.length === 1 ? '' : 's'}{capituloId ? ' en el capítulo' : ' en el catálogo'}
+              {apus.length} de {total} APU{total === 1 ? '' : 's'}{capituloId ? ' en el capítulo' : ' en el catálogo'}
               {cargandoCostos && ' · calculando costos…'}
             </span>
           )}
           <button type="button" className="btn btn-small btn-secondary" onClick={() => setModalImportar(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Upload size={15} /> Importar
           </button>
-          <button type="button" className="btn btn-small btn-secondary" onClick={exportar} disabled={apus.length === 0 || exportando} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <button type="button" className="btn btn-small btn-secondary" onClick={exportar} disabled={total === 0 || exportando} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Download size={15} /> {exportando ? 'Exportando…' : 'Exportar'}
           </button>
           <button type="button" className="btn btn-small" onClick={() => setModalNuevo(true)} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -222,6 +206,7 @@ export function CatalogoApusPage() {
               onDuplicar={() => duplicar(a)}
             />
           ))}
+          <PaginadorApus pagina={pagina} paginas={paginas} total={total} enPagina={apus.length} onCambiar={setPagina} />
         </div>
       )}
 
@@ -240,6 +225,33 @@ export function CatalogoApusPage() {
         />
       )}
     </main>
+  );
+}
+
+function PaginadorApus({
+  pagina, paginas, total, enPagina, onCambiar,
+}: {
+  pagina: number;
+  paginas: number;
+  total: number;
+  enPagina: number;
+  onCambiar: (pagina: number) => void;
+}) {
+  if (paginas <= 1 && total <= enPagina) return null;
+  return (
+    <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+      <span className="small" style={{ color: '#8c8578' }}>
+        Página {pagina} de {Math.max(1, paginas)} · {total} resultado{total === 1 ? '' : 's'}
+      </span>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <button type="button" className="btn btn-small btn-secondary" onClick={() => onCambiar(Math.max(1, pagina - 1))} disabled={pagina <= 1} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <ChevronLeft size={14} /> Anterior
+        </button>
+        <button type="button" className="btn btn-small btn-secondary" onClick={() => onCambiar(Math.min(paginas, pagina + 1))} disabled={pagina >= paginas} style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          Siguiente <ChevronRight size={14} />
+        </button>
+      </div>
+    </div>
   );
 }
 

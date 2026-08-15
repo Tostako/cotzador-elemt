@@ -4,6 +4,7 @@ import { Palette, Check, RotateCcw, ShieldCheck } from 'lucide-react';
 import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { ACENTOS_MARCA, type Marca } from './types';
+import { marcaABackend, marcaDesdeBackend } from './mapeo';
 
 const MARCA_INICIAL: Marca = {
   nombreEmpresa: '',
@@ -51,18 +52,7 @@ export function MarcaPage() {
       ]);
       if (cancel) return;
       if (m) {
-        setMarca({
-          ...MARCA_INICIAL,
-          nombreEmpresa: m.nombreEmpresa ?? m.nombre_empresa ?? '',
-          nit: m.nit ?? '',
-          direccion: m.direccion ?? '',
-          telefono: m.telefono ?? '',
-          correo: m.correo ?? '',
-          sitioWeb: m.sitioWeb ?? m.sitio_web ?? '',
-          logoUrl: m.logoUrl ?? m.logo_url ?? '',
-          colorAcento: m.colorAcento ?? m.color_acento ?? MARCA_INICIAL.colorAcento,
-          plantillaDocumento: m.plantillaDocumento ?? m.plantilla_documento ?? 'CLASICA',
-        });
+        setMarca({ ...MARCA_INICIAL, ...marcaDesdeBackend(m) });
         setError(null);
       }
       const arr = Array.isArray(ps) ? ps : (ps?.items ?? null);
@@ -83,7 +73,7 @@ export function MarcaPage() {
     }
     setGuardando(true);
     try {
-      await apiService.updateMarca({ ...marca, nombreEmpresa: marca.nombreEmpresa.trim() });
+      await apiService.updateMarca(marcaABackend({ ...marca, nombreEmpresa: marca.nombreEmpresa.trim() }));
       showNotification('Guardada', 'success', 'La marca se aplicará a los documentos que generes desde ahora.');
       setError(null);
     } catch (e: any) {

@@ -5,7 +5,8 @@ import { apiService, extractData } from '../../shared/services/api';
 import { showNotification } from '../../shared/hooks/useNotifications';
 import { FormModal } from '../../shared/components/FormModal';
 import { descargarCsv } from './exportarCsv';
-import { grupoDesdeBackend } from './mapeo';
+import { grupoABackend } from './mapeo';
+import { normalizarConsolidado } from './ConsolidadosPage';
 import {
   aNumero, money, diferenciaLinea,
   COLOR_ESTADO_LINEA, ETIQUETA_ESTADO_LINEA,
@@ -13,6 +14,18 @@ import {
 } from './types';
 
 const ESTADOS: EstadoLinea[] = ['PENDIENTE', 'COTIZADO', 'APROBADO', 'RECHAZADO'];
+const GRUPOS_COTIZABLES = ['MATERIALES', 'MANO_OBRA', 'EQUIPOS', 'TRANSPORTE'] as const;
+
+function lineaABackend(linea: Partial<LineaCotizacion> & { id?: string }) {
+  const tienePrecioCotizado = Object.prototype.hasOwnProperty.call(linea, 'precioCotizado');
+  return {
+    ...(linea.id ? { id: linea.id } : {}),
+    ...(linea.proveedor !== undefined ? { proveedor: linea.proveedor } : {}),
+    ...(tienePrecioCotizado ? { precio_cotizado: linea.precioCotizado ?? null } : {}),
+    ...(linea.estado !== undefined ? { estado: linea.estado } : {}),
+    ...(linea.observacion !== undefined ? { observacion: linea.observacion } : {}),
+  };
+}
 
 function normalizarLinea(l: any): LineaCotizacion {
   const precio = l.precioCotizado ?? l.precio_cotizado;
@@ -22,7 +35,7 @@ function normalizarLinea(l: any): LineaCotizacion {
     descripcion: l.descripcion ?? l.nombre ?? '',
     unidad: l.unidad ?? '',
     cantidad: aNumero(l.cantidad ?? l.cantidadTotal ?? l.cantidad_total),
-    precioPresupuesto: String(l.precioPresupuesto ?? l.precio_presupuesto ?? l.valorUnitario ?? l.valor_unitario ?? '0'),
+    precioPresupuesto: String(l.precioPresupuesto ?? l.precio_presupuesto ?? l.precio_presupuestado ?? l.valorUnitario ?? l.valor_unitario ?? '0'),
     proveedor: l.proveedor ?? '',
     precioCotizado: precio === null || precio === undefined ? undefined : String(precio),
     estado: (l.estado ?? 'PENDIENTE') as EstadoLinea,
@@ -93,7 +106,7 @@ export function CotizacionesPage() {
     setCotizaciones((cs) => cs.map((c) => (c.id === activa.id ? { ...c, lineas } : c)));
     setGuardando(true);
     try {
-      await apiService.updateCotizacion(projectId, activa.id, { lineas: [{ id: lineaId, ...cambio }] });
+      await apiService.updateCotizacion(projectId, activa.id, { lineas: [lineaABackend({ id: lineaId, ...cambio })] });
     } catch (e: any) {
       showNotification('Error', 'error', e?.message || 'No se pudo guardar el cambio.');
       cargar();
@@ -357,18 +370,17 @@ function ModalNuevaCotizacion({
     let cancel = false;
     (async () => {
       try {
-        const d: any = extractData(await apiService.getConsolidados(projectId));
-        const bruto: any[] = Array.isArray(d) ? d
-          : Array.isArray(d?.items) ? d.items
-          : Array.isArray(d?.insumos) ? d.insumos
-          : Array.isArray(d?.grupos) ? d.grupos.flatMap((g: any) => (g.items ?? []).map((i: any) => ({ grupo: g.tipo ?? g.grupo, ...i }))) : [];
-        const fs = bruto.map((i) => ({
-          insumoId: String(i.insumoId ?? i.insumo_id ?? i.id ?? ''),
-          descripcion: i.descripcion ?? i.nombre ?? '',
-          unidad: i.unidad ?? '',
-          cantidad: aNumero(i.cantidadTotal ?? i.cantidad_total ?? i.cantidad),
-          valorUnitario: String(i.valorUnitario ?? i.valor_unitario ?? '0'),
-          grupo: grupoDesdeBackend(i.grupo ?? i.tipo),
+        const respuestas = await Promise.all(GRUPOS_COTIZABLES.map(async (g) => {
+          const d: any = extractData(await apiService.getConsolidados(projectId, grupoABackend(g)));
+          return normalizarConsolidado(d, g);
+        }));
+        const fs = respuestas.flat().map((i) => ({
+          insumoId: i.insumoId,
+          descripcion: i.descripcion,
+          unidad: i.unidad,
+          cantidad: aNumero(i.cantidadTotal),
+          valorUnitario: i.valorUnitario,
+          grupo: i.grupo,
         }));
         if (!cancel) {
           setFilas(fs);
@@ -403,11 +415,11 @@ function ModalNuevaCotizacion({
       await apiService.crearCotizacion(projectId, {
         nombre: nombre.trim() || `Cotización ${new Date().toLocaleDateString('es-CO')}`,
         lineas: lineas.map((f) => ({
-          insumoId: f.insumoId,
+          insumo_id: f.insumoId,
           descripcion: f.descripcion,
           unidad: f.unidad,
-          cantidad: f.cantidad,
-          precioPresupuesto: f.valorUnitario,
+          cantidad_total: f.cantidad,
+          precio_presupuestado: f.valorUnitario,
           estado: 'PENDIENTE',
         })),
       });
